@@ -1,7 +1,7 @@
 # Architecture boundaries
 
 Status: agreed conceptual boundaries and language direction, 2026-09-18.
-Detailed architecture remains open. See the [product specification](specification.md)
+Detailed architecture remains open. See the [product specification](specification.md),
 [dashboard model](dashboards.md) and [server engine](engine.md).
 
 ## Client and engine model
@@ -151,3 +151,10 @@ that a closed ticket proves a successful check.
 Rust/Axum is now selected; SQLite remains provisional. The earlier endpoint list, host-collector design,
 evidence-only restriction, fixed budgets/cadences, retention periods and private
 single-instance deployment remain withdrawn as specification commitments.
+
+## Implementation sequence
+
+The [first milestone plan](implementation-plan.md) develops web and native Android
+together. Runtime, UI-contract and persistence prototypes precede final choices
+of JS host, renderer framework and storage adapter. Candidate runtime libraries
+are not yet selected or qualified.

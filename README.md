@@ -37,6 +37,8 @@ These documents record the **high-level product direction discussed with the
 user**, not a signed-off detailed specification or implementation architecture.
 Nothing has been implemented or deployed.
 
+- [Implementation plan](docs/implementation-plan.md): first milestone with both
+  web and native Android, technical prototypes, and acceptance gates.
 - [Product specification](docs/specification.md): discussed scope and open
   behavioral questions.
 - [Server engine](docs/engine.md): runtime primitives, execution, persistence,

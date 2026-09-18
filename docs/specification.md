@@ -202,3 +202,12 @@ implementation or release sequence:
   Talìa, including the future roles of Grafana, Loki and Alertmanager.
 
 These questions are not resolved by the previous draft's proposed defaults.
+
+## First implementation milestone
+
+Both web and native Android are required in the first milestone. Features are
+built against one shared dashboard/UI/logic contract and exercised on both
+clients as they are introduced. The [implementation plan](implementation-plan.md)
+drafts the end-to-end slice, runtime prototypes and validation gates. Its proposed
+technical choices remain subject to prototype evidence; the detailed product
+questions above are not silently resolved by the plan.
