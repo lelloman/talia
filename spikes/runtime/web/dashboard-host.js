@@ -1,3 +1,4 @@
+import {LIMITS, boundedText, validateRequest} from './bridge-policy.js';
 // Parent-owned resources survive Worker failures and are retired by generation.
 export class DashboardHost {
   value = 0;
@@ -9,14 +10,19 @@ export class DashboardHost {
   timers = new Map();
 
   async create(bridge) {
+    if (this.guests.size >= LIMITS.workers) throw Error('Worker limit');
     const generation = ++this.generation;
     const worker = new Worker('/web/dist/dashboard-worker.js', {type:'module'});
     const pending = new Map();
     let next = 0;
-    const guest = {generation, worker, pending, active:true, memory_bytes:0, reason:null};
+    const guest = {generation, worker, pending, active:true, memory_bytes:0, reason:null, lastRequest:0};
     guest.command = (op, value, timeout = 3000) => new Promise((resolve, reject) => {
       if (!guest.active) { reject(Error('retired Worker')); return; }
       const id = ++next;
+      try {
+        boundedText(JSON.stringify({id, op, value}), LIMITS.commandBytes);
+        if (pending.size >= LIMITS.commands) throw Error('command queue limit');
+      } catch (error) { this.retire(guest, 'bridge policy: ' + error.message); reject(error); return; }
       const timer = setTimeout(() => this.retire(guest, 'watchdog'), timeout);
       pending.set(id, {resolve, reject, timer});
       worker.postMessage({id, op, value});
@@ -27,7 +33,11 @@ export class DashboardHost {
       if (data.hanging) { guest.hanging = true; return; }
       if (data.memory_bytes) guest.memory_bytes = data.memory_bytes;
       if (data.fatal) { this.retire(guest, 'guest failure: ' + data.fatal); return; }
-      if (data.request) { this.request(guest, data.request); return; }
+      if (Object.hasOwn(data, 'request')) {
+        this.request(guest, data.request);
+        if (guest.active) worker.postMessage({op:'ack'});
+        return;
+      }
       const operation = pending.get(data.id);
       if (!operation) return;
       clearTimeout(operation.timer); pending.delete(data.id); operation.resolve(data.value);
@@ -58,8 +68,33 @@ export class DashboardHost {
     guest.command('deliver', message).catch(() => {}); // Retirement owns pending rejection.
     return true;
   }
-  request(guest, {id, op, value}) {
+  request(guest, raw) {
     if (!guest.active) return;
+    let request;
+    try {
+      request = validateRequest(raw);
+      if (request.id <= guest.lastRequest) throw Error('request ID replay/order');
+      guest.lastRequest = request.id;
+      const owned = collection => [...collection.values()].filter(g => g === guest.generation).length;
+      if (request.op === 'subscribe' && owned(this.subscriptions) >= LIMITS.subscriptions)
+        throw Error('subscription limit');
+      if (request.op === 'delay' && owned(this.timers) >= LIMITS.timers) throw Error('timer limit');
+      if (request.op === 'stall' && this.stalled.filter(r => r.generation === guest.generation).length >= LIMITS.stalled)
+        throw Error('stalled call limit');
+      if (request.op === 'unsubscribe' && this.subscriptions.get(request.value) !== guest.generation)
+        throw Error('subscription ownership');
+      // Attribute publisher overload to the producer, before touching any recipient.
+      if (request.op === 'publish') {
+        const counts = new Map();
+        for (const generation of this.subscriptions.values()) counts.set(generation, (counts.get(generation) || 0) + 1);
+        for (const [generation, count] of counts) {
+          const owner = this.guests.get(generation);
+          if (owner && owner.pending.size + count + (owner === guest ? 1 : 0) > LIMITS.commands)
+            throw Error('publish fanout limit');
+        }
+      }
+    } catch (error) { this.retire(guest, 'bridge policy: ' + error.message); return; }
+    const {id, op, value} = request;
     let result = null;
     switch (op) {
       case 'echo': result = value; break;

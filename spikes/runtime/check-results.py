@@ -40,6 +40,13 @@ for probe in bounded['failures']:
     assert probe['memory_bytes'] == 16 * 1024 * 1024
     for key in ('retired', 'resources_released', 'survivor_works', 'replacement_works'):
         assert probe[key], (probe['name'], key)
+policy = bounded['policy']
+assert policy['passed'] and policy['worker_budget'] and policy['exact_boundaries']
+assert policy['resources_empty']
+assert len(policy['cases']) == 23 and len(set(policy['cases'])) == 23
+assert policy['limits'] == dict(wireBytes=32768, commandBytes=65536, depth=16,
+    nodes=2048, inFlight=32, commands=64, subscriptions=16, timers=16, stalled=16, workers=8)
+print('Browser bridge: 23 abuse cases plus exact resource boundaries pass.')
 print('Capped disposable Workers pass the full suite, OOM isolation and watchdog recovery.')
 print('Lifecycle cleanup and stale-generation checks pass on all 3 hosts.')
 print('Capped WASM pressure probes pass in Node and Chromium.')

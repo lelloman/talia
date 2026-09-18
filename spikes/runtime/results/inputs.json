@@ -10,11 +10,14 @@
     "web/worker.js": "b60d21b9acd30307e20c3d43998a44b3efffcfddff6d025e4319204fac1d453b",
     "memory-probe.mjs": "d1f0ff73b86837fae3756e14814968dc0366b9b940dd37d229782415347fb27b",
     "capped-memory.mjs": "9b90d18bd494b68f658dad200000bdac3c54db40d24440d63ffb62a039187824",
-    "web/dashboard-host.js": "5aebb4d9afc10550dec73813902ae3b29431f22770e5373781ca2be0a9d05544",
-    "web/dashboard-worker.js": "7158d387dccbc63a30c027967cf029537fa01d5f31c6f06a2319da0b09bf719f",
-    "web/disposable-suite.js": "645fc3b90edfa0e884f45ff066f9633751fce9e1da80886852614cfa3db18501",
+    "web/dashboard-host.js": "a7f6af115867905d96c5b222649a19d8d5231a4fc6016d3cef6449aacb5e3a9b",
+    "web/dashboard-worker.js": "b833300259d67485c89a45a8fc538ca8bd3066a44cd395aeba7eff0f09d56a4c",
+    "web/disposable-suite.js": "ce5a5bb5a2347d0813260f61291c4aeaecb680c933132f0c07df7757e6ebb773",
     "web/index.html": "ac8485145e7721044a1c6bdcf7c6e417b7faf0b3f00982b4c4023cae86b766f5",
     "package.json": "322bf3d25d25009e4ce6b127931c086da0cea3599971742e16d73147fc56f170",
-    "run-browser.mjs": "8fe4578b2679a77fd0241f95b0420476427524ca3a6ae33df6b93e0b5350e910"
+    "run-browser.mjs": "8fe4578b2679a77fd0241f95b0420476427524ca3a6ae33df6b93e0b5350e910",
+    "web/bridge-policy.js": "73e8e916b47dfd56d9286dfedb24be7ff11561b3eae9a62b6535c60f6d3ee7e9",
+    "web/policy-suite.js": "6b78e261ded352ea96ade8d4d0d7dfa294684d267d4f61c1fb93e4e4f7fff53b",
+    "bridge-policy.test.mjs": "db84b6f2f29b75a8e97911551bef65e5b52140723cabb02b74cb5f85ed5f01df"
   }
 }

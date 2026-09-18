@@ -1,6 +1,6 @@
 # P0 runtime findings
 
-Status: capped disposable Worker follow-up executed, 2026-09-18. **P0 qualification is incomplete.**
+Status: browser bridge validation and budgets tested, 2026-09-18. **P0 qualification is incomplete.**
 Runnable code and commands are in the [runtime experiment](../spikes/runtime/README.md).
 The implementation plan's full runtime gate is not passed by these smoke tests.
 
@@ -103,9 +103,53 @@ error; guest exceptions caught within the shared suite remain recoverable. A nul
 exception under OOM also retires the Worker. The watchdog uses a 250 ms test deadline
 for the injected hang and a 3 s default command deadline; these are not product SLAs.
 The recovery test demonstrates fresh Worker execution, not immediate RSS reclamation
-by the browser. Host payload/queue budgets and malicious-message validation are
-still open. The report keeps the uncapped `qualified: false` while recording
+by the browser. Browser bridge validation and budgets are now tested below. The report keeps the uncapped `qualified: false` while recording
 `disposable.passed: true`; neither field signs off all of P0.
+
+### Browser bridge validation and budgets
+
+The trusted Worker adapter validates raw guest JSON before posting it; the parent
+independently validates it before applying effects. Requests require exactly
+`id`, `op`, and `value`, a positive safe integer ID, an allowed operation and
+operation-specific arguments. IDs must strictly increase within a generation.
+The fixture permits only its `value` variable; unsubscribe requires ownership.
+This is fixture capability validation, not user authentication or production ACLs.
+
+Prototype limits (evaluation defaults, not signed-off product settings):
+
+| Resource | Limit |
+|---|---:|
+| Guest request, UTF-8 including envelope | 32 KiB |
+| Harness command or result envelope | 64 KiB |
+| JSON nesting / visited values | 16 levels / 2,048 values |
+| Worker requests awaiting parent acknowledgement | 32 |
+| Outstanding parent commands per dashboard | 64 |
+| Subscriptions / timers / stalled calls per dashboard | 16 each |
+| Live Workers per host | 8 |
+
+Acknowledgements replenish the Worker adapter's credits only after parent request
+handling. Guest code cannot access those credits. Once the adapter detects a
+violation it remains poisoned even if the guest catches the exception, and the
+parent retires that Worker. Resource and queue overruns also retire the offender.
+Broadcast admission checks recipient capacity first; a flooding publisher cannot
+cause a healthy subscriber to be retired for that publisher's overload.
+
+The browser `disposable.policy` evidence covers malformed JSON/envelopes, unknown
+capabilities, wrong arguments, unsafe/replayed IDs, extra routing fields, oversized
+UTF-8 requests/commands/results, deeply nested and wide JSON, caught request floods,
+resource limits, cross-instance unsubscribe and publish fanout overload. Parent-only
+injection separately proves validation and cleanup do not rely on the Worker adapter.
+Every rejection checks unchanged engine state and continued survivor events/calls.
+Exact request/resource boundaries and the Worker-count ceiling also pass.
+`bridge-policy.test.mjs` tests parser and UTF-8 boundary cases independently.
+
+These limits bound admitted messages and tracked resources, not total RSS or a
+request rate over time. Copying a guest string or dumping an evaluation result
+still makes temporary host allocations before the size check; the guest module
+cap remains relevant. Structured-clone overhead and browser queue bookkeeping are
+not measured. The trusted Worker shell is part of the boundary; this does not
+contain arbitrary code execution in that shell. Native hosts have not yet adopted
+this policy, and real engine authorization/transport contracts remain unqualified.
 
 Android testing uses an Android 16/API 36 x86_64 native Activity/JNI app, with a
 main-thread heartbeat outside the runtime thread. Exact ticks/timing are recorded
@@ -126,8 +170,9 @@ Do not yet finalize the browser runtime or claim hardened script isolation.
 
 Use a separate capped WASM module and disposable Worker per browser dashboard as
 the candidate hosting strategy. Its full fixture suite and failure recovery now
-pass in Chromium. Next, bound host-side queues and transport payloads and test
-host validation against malformed and excessive requests. Preserve the uncapped
+pass in Chromium, including malformed-request validation and bridge budgets.
+Next, investigate native-runtime crash containment and apply comparable host
+validation/resource controls to the native bridge. Preserve the uncapped
 regression probes so upgrades cannot silently reintroduce reliance on the broken
 aggregate runtime limit.
 

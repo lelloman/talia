@@ -21,6 +21,7 @@ npm --prefix spikes/runtime run build
 node spikes/runtime/run-browser.mjs
 node spikes/runtime/compare-memory.mjs
 node spikes/runtime/test-capped-memory.mjs
+node --test spikes/runtime/bridge-policy.test.mjs
 python3 spikes/runtime/check-results.py
 ```
 
@@ -99,8 +100,9 @@ are trusted test controls, not guest engine capabilities or a production MCP API
   bridging and a native dashboard renderer are not qualified.
 - The serialization helper lives in trusted fixture JS; enforcement against
   malicious scripts bypassing that helper is not established.
-- A missing global is not a security proof. Host payload validation, authorization,
-  worker/process containment and hostile native-runtime crash behavior remain open.
+- A missing global is not a security proof. The browser fixture validates requests
+  and resource budgets; production authorization, native host validation and
+  hostile native-runtime crash behavior remain open.
 - Cross-generation routing and forced disposal are tested with simulated host
   resources. Reconnect and cancellation of external effects remain unqualified.
 - The cache test checks initial concurrency, not the full dependency/invalidation
@@ -111,7 +113,8 @@ are trusted test controls, not guest engine capabilities or a production MCP API
   module-wide cap, not a guest-only budget or total browser RSS limit. The full
   shared suite now also runs in separate capped Workers, with OOM retirement,
   watchdog termination, parent-owned resource cleanup and fresh Worker recovery.
-  Host-side message/queue budgets and malformed-request validation remain open.
+  Browser message/queue budgets and malformed-request validation now have abuse
+  and exact-boundary tests. See the findings for limits and remaining constraints.
 - Only Linux x86_64, Android emulator x86_64, and Chromium were exercised; ARM64,
   physical Android devices and other browsers remain unverified.
 

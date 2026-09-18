@@ -1,3 +1,4 @@
+import {runPolicySuite} from './policy-suite.js';
 import {DashboardHost} from './dashboard-host.js';
 import {memoryCases} from '../memory-probe.mjs';
 const check = (condition, message) => { if (!condition) throw Error(message); };
@@ -102,7 +103,8 @@ export async function runDisposableSuite() {
     check(JSON.stringify((await done(recovered)).checks) === JSON.stringify(checks), 'full suite failed after recovery');
     host.retire(recovered); host.retire(survivor);
     check(host.guests.size === 0 && host.subscriptions.size === 0 && host.stalled.length === 0 && host.timers.size === 0, 'final resource leak');
-    return {passed:true, cycles:20, checks, module_limit_bytes:16777216,
+    const policy = await runPolicySuite(bridge, lifecycle);
+    return {passed:true, policy, cycles:20, checks, module_limit_bytes:16777216,
       lifecycle:{forced_reload_cleanup:true, stale_response_rejected:true, stale_event_rejected:true,
         colliding_request_ids:true, other_instance_survives:true},
       failures, interruption_ms, watchdog_cleanup:true, progress_during_hang:true,
