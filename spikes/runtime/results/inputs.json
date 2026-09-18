@@ -4,7 +4,7 @@
     "shared/bridge.js": "3b31125e0f1a03b16dcfc4966e4970d1d581c3ccf3ea7f8a243f6ba642e0d176",
     "shared/suite.js": "3b478ad868f432bfc47050d4e0becec3f6feac69d709c9544d149b652e078f19",
     "shared/lifecycle.json": "14a451c3ba084669241562721cc49427008d4a6d38a007c67732af1958a5a00e",
-    "native/src/lib.rs": "1a108008298a11071c46ae5c85ec82c06541300b5748719ebafdaa436866049a",
+    "native/src/lib.rs": "beb37ab984dbae0e7b1053f3db159aa9c56de7b94ea29d85cf7c4992f3e6c30b",
     "native/Cargo.lock": "b2f8b6a5ce5c87614c6b462d3d7f6adb89fc1b5461fbbf0809e240882e60f111",
     "package-lock.json": "8ece00b75ee6cef5a26565fe64f822b0c6144451083c0bfa4dad01d28542d443",
     "web/worker.js": "b60d21b9acd30307e20c3d43998a44b3efffcfddff6d025e4319204fac1d453b",
@@ -18,6 +18,9 @@
     "run-browser.mjs": "8fe4578b2679a77fd0241f95b0420476427524ca3a6ae33df6b93e0b5350e910",
     "web/bridge-policy.js": "73e8e916b47dfd56d9286dfedb24be7ff11561b3eae9a62b6535c60f6d3ee7e9",
     "web/policy-suite.js": "6b78e261ded352ea96ade8d4d0d7dfa294684d267d4f61c1fb93e4e4f7fff53b",
-    "bridge-policy.test.mjs": "db84b6f2f29b75a8e97911551bef65e5b52140723cabb02b74cb5f85ed5f01df"
+    "bridge-policy.test.mjs": "db84b6f2f29b75a8e97911551bef65e5b52140723cabb02b74cb5f85ed5f01df",
+    "native/src/main.rs": "1ef5765f9d9c86f0e8204adbc00ab3905a1446bc1bf01e4c151b02f3360be558",
+    "native/src/policy.rs": "8494f2157ff6ffca98a2da0133dfa918ec82d0de75438065130679d8b112c33f",
+    "native/src/process.rs": "550cb9b301f62d69b87db97b04a3451a6ec5bb3ebc8b41744eca94c3540775a1"
   }
 }

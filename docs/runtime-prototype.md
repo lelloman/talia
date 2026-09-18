@@ -1,6 +1,6 @@
 # P0 runtime findings
 
-Status: browser bridge validation and budgets tested, 2026-09-18. **P0 qualification is incomplete.**
+Status: native bridge validation and Linux crash containment tested, 2026-09-18. **P0 qualification is incomplete.**
 Runnable code and commands are in the [runtime experiment](../spikes/runtime/README.md).
 The implementation plan's full runtime gate is not passed by these smoke tests.
 
@@ -148,8 +148,54 @@ request rate over time. Copying a guest string or dumping an evaluation result
 still makes temporary host allocations before the size check; the guest module
 cap remains relevant. Structured-clone overhead and browser queue bookkeeping are
 not measured. The trusted Worker shell is part of the boundary; this does not
-contain arbitrary code execution in that shell. Native hosts have not yet adopted
-this policy, and real engine authorization/transport contracts remain unqualified.
+contain arbitrary code execution in that shell. Native fixture controls are described below; real engine authorization/transport
+contracts remain unqualified.
+
+### Native validation and Linux crash containment
+
+Linux and Android JNI now run a native request validator before enqueueing guest
+messages and again before host effects. It enforces UTF-8 request size (32 KiB),
+JSON complexity (16 levels / 2,048 values), exact envelope shape, safe positive
+request IDs, allowed operations/arguments, increasing IDs and subscription ownership.
+The native adapter queue holds at most 32 requests; each generation may retain 16
+subscriptions and 16 stalled calls. Source evaluation is limited to 64 KiB.
+A validation/queue failure poisons the guest even if its script continues or catches
+an exception. Host pumping rejects the poisoned generation, clears its queue and
+retires its resources. The `late` fixture now drains only its own generation's calls.
+
+Both native reports include 16 abuse cases, independent host-side invalid input,
+resource cleanup with existing subscriptions/calls, and exact request/subscription/
+stalled-call boundaries. The surviving instance continues receiving events and the
+engine value remains unchanged in those rejection cases. Numeric writes now accept
+finite floating-point values instead of relying on an integer conversion unwrap.
+These are comparable fixture controls, not full browser/native scheduler parity:
+native `delay` remains an immediate simulation, with no native timer queue; the
+native harness does not implement the browser Worker-count or fanout admission policy.
+The fixture still has trusted read/delivery/assertion helpers; it is not a hardened
+production dispatcher. String conversion and result inspection can make transient
+allocations, and aggregate process RSS is not bounded here.
+
+The separate [Linux process report](../spikes/runtime/results/native-process.json)
+tests a Rust supervisor with two runtime children. Child requests establish actual
+fixture subscriptions and pending calls recorded in the parent. The harness then
+injects an abort into one child and verifies SIGABRT termination, or injects a hang
+and kills/reaps it after the 200 ms test deadline. The supervisor retires only that
+child's generation; the other child evaluates code and receives events. A fresh child
+restores baseline state and runs the complete native behavior and validation suites.
+Core dumps are disabled for these deliberately crashing children only.
+
+The experiment uses capped newline-framed IPC (64 KiB) and sequential commands,
+with a bounded response channel. The fault controls are trusted CLI harness commands,
+not guest engine capabilities. It proves containment of these injected failures,
+not a fix for a known QuickJS crash, a security sandbox, or resource isolation against
+arbitrary native code. Child processes still inherit OS permissions. The supervisor's
+resource dispatcher handles only the lifecycle fixture; production IPC, authorization,
+external effects, backpressure and durable engine ownership remain to be built.
+
+**Android validation is tested; Android crash containment is not.** Its current JNI
+runtime still shares the app process. Rust `catch_unwind` handles panics, not aborts
+or segmentation faults. A separate Android service/process and Binder lifecycle
+experiment is needed before making an equivalent containment claim for that client.
 
 Android testing uses an Android 16/API 36 x86_64 native Activity/JNI app, with a
 main-thread heartbeat outside the runtime thread. Exact ticks/timing are recorded
@@ -171,13 +217,14 @@ Do not yet finalize the browser runtime or claim hardened script isolation.
 Use a separate capped WASM module and disposable Worker per browser dashboard as
 the candidate hosting strategy. Its full fixture suite and failure recovery now
 pass in Chromium, including malformed-request validation and bridge budgets.
-Next, investigate native-runtime crash containment and apply comparable host
-validation/resource controls to the native bridge. Preserve the uncapped
+Linux child-process crash containment and native bridge controls now have fixture
+evidence. Next, test Android service/process isolation and Binder death/rebind
+cleanup, then exercise native ARM64. Preserve the uncapped
 regression probes so upgrades cannot silently reintroduce reliance on the broken
 aggregate runtime limit.
 
 Before P0 closes, also qualify production-style host validation, external-effect
-cancellation, dependency-cycle handling, native crash containment and ARM64
+cancellation, dependency-cycle handling, Android crash containment and ARM64
 Android. The [experiment limits](../spikes/runtime/README.md#limits-of-the-evidence)
 distinguish what is demonstrated from what still needs implementation.
 

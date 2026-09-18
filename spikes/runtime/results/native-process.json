@@ -1,0 +1,23 @@
+{
+  "faults": [
+    {
+      "fault": "abort",
+      "replacement_full_suite": true,
+      "replacement_works": true,
+      "resources_retired": true,
+      "supervisor_survived": true,
+      "survivor_progress": true
+    },
+    {
+      "fault": "hang",
+      "replacement_full_suite": true,
+      "replacement_works": true,
+      "resources_retired": true,
+      "supervisor_survived": true,
+      "survivor_progress": true
+    }
+  ],
+  "host": "linux",
+  "isolation": "child process",
+  "resources_empty": true
+}

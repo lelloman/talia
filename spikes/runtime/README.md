@@ -16,6 +16,8 @@ versions are recorded in Cargo.lock/package-lock.json. Run from repository root:
 
 ```sh
 cargo run --manifest-path spikes/runtime/native/Cargo.toml --locked
+# Linux only: deliberately aborts/kills isolated test children, not the supervisor.
+cargo run --manifest-path spikes/runtime/native/Cargo.toml --locked -- --process-check
 npm --prefix spikes/runtime ci
 npm --prefix spikes/runtime run build
 node spikes/runtime/run-browser.mjs
@@ -92,6 +94,14 @@ loop and a harness-injected Worker hang. Another live Worker must continue makin
 progress, and a fresh Worker reruns the full suite after recovery. Fault commands
 are trusted test controls, not guest engine capabilities or a production MCP API.
 
+Native reports now include 16 abuse cases and request/resource boundary checks.
+The native adapter validates before enqueueing and the host validates before
+applying effects; violations poison the generation and host pumping retires its
+resources. Native `delay` is still immediate, so timer budgets are not claimed.
+The Linux `--process-check` command uses separate runtime children, bounded IPC,
+parent-owned subscription/call records and injected abort/hang recovery. Its fault
+commands are trusted harness controls and are not exposed to guest scripts.
+
 ## Limits of the evidence
 
 - No server persistence, real monitoring, renderer compiler, MCP routing,
@@ -100,9 +110,12 @@ are trusted test controls, not guest engine capabilities or a production MCP API
   bridging and a native dashboard renderer are not qualified.
 - The serialization helper lives in trusted fixture JS; enforcement against
   malicious scripts bypassing that helper is not established.
-- A missing global is not a security proof. The browser fixture validates requests
-  and resource budgets; production authorization, native host validation and
-  hostile native-runtime crash behavior remain open.
+- A missing global is not a security proof. Browser and native fixtures validate
+  requests and bound their implemented queues/resources. Production authorization,
+  complete native scheduling/backpressure and malicious native-code isolation remain open.
+- Linux child-process tests contain an injected abort and hang, release parent-owned
+  fixture resources and rerun the full native suite in replacements. Android JNI
+  still runs in the app process; separate-service crash containment is untested.
 - Cross-generation routing and forced disposal are tested with simulated host
   resources. Reconnect and cancellation of external effects remain unqualified.
 - The cache test checks initial concurrency, not the full dependency/invalidation

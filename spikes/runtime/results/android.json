@@ -17,21 +17,49 @@
     "engine side effect"
   ],
   "cycles": 20,
-  "elapsed_ms": 417,
+  "elapsed_ms": 156,
   "engine_effect_survives": true,
   "fresh_context": true,
   "heap_limit": true,
   "host": "android",
   "interruption_ms": 50,
-  "ui_ticks": 27,
-  "android_release": "16",
-  "android_sdk": 36,
-  "harness": "native Activity / JNI / background thread",
   "lifecycle": {
     "colliding_request_ids": true,
     "forced_reload_cleanup": true,
     "other_instance_survives": true,
     "stale_event_rejected": true,
     "stale_response_rejected": true
-  }
+  },
+  "policy": {
+    "cases": [
+      "malformed JSON",
+      "non-string wire",
+      "oversized command",
+      "wrong envelope",
+      "invalid write",
+      "extra routing field",
+      "unsafe ID",
+      "unknown capability",
+      "oversized UTF8",
+      "deep JSON",
+      "wide JSON",
+      "caught flood",
+      "replayed ID",
+      "subscription budget",
+      "stalled budget",
+      "subscription ownership"
+    ],
+    "exact_boundaries": true,
+    "parent_validation": true,
+    "passed": true,
+    "queued_requests": 32,
+    "resources_empty": true,
+    "stalled_calls": 16,
+    "subscriptions": 16,
+    "wire_bytes": 32768
+  },
+  "ui_ticks": 14,
+  "android_release": "16",
+  "android_sdk": 36,
+  "harness": "native Activity / JNI / background thread"
 }

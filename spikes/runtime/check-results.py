@@ -46,6 +46,20 @@ assert policy['resources_empty']
 assert len(policy['cases']) == 23 and len(set(policy['cases'])) == 23
 assert policy['limits'] == dict(wireBytes=32768, commandBytes=65536, depth=16,
     nodes=2048, inFlight=32, commands=64, subscriptions=16, timers=16, stalled=16, workers=8)
+native = reports['linux']['policy']
+assert reports['android']['policy'] == native
+assert native['passed'] and native['parent_validation'] and native['exact_boundaries']
+assert native['resources_empty'] and len(native['cases']) == 16
+assert native['wire_bytes'] == 32768 and native['queued_requests'] == 32
+assert native['subscriptions'] == native['stalled_calls'] == 16
+process = json.loads((root / 'native-process.json').read_text())
+assert process['host'] == 'linux' and process['resources_empty']
+assert {p['fault'] for p in process['faults']} == {'abort', 'hang'}
+for fault in process['faults']:
+    for key in ('replacement_full_suite', 'replacement_works', 'resources_retired',
+                'supervisor_survived', 'survivor_progress'):
+        assert fault[key], (fault['fault'], key)
+print('Native: 16 abuse cases pass on Linux and Android; Linux child abort/hang recovery passes.')
 print('Browser bridge: 23 abuse cases plus exact resource boundaries pass.')
 print('Capped disposable Workers pass the full suite, OOM isolation and watchdog recovery.')
 print('Lifecycle cleanup and stale-generation checks pass on all 3 hosts.')
