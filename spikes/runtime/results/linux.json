@@ -17,10 +17,17 @@
     "engine side effect"
   ],
   "cycles": 20,
-  "elapsed_ms": 93,
+  "elapsed_ms": 110,
   "engine_effect_survives": true,
   "fresh_context": true,
   "heap_limit": true,
   "host": "linux",
-  "interruption_ms": 50
+  "interruption_ms": 50,
+  "lifecycle": {
+    "colliding_request_ids": true,
+    "forced_reload_cleanup": true,
+    "other_instance_survives": true,
+    "stale_event_rejected": true,
+    "stale_response_rejected": true
+  }
 }

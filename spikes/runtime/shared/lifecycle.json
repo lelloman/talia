@@ -1,0 +1,4 @@
+{
+  "start": "(async()=>{globalThis.events=[];globalThis.reply=null;await engine.subscribe('value',v=>events.push(v));engine.call('stall').then(v=>reply=v);report.done=true;})().catch(e=>{report.error=String(e);report.done=true;});",
+  "verify": "assert(events.length===1 && events[0]===3,'current generation event delivered');assert(reply==='new','current generation response delivered');"
+}

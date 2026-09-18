@@ -3,10 +3,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "esbuild web/worker.js --bundle --format=esm --outfile=web/dist/worker.js && cp node_modules/@jitl/quickjs-wasmfile-release-sync/dist/emscripten-module.wasm web/dist/quickjs.wasm"
+    "build": "esbuild web/worker.js --bundle --format=esm --outfile=web/dist/worker.js && cp node_modules/@jitl/quickjs-wasmfile-release-sync/dist/emscripten-module.wasm web/dist/quickjs.wasm && cp node_modules/quickjs-new/node_modules/@jitl/quickjs-wasmfile-release-sync/dist/emscripten-module.wasm web/dist/new.wasm && cp node_modules/@jitl/quickjs-ng-wasmfile-release-sync/dist/emscripten-module.wasm web/dist/ng.wasm"
   },
   "dependencies": {
-    "quickjs-emscripten": "0.31.0"
+    "@jitl/quickjs-ng-wasmfile-release-sync": "0.32.0",
+    "quickjs-emscripten": "0.31.0",
+    "quickjs-new": "npm:quickjs-emscripten@0.32.0"
   },
   "devDependencies": {
     "esbuild": "0.25.12",

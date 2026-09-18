@@ -19,6 +19,9 @@ cargo run --manifest-path spikes/runtime/native/Cargo.toml --locked
 npm --prefix spikes/runtime ci
 npm --prefix spikes/runtime run build
 node spikes/runtime/run-browser.mjs
+node spikes/runtime/compare-memory.mjs
+node spikes/runtime/test-capped-memory.mjs
+python3 spikes/runtime/check-results.py
 ```
 
 Use `TALIA_CHROMIUM=/path/to/chromium` to override Playwright's browser. The browser
@@ -62,6 +65,9 @@ Each host runs 20 fresh-context cycles over the identical source fixtures:
   progress, rejection recovery, and one cache load for concurrent getter calls.
 - Event subscriptions, unsubscribe, explicit pending-call cancellation, and
   ignored duplicate/late replies within the context.
+- Forced reload with active subscriptions and pending calls: host-owned generation
+  cleanup, stale response/event rejection with colliding request IDs, and continued
+  operation of an unrelated instance.
 - Host writes, temporary function/state changes and baseline restoration in a
   new context, while the host's value survives reload.
 - No ambient fetch/DOM/Node/renderer-definition globals in guest contexts.
@@ -84,13 +90,15 @@ but not qualification of a production network scheduler.
   malicious scripts bypassing that helper is not established.
 - A missing global is not a security proof. Host payload validation, authorization,
   worker/process containment and hostile native-runtime crash behavior remain open.
-- Late responses are tested within a context. Cross-generation response routing,
-  reconnect, cancelled external effects and forced disposal with active
-  subscriptions are not yet qualified.
+- Cross-generation routing and forced disposal are tested with simulated host
+  resources. Reconnect and cancellation of external effects remain unqualified.
 - The cache test checks initial concurrency, not the full dependency/invalidation
   contract. Local state is in memory; no durable-state claim is made.
 - Timeout interrupts and heap errors are observed, but hard process-level CPU/RSS
-  limits are not established. Browser ArrayBuffer limits fail in this candidate.
+  limits are not established. Aggregate browser runtime limits fail across the three tested builds.
+  A separately supplied capped WASM memory stops the pressure probes; it is a
+  module-wide cap, not a guest-only budget or total browser RSS limit. Full
+  behavioral tests under that cap and Worker failure recovery remain open.
 - Only Linux x86_64, Android emulator x86_64, and Chromium were exercised; ARM64,
   physical Android devices and other browsers remain unverified.
 

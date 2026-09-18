@@ -1,0 +1,53 @@
+{
+  "probes": [
+    {
+      "name": "single_buffer",
+      "rejected": true,
+      "error": {
+        "name": "InternalError",
+        "message": "out of memory",
+        "stack": "    at <eval> (eval.js:1:23)\n"
+      },
+      "disposed": true,
+      "failure": null,
+      "growth_rejected": true,
+      "memory_bytes": 16777216
+    },
+    {
+      "name": "repeated_buffers",
+      "rejected": true,
+      "error": {
+        "name": "InternalError",
+        "message": "out of memory",
+        "stack": "    at <eval> (eval.js:1:54)\n"
+      },
+      "disposed": true,
+      "failure": null,
+      "growth_rejected": true,
+      "memory_bytes": 16777216
+    },
+    {
+      "name": "repeated_strings",
+      "rejected": true,
+      "error": {
+        "name": "InternalError",
+        "message": "out of memory",
+        "stack": "    at <eval> (eval.js:1:63)\n"
+      },
+      "disposed": true,
+      "failure": null,
+      "growth_rejected": true,
+      "memory_bytes": 16777216
+    },
+    {
+      "name": "objects",
+      "rejected": true,
+      "error": null,
+      "disposed": true,
+      "failure": null,
+      "growth_rejected": true,
+      "memory_bytes": 16777216
+    }
+  ],
+  "fresh_module_works": true
+}

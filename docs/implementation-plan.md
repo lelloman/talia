@@ -6,7 +6,7 @@ required in the first milestone.** The product decisions in the
 [dashboard model](dashboards.md) remain authoritative. Proposed technical choices
 below are evaluation inputs, not additional signed-off requirements.
 
-The first P0 experiment has now been executed; see [runtime findings](runtime-prototype.md).
+The P0 experiment and memory/reload follow-up have been executed; see [runtime findings](runtime-prototype.md).
 P0 is not fully qualified and later phases have not started.
 
 ## Outcome
@@ -100,7 +100,8 @@ Source basis checked 2026-09-18:
   WebAssembly embedding candidate for browser execution.
 - [Worker termination](https://developer.mozilla.org/en-US/docs/Web/API/Worker/terminate)
   stops a browser worker immediately; it does not run graceful cleanup. Host-side
-  subscription disposal and ignoring replies from old generations still need tests.
+  subscription disposal and old-generation reply rejection now have simulated-host
+  tests; production transport cancellation and reconnect remain open.
 
 A browser Worker alone is not a capability sandbox: browser-native network and
 other APIs must not become an unreviewed route around the engine bridge. Likewise,

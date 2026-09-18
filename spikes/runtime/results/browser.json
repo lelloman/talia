@@ -1,5 +1,6 @@
 {
   "host": "browser-wasm",
+  "variant": "quickjs-ng 0.32.0",
   "cycles": 20,
   "checks": [
     "no ambient platform or renderer APIs",
@@ -17,13 +18,188 @@
     "late and duplicate replies ignored",
     "engine side effect"
   ],
+  "lifecycle": {
+    "forced_reload_cleanup": true,
+    "stale_response_rejected": true,
+    "stale_event_rejected": true,
+    "colliding_request_ids": true,
+    "other_instance_survives": true
+  },
   "fresh_context": true,
   "engine_effect_survives": true,
   "interruption_ms": 50.5,
   "heap_limit": false,
-  "object_heap_limit": true,
+  "memory_comparison": {
+    "bellard_0_31_0": [
+      {
+        "name": "single_buffer",
+        "limit_bytes": 16777216,
+        "rejected": true,
+        "error": {
+          "name": "InternalError",
+          "message": "out of memory",
+          "stack": "    at <eval> (eval.js:1)\n"
+        },
+        "retained": null,
+        "memory_used_bytes": 68842
+      },
+      {
+        "name": "repeated_buffers",
+        "limit_bytes": 16777216,
+        "rejected": false,
+        "error": null,
+        "retained": 64,
+        "memory_used_bytes": 67184327
+      },
+      {
+        "name": "repeated_strings",
+        "limit_bytes": 16777216,
+        "rejected": false,
+        "error": null,
+        "retained": 8,
+        "memory_used_bytes": 33623687
+      },
+      {
+        "name": "objects",
+        "limit_bytes": 16777216,
+        "rejected": false,
+        "error": null,
+        "retained": 400000,
+        "memory_used_bytes": 37957992
+      }
+    ],
+    "bellard_0_32_0": [
+      {
+        "name": "single_buffer",
+        "limit_bytes": 16777216,
+        "rejected": true,
+        "error": {
+          "name": "InternalError",
+          "message": "out of memory",
+          "stack": "    at <eval> (eval.js:1:35)\n"
+        },
+        "retained": null,
+        "memory_used_bytes": 86235
+      },
+      {
+        "name": "repeated_buffers",
+        "limit_bytes": 16777216,
+        "rejected": false,
+        "error": null,
+        "retained": 64,
+        "memory_used_bytes": 67201955
+      },
+      {
+        "name": "repeated_strings",
+        "limit_bytes": 16777216,
+        "rejected": false,
+        "error": null,
+        "retained": 8,
+        "memory_used_bytes": 86483
+      },
+      {
+        "name": "objects",
+        "limit_bytes": 16777216,
+        "rejected": false,
+        "error": null,
+        "retained": 400000,
+        "memory_used_bytes": 37975364
+      }
+    ],
+    "quickjs_ng_0_32_0": [
+      {
+        "name": "single_buffer",
+        "limit_bytes": 16777216,
+        "rejected": true,
+        "error": {
+          "name": "InternalError",
+          "message": "out of memory",
+          "stack": "    at <eval> (eval.js:1:23)\n"
+        },
+        "retained": null,
+        "memory_used_bytes": 95164
+      },
+      {
+        "name": "repeated_buffers",
+        "limit_bytes": 16777216,
+        "rejected": false,
+        "error": null,
+        "retained": 64,
+        "memory_used_bytes": 67210917
+      },
+      {
+        "name": "repeated_strings",
+        "limit_bytes": 16777216,
+        "rejected": false,
+        "error": null,
+        "retained": 8,
+        "memory_used_bytes": 95445
+      },
+      {
+        "name": "objects",
+        "limit_bytes": 16777216,
+        "rejected": false,
+        "error": null,
+        "retained": 400000,
+        "memory_used_bytes": 42784350
+      }
+    ]
+  },
+  "capped_memory": {
+    "probes": [
+      {
+        "name": "single_buffer",
+        "rejected": true,
+        "error": {
+          "name": "InternalError",
+          "message": "out of memory",
+          "stack": "    at <eval> (eval.js:1:23)\n"
+        },
+        "disposed": true,
+        "failure": null,
+        "growth_rejected": true,
+        "memory_bytes": 16777216
+      },
+      {
+        "name": "repeated_buffers",
+        "rejected": true,
+        "error": {
+          "name": "InternalError",
+          "message": "out of memory",
+          "stack": "    at <eval> (eval.js:1:54)\n"
+        },
+        "disposed": true,
+        "failure": null,
+        "growth_rejected": true,
+        "memory_bytes": 16777216
+      },
+      {
+        "name": "repeated_strings",
+        "rejected": true,
+        "error": {
+          "name": "InternalError",
+          "message": "out of memory",
+          "stack": "    at <eval> (eval.js:1:63)\n"
+        },
+        "disposed": true,
+        "failure": null,
+        "growth_rejected": true,
+        "memory_bytes": 16777216
+      },
+      {
+        "name": "objects",
+        "rejected": true,
+        "error": null,
+        "disposed": true,
+        "failure": null,
+        "growth_rejected": true,
+        "memory_bytes": 16777216
+      }
+    ],
+    "fresh_module_works": true
+  },
   "qualified": false,
-  "elapsed_ms": 567.1999999992549,
-  "renderer_ticks": 59,
+  "elapsed_ms": 1777,
+  "renderer_ticks": 180,
   "browser": "145.0.7632.6"
 }

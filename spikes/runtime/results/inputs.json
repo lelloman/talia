@@ -3,7 +3,12 @@
   "sha256": {
     "shared/bridge.js": "3b31125e0f1a03b16dcfc4966e4970d1d581c3ccf3ea7f8a243f6ba642e0d176",
     "shared/suite.js": "3b478ad868f432bfc47050d4e0becec3f6feac69d709c9544d149b652e078f19",
+    "shared/lifecycle.json": "14a451c3ba084669241562721cc49427008d4a6d38a007c67732af1958a5a00e",
+    "native/src/lib.rs": "1a108008298a11071c46ae5c85ec82c06541300b5748719ebafdaa436866049a",
     "native/Cargo.lock": "b2f8b6a5ce5c87614c6b462d3d7f6adb89fc1b5461fbbf0809e240882e60f111",
-    "package-lock.json": "825eafb5e834e70c221a17f9a833c002761b8f8432b4c0ea8090a38a0aac8873"
+    "package-lock.json": "8ece00b75ee6cef5a26565fe64f822b0c6144451083c0bfa4dad01d28542d443",
+    "web/worker.js": "b60d21b9acd30307e20c3d43998a44b3efffcfddff6d025e4319204fac1d453b",
+    "memory-probe.mjs": "d1f0ff73b86837fae3756e14814968dc0366b9b940dd37d229782415347fb27b",
+    "capped-memory.mjs": "9b90d18bd494b68f658dad200000bdac3c54db40d24440d63ffb62a039187824"
   }
 }

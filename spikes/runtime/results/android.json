@@ -17,14 +17,21 @@
     "engine side effect"
   ],
   "cycles": 20,
-  "elapsed_ms": 114,
+  "elapsed_ms": 417,
   "engine_effect_survives": true,
   "fresh_context": true,
   "heap_limit": true,
   "host": "android",
   "interruption_ms": 50,
-  "ui_ticks": 11,
+  "ui_ticks": 27,
   "android_release": "16",
   "android_sdk": 36,
-  "harness": "native Activity / JNI / background thread"
+  "harness": "native Activity / JNI / background thread",
+  "lifecycle": {
+    "colliding_request_ids": true,
+    "forced_reload_cleanup": true,
+    "other_instance_survives": true,
+    "stale_event_rejected": true,
+    "stale_response_rejected": true
+  }
 }
