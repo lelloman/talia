@@ -27,7 +27,7 @@
   },
   "fresh_context": true,
   "engine_effect_survives": true,
-  "interruption_ms": 50.5,
+  "interruption_ms": 50.600000001490116,
   "heap_limit": false,
   "memory_comparison": {
     "bellard_0_31_0": [
@@ -199,7 +199,79 @@
     "fresh_module_works": true
   },
   "qualified": false,
-  "elapsed_ms": 1777,
-  "renderer_ticks": 180,
+  "elapsed_ms": 2133.599999997765,
+  "disposable": {
+    "passed": true,
+    "cycles": 20,
+    "checks": [
+      "no ambient platform or renderer APIs",
+      "baseline ViewModel restored",
+      "JSON roundtrip",
+      "unsupported wire values rejected",
+      "host rejection",
+      "setter observes completed getter state",
+      "per-instance serialization across await",
+      "queue continues after rejection",
+      "concurrent cache miss loads once",
+      "subscription delivers host event",
+      "unsubscribe stops host events",
+      "pending host operation cancellation",
+      "late and duplicate replies ignored",
+      "engine side effect"
+    ],
+    "module_limit_bytes": 16777216,
+    "lifecycle": {
+      "forced_reload_cleanup": true,
+      "stale_response_rejected": true,
+      "stale_event_rejected": true,
+      "colliding_request_ids": true,
+      "other_instance_survives": true
+    },
+    "failures": [
+      {
+        "name": "single_buffer",
+        "retired": true,
+        "memory_bytes": 16777216,
+        "error": "Error: guest failure: Error: {\"name\":\"InternalError\",\"message\":\"out of memory\",\"stack\":\"    at <eval> (eval.js:1:23)\\n\"}",
+        "resources_released": true,
+        "survivor_works": true,
+        "replacement_works": true
+      },
+      {
+        "name": "repeated_buffers",
+        "retired": true,
+        "memory_bytes": 16777216,
+        "error": "Error: guest failure: Error: {\"name\":\"InternalError\",\"message\":\"out of memory\",\"stack\":\"    at <eval> (eval.js:1:54)\\n\"}",
+        "resources_released": true,
+        "survivor_works": true,
+        "replacement_works": true
+      },
+      {
+        "name": "repeated_strings",
+        "retired": true,
+        "memory_bytes": 16777216,
+        "error": "Error: guest failure: Error: {\"name\":\"InternalError\",\"message\":\"out of memory\",\"stack\":\"    at <eval> (eval.js:1:63)\\n\"}",
+        "resources_released": true,
+        "survivor_works": true,
+        "replacement_works": true
+      },
+      {
+        "name": "objects",
+        "retired": true,
+        "memory_bytes": 16777216,
+        "error": "Error: guest failure: Error: null",
+        "resources_released": true,
+        "survivor_works": true,
+        "replacement_works": true
+      }
+    ],
+    "interruption_ms": 50.79999999701977,
+    "watchdog_cleanup": true,
+    "progress_during_hang": true,
+    "full_suite_after_recovery": true,
+    "host_resources_empty": true,
+    "elapsed_ms": 1707.6000000014901
+  },
+  "renderer_ticks": 388,
   "browser": "145.0.7632.6"
 }

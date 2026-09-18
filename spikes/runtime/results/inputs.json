@@ -9,6 +9,12 @@
     "package-lock.json": "8ece00b75ee6cef5a26565fe64f822b0c6144451083c0bfa4dad01d28542d443",
     "web/worker.js": "b60d21b9acd30307e20c3d43998a44b3efffcfddff6d025e4319204fac1d453b",
     "memory-probe.mjs": "d1f0ff73b86837fae3756e14814968dc0366b9b940dd37d229782415347fb27b",
-    "capped-memory.mjs": "9b90d18bd494b68f658dad200000bdac3c54db40d24440d63ffb62a039187824"
+    "capped-memory.mjs": "9b90d18bd494b68f658dad200000bdac3c54db40d24440d63ffb62a039187824",
+    "web/dashboard-host.js": "5aebb4d9afc10550dec73813902ae3b29431f22770e5373781ca2be0a9d05544",
+    "web/dashboard-worker.js": "7158d387dccbc63a30c027967cf029537fa01d5f31c6f06a2319da0b09bf719f",
+    "web/disposable-suite.js": "645fc3b90edfa0e884f45ff066f9633751fce9e1da80886852614cfa3db18501",
+    "web/index.html": "ac8485145e7721044a1c6bdcf7c6e417b7faf0b3f00982b4c4023cae86b766f5",
+    "package.json": "322bf3d25d25009e4ce6b127931c086da0cea3599971742e16d73147fc56f170",
+    "run-browser.mjs": "8fe4578b2679a77fd0241f95b0420476427524ca3a6ae33df6b93e0b5350e910"
   }
 }

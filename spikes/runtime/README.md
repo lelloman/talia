@@ -26,8 +26,11 @@ python3 spikes/runtime/check-results.py
 
 Use `TALIA_CHROMIUM=/path/to/chromium` to override Playwright's browser. The browser
 runner starts an ephemeral localhost server and closes it after testing. Its
-JSON reports `qualified: false` and exits 2 for a failed memory test; behavioral
-failures also exit nonzero. Read the full result to distinguish them.
+JSON retains `qualified: false` for the deliberately uncapped regression candidate.
+The runner exits zero when the capped disposable-Worker suite passes, exits 2 if
+that suite does not report success, and fails on behavioral/harness errors. Full P0
+qualification remains separate. `check-results.py` validates saved evidence; it
+does not rerun the runtimes.
 
 Android requires an x86_64 emulator, Rust's `x86_64-linux-android` target, NDK
 27.0.12077973, libclang for bindgen, SDK 36, JDK 17+ and Gradle 8.13:
@@ -80,6 +83,14 @@ to Talìa. Rust's queue-driven host pumps messages after JS suspends; the browse
 delay operation also uses a real host timer. This is genuine Promise/host bridging,
 but not qualification of a production network scheduler.
 
+The browser additionally runs `web/disposable-suite.js` in the parent page with
+`dashboard-host.js` owning resources outside each `dashboard-worker.js`. Each
+Worker gets a separate capped module. This tests the full shared suite over 20
+fresh Workers, active-resource reload, four OOM workloads, an interrupted guest
+loop and a harness-injected Worker hang. Another live Worker must continue making
+progress, and a fresh Worker reruns the full suite after recovery. Fault commands
+are trusted test controls, not guest engine capabilities or a production MCP API.
+
 ## Limits of the evidence
 
 - No server persistence, real monitoring, renderer compiler, MCP routing,
@@ -97,8 +108,10 @@ but not qualification of a production network scheduler.
 - Timeout interrupts and heap errors are observed, but hard process-level CPU/RSS
   limits are not established. Aggregate browser runtime limits fail across the three tested builds.
   A separately supplied capped WASM memory stops the pressure probes; it is a
-  module-wide cap, not a guest-only budget or total browser RSS limit. Full
-  behavioral tests under that cap and Worker failure recovery remain open.
+  module-wide cap, not a guest-only budget or total browser RSS limit. The full
+  shared suite now also runs in separate capped Workers, with OOM retirement,
+  watchdog termination, parent-owned resource cleanup and fresh Worker recovery.
+  Host-side message/queue budgets and malformed-request validation remain open.
 - Only Linux x86_64, Android emulator x86_64, and Chromium were exercised; ARM64,
   physical Android devices and other browsers remain unverified.
 

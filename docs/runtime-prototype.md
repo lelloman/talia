@@ -1,6 +1,6 @@
 # P0 runtime findings
 
-Status: memory comparison and reload follow-up executed, 2026-09-18. **P0 qualification is incomplete.**
+Status: capped disposable Worker follow-up executed, 2026-09-18. **P0 qualification is incomplete.**
 Runnable code and commands are in the [runtime experiment](../spikes/runtime/README.md).
 The implementation plan's full runtime gate is not passed by these smoke tests.
 
@@ -72,9 +72,40 @@ exception value; callers cannot require a richly allocated error payload under O
 This is an alternative containment mechanism, not a repaired per-runtime limit.
 Independent budgets require separate WASM modules; contexts sharing a module
 share its budget. It does not cap host-side messages, queues, JavaScript memory,
-Worker overhead or total RSS. The full behavioral suite still runs on the normal
-module; the capped module currently runs the pressure probes only. Recovery and
-budget handling need integration before adopting this as the browser host.
+Worker overhead or total RSS. The uncapped regression suite remains separate; the new `disposable` report
+records the full suite and failure recovery under the module cap.
+
+### Disposable dashboard Workers
+
+The browser now also runs each dashboard fixture in its own Worker with its own
+16 MiB capped WASM module. The parent page owns engine state, subscription records,
+pending bridge operations and host timers. Retiring a generation terminates its
+Worker and releases only its resources, without invoking guest cleanup.
+
+The [browser report](../spikes/runtime/results/browser.json) records:
+
+- Twenty fresh capped Workers passing the same 14 shared behavioral checks.
+- Live state/function edits restored on reload while engine writes survive.
+- Active subscription/pending-call/timer cleanup and stale-generation rejection,
+  including colliding request IDs and an unrelated live dashboard.
+- All four allocation probes failing within their capped modules, followed by
+  parent-owned cleanup and clean replacements. Another dashboard still receives
+  events and evaluates code; its pending call and timer remain registered.
+- An interrupted guest loop, plus a separate trusted-harness hang that bypasses
+  QuickJS interruption. The parent watchdog terminates that Worker and rejects its
+  pending command. The other dashboard makes progress **during** the hang.
+- The full shared suite passing in a fresh Worker after failure recovery, with no
+  remaining host resource registrations when the harness finishes.
+
+These are simulated dashboard/engine hosts, not a renderer or production transport.
+The fault policy in this spike retires the Worker on an uncaught guest evaluation
+error; guest exceptions caught within the shared suite remain recoverable. A null
+exception under OOM also retires the Worker. The watchdog uses a 250 ms test deadline
+for the injected hang and a 3 s default command deadline; these are not product SLAs.
+The recovery test demonstrates fresh Worker execution, not immediate RSS reclamation
+by the browser. Host payload/queue budgets and malicious-message validation are
+still open. The report keeps the uncapped `qualified: false` while recording
+`disposable.passed: true`; neither field signs off all of P0.
 
 Android testing uses an Android 16/API 36 x86_64 native Activity/JNI app, with a
 main-thread heartbeat outside the runtime thread. Exact ticks/timing are recorded
@@ -93,17 +124,16 @@ Continue evaluating rquickjs/QuickJS-NG for the Rust server and a native Android
 bridge. The shared-source and Promise bridge approach is viable in these tests.
 Do not yet finalize the browser runtime or claim hardened script isolation.
 
-Next, integrate the capped-module strategy into a disposable Worker per dashboard
-instance, run the full bridge/lifecycle suite under that cap, and verify that OOM
-or Worker termination retires host resources while another dashboard continues.
-Bound host-side queues and transport payloads separately. Preserve the uncapped
-regression probes so package upgrades cannot silently reintroduce reliance on the
-broken aggregate runtime limit.
+Use a separate capped WASM module and disposable Worker per browser dashboard as
+the candidate hosting strategy. Its full fixture suite and failure recovery now
+pass in Chromium. Next, bound host-side queues and transport payloads and test
+host validation against malformed and excessive requests. Preserve the uncapped
+regression probes so upgrades cannot silently reintroduce reliance on the broken
+aggregate runtime limit.
 
 Before P0 closes, also qualify production-style host validation, external-effect
 cancellation, dependency-cycle handling, native crash containment and ARM64
 Android. The [experiment limits](../spikes/runtime/README.md#limits-of-the-evidence)
 distinguish what is demonstrated from what still needs implementation.
 
-The current conclusion is **behavioral feasibility with a browser qualification
-blocker**, not a final runtime selection or completion of the first milestone.
+The current conclusion is **behavioral feasibility with tested browser module containment**, not a final runtime selection or completion of the first milestone.

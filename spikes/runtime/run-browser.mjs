@@ -17,9 +17,9 @@ let browser;
 try{
  browser=await chromium.launch({headless:true,...(process.env.TALIA_CHROMIUM?{executablePath:process.env.TALIA_CHROMIUM}:{})});
  const page=await browser.newPage();await page.goto(`http://127.0.0.1:${server.address().port}/web/index.html`);
- await page.waitForFunction(()=>window.spikeResult,null,{timeout:20000});
+ await page.waitForFunction(()=>window.spikeResult,null,{timeout:50000});
  const result=await page.evaluate(()=>window.spikeResult);result.browser=browser.version();
  if(result.error||result.renderer_ticks<1)throw Error(JSON.stringify(result));
  console.log(JSON.stringify(result));
- if(result.qualified === false) process.exitCode = 2;
+ if(result.disposable?.passed !== true) process.exitCode = 2;
 }finally{await browser?.close();server.close();}

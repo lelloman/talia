@@ -6,7 +6,7 @@ required in the first milestone.** The product decisions in the
 [dashboard model](dashboards.md) remain authoritative. Proposed technical choices
 below are evaluation inputs, not additional signed-off requirements.
 
-The P0 experiment and memory/reload follow-up have been executed; see [runtime findings](runtime-prototype.md).
+The P0 experiment, memory/reload follow-up and capped disposable Worker tests have been executed; see [runtime findings](runtime-prototype.md).
 P0 is not fully qualified and later phases have not started.
 
 ## Outcome

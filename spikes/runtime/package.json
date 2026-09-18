@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "esbuild web/worker.js --bundle --format=esm --outfile=web/dist/worker.js && cp node_modules/@jitl/quickjs-wasmfile-release-sync/dist/emscripten-module.wasm web/dist/quickjs.wasm && cp node_modules/quickjs-new/node_modules/@jitl/quickjs-wasmfile-release-sync/dist/emscripten-module.wasm web/dist/new.wasm && cp node_modules/@jitl/quickjs-ng-wasmfile-release-sync/dist/emscripten-module.wasm web/dist/ng.wasm"
+    "build": "esbuild web/worker.js web/dashboard-worker.js web/disposable-suite.js --bundle --format=esm --outdir=web/dist && cp node_modules/@jitl/quickjs-wasmfile-release-sync/dist/emscripten-module.wasm web/dist/quickjs.wasm && cp node_modules/quickjs-new/node_modules/@jitl/quickjs-wasmfile-release-sync/dist/emscripten-module.wasm web/dist/new.wasm && cp node_modules/@jitl/quickjs-ng-wasmfile-release-sync/dist/emscripten-module.wasm web/dist/ng.wasm"
   },
   "dependencies": {
     "@jitl/quickjs-ng-wasmfile-release-sync": "0.32.0",
