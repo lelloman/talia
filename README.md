@@ -1,3 +1,5 @@
+<img src="assets/brand/brand.svg" width="80" height="80" alt="Talìa Wide gaze icon" />
+
 # Talìa
 
 Talìa provides agent-authored dashboards, scheduled checks and tasks,
@@ -45,3 +47,5 @@ Nothing has been implemented or deployed.
   and decisions still to make.
 - [Existing systems and migration considerations](docs/migration.md): source
   inventory and issues to address when planning the transition.
+
+- [Brand identity](docs/branding.md): selected Wide gaze icon, assets and exploration.
