@@ -1,0 +1,29 @@
+{
+  "host": "browser-wasm",
+  "cycles": 20,
+  "checks": [
+    "no ambient platform or renderer APIs",
+    "baseline ViewModel restored",
+    "JSON roundtrip",
+    "unsupported wire values rejected",
+    "host rejection",
+    "setter observes completed getter state",
+    "per-instance serialization across await",
+    "queue continues after rejection",
+    "concurrent cache miss loads once",
+    "subscription delivers host event",
+    "unsubscribe stops host events",
+    "pending host operation cancellation",
+    "late and duplicate replies ignored",
+    "engine side effect"
+  ],
+  "fresh_context": true,
+  "engine_effect_survives": true,
+  "interruption_ms": 50.5,
+  "heap_limit": false,
+  "object_heap_limit": true,
+  "qualified": false,
+  "elapsed_ms": 567.1999999992549,
+  "renderer_ticks": 59,
+  "browser": "145.0.7632.6"
+}

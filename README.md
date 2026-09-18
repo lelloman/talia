@@ -35,8 +35,11 @@ operations are serialized per instance.
 
 These documents record the **high-level product direction discussed with the
 user**, not a signed-off detailed specification or implementation architecture.
-Nothing has been implemented or deployed.
+An isolated [runtime prototype](docs/runtime-prototype.md) has been implemented
+and tested; the product has not been implemented or deployed.
 
+- [Runtime findings](docs/runtime-prototype.md): executable P0 evidence and
+  unresolved qualification gaps.
 - [Implementation plan](docs/implementation-plan.md): first milestone with both
   web and native Android, technical prototypes, and acceptance gates.
 - [Product specification](docs/specification.md): discussed scope and open

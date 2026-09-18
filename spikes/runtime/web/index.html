@@ -1,0 +1,14 @@
+<!doctype html><meta charset="utf-8"><title>Talìa runtime spike</title>
+<h1>Talìa runtime spike</h1><p id="heartbeat"></p><pre id="result">Running…</pre>
+<script type="module">
+let ticks=0;
+setInterval(()=>{document.querySelector('#heartbeat').textContent=`Renderer heartbeat: ${++ticks}`;},10);
+const worker=new Worker('/web/dist/worker.js',{type:'module'});
+const timeout=setTimeout(()=>{worker.terminate();window.spikeResult={error:'worker timeout'};},15000);
+worker.onmessage=({data})=>{
+ clearTimeout(timeout);worker.terminate();window.spikeResult={...data,renderer_ticks:ticks};
+ document.querySelector('#result').textContent=JSON.stringify(window.spikeResult,null,2);
+};
+worker.onerror=e=>{window.spikeResult={error:e.message};clearTimeout(timeout);worker.terminate();};
+worker.postMessage('run');
+</script>

@@ -1,0 +1,11 @@
+# Runtime prototype build products
+spikes/runtime/native/target/
+spikes/runtime/node_modules/
+spikes/runtime/web/dist/
+spikes/runtime/results/*.local.json
+spikes/runtime/android/.gradle/
+spikes/runtime/android/build/
+spikes/runtime/android/app/build/
+spikes/runtime/android/local.properties
+
+spikes/runtime/jniLibs/

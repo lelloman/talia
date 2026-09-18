@@ -1,0 +1,15 @@
+{
+  "name": "talia-runtime-spike",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "esbuild web/worker.js --bundle --format=esm --outfile=web/dist/worker.js && cp node_modules/@jitl/quickjs-wasmfile-release-sync/dist/emscripten-module.wasm web/dist/quickjs.wasm"
+  },
+  "dependencies": {
+    "quickjs-emscripten": "0.31.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.12",
+    "playwright": "1.58.2"
+  }
+}

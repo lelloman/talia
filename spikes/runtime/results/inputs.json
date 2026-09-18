@@ -1,0 +1,9 @@
+{
+  "date": "2026-09-18",
+  "sha256": {
+    "shared/bridge.js": "3b31125e0f1a03b16dcfc4966e4970d1d581c3ccf3ea7f8a243f6ba642e0d176",
+    "shared/suite.js": "3b478ad868f432bfc47050d4e0becec3f6feac69d709c9544d149b652e078f19",
+    "native/Cargo.lock": "b2f8b6a5ce5c87614c6b462d3d7f6adb89fc1b5461fbbf0809e240882e60f111",
+    "package-lock.json": "825eafb5e834e70c221a17f9a833c002761b8f8432b4c0ea8090a38a0aac8873"
+  }
+}

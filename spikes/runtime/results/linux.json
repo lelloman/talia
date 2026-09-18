@@ -1,0 +1,26 @@
+{
+  "arch": "x86_64",
+  "checks": [
+    "no ambient platform or renderer APIs",
+    "baseline ViewModel restored",
+    "JSON roundtrip",
+    "unsupported wire values rejected",
+    "host rejection",
+    "setter observes completed getter state",
+    "per-instance serialization across await",
+    "queue continues after rejection",
+    "concurrent cache miss loads once",
+    "subscription delivers host event",
+    "unsubscribe stops host events",
+    "pending host operation cancellation",
+    "late and duplicate replies ignored",
+    "engine side effect"
+  ],
+  "cycles": 20,
+  "elapsed_ms": 93,
+  "engine_effect_survives": true,
+  "fresh_context": true,
+  "heap_limit": true,
+  "host": "linux",
+  "interruption_ms": 50
+}

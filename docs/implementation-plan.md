@@ -6,7 +6,8 @@ required in the first milestone.** The product decisions in the
 [dashboard model](dashboards.md) remain authoritative. Proposed technical choices
 below are evaluation inputs, not additional signed-off requirements.
 
-No prototypes or implementation described here have been executed yet.
+The first P0 experiment has now been executed; see [runtime findings](runtime-prototype.md).
+P0 is not fully qualified and later phases have not started.
 
 ## Outcome
 

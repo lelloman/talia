@@ -1,0 +1,11 @@
+[package]
+name = "talia-runtime-spike"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["rlib", "cdylib"]
+
+[dependencies]
+rquickjs = { version = "=0.13.0", features = ["bindgen"] }
+serde_json = "1"
