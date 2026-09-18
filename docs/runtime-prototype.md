@@ -1,6 +1,6 @@
 # P0 runtime findings
 
-Status: native bridge validation and Linux crash containment tested, 2026-09-18. **P0 qualification is incomplete.**
+Status: Android service-process death and rebind tests executed, 2026-09-18. **P0 qualification is incomplete.**
 Runnable code and commands are in the [runtime experiment](../spikes/runtime/README.md).
 The implementation plan's full runtime gate is not passed by these smoke tests.
 
@@ -192,10 +192,45 @@ arbitrary native code. Child processes still inherit OS permissions. The supervi
 resource dispatcher handles only the lifecycle fixture; production IPC, authorization,
 external effects, backpressure and durable engine ownership remain to be built.
 
-**Android validation is tested; Android crash containment is not.** Its current JNI
-runtime still shares the app process. Rust `catch_unwind` handles panics, not aborts
-or segmentation faults. A separate Android service/process and Binder lifecycle
-experiment is needed before making an equivalent containment claim for that client.
+### Android service processes and Binder recovery
+
+The [Android process report](../spikes/runtime/results/android-process.json) now
+records two non-exported bound services in distinct `:runtime_a` and `:runtime_b`
+processes. Each service owns a persistent QuickJS instance on a dedicated
+HandlerThread. The Activity process tracks each connection generation, its guest
+subscription, stalled call, outstanding Binder commands and timeout callbacks.
+Actual guest subscribe/stall requests are checked natively before the parent
+records those resources; the IPC adapter uses fixed test commands, not a complete
+engine protocol.
+
+The emulator test injects a native `abort()` into service A, observes Binder death,
+rejects the outstanding command and retires that generation's resources. It then
+binds a replacement and verifies a fresh PID, baseline VM state and the complete
+native behavior/validation suite. The second scenario blocks service A's native
+thread, confirms service B still evaluates code and receives events during the
+hang, then terminates A at a 1.5 s test watchdog deadline. Binder death and fresh
+rebind recovery pass again. The test explicitly unbinds retired generations;
+it does not depend on Android's automatic service reconnection behavior.
+
+Late replies are rejected even when their request IDs collide with a currently
+pending replacement command. Old-generation events are rejected as well. A dirty
+VM does not survive process replacement; the survivor's subscription and pending
+call do. All parent resource registrations, command promises, timeout callbacks
+and service bindings are retired at the end. The final emulator process listing
+showed the Activity process only, with both runtime service processes stopped.
+The process report records UI heartbeat ticks separately from the original JNI
+suite's heartbeat measurement.
+
+This demonstrates containment of these injected faults on the recorded x86_64
+Android emulator, not a known QuickJS crash fix or an arbitrary-native-code sandbox.
+The services use separate processes **under the same app UID**, not
+`isolatedProcess`; they retain app permissions. Native abort/hang controls are
+trusted harness actions in non-exported test services, never guest capabilities.
+The Activity still runs the original in-process JNI smoke suite separately; its
+`catch_unwind` cannot contain aborts or segmentation faults. The service prototype
+is the crash-containment candidate. Production Binder validation, byte/queue budgets,
+engine integration, external-effect cancellation, background lifecycle policy and
+physical-device/ARM64 testing remain open.
 
 Android testing uses an Android 16/API 36 x86_64 native Activity/JNI app, with a
 main-thread heartbeat outside the runtime thread. Exact ticks/timing are recorded
@@ -217,15 +252,15 @@ Do not yet finalize the browser runtime or claim hardened script isolation.
 Use a separate capped WASM module and disposable Worker per browser dashboard as
 the candidate hosting strategy. Its full fixture suite and failure recovery now
 pass in Chromium, including malformed-request validation and bridge budgets.
-Linux child-process crash containment and native bridge controls now have fixture
-evidence. Next, test Android service/process isolation and Binder death/rebind
-cleanup, then exercise native ARM64. Preserve the uncapped
+Linux child-process and Android service-process fault containment now have fixture
+evidence, including Binder death, cleanup and explicit rebind. Next, exercise
+native ARM64 and qualify the production host/transport contracts. Preserve the uncapped
 regression probes so upgrades cannot silently reintroduce reliance on the broken
 aggregate runtime limit.
 
 Before P0 closes, also qualify production-style host validation, external-effect
-cancellation, dependency-cycle handling, Android crash containment and ARM64
+cancellation, dependency-cycle handling, Android background lifecycle and ARM64
 Android. The [experiment limits](../spikes/runtime/README.md#limits-of-the-evidence)
 distinguish what is demonstrated from what still needs implementation.
 
-The current conclusion is **behavioral feasibility with tested browser module containment**, not a final runtime selection or completion of the first milestone.
+The current conclusion is **behavioral feasibility with tested browser, Linux process and Android service containment**, not a final runtime selection or completion of the first milestone.

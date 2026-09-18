@@ -3,5 +3,7 @@
   <activity android:directBootAware="true" android:name=".MainActivity" android:exported="true">
    <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
   </activity>
+  <service android:name=".RuntimeService$A" android:process=":runtime_a" android:exported="false" android:directBootAware="true" android:stopWithTask="true" />
+  <service android:name=".RuntimeService$B" android:process=":runtime_b" android:exported="false" android:directBootAware="true" android:stopWithTask="true" />
  </application>
 </manifest>

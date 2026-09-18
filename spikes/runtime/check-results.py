@@ -59,6 +59,20 @@ for fault in process['faults']:
     for key in ('replacement_full_suite', 'replacement_works', 'resources_retired',
                 'supervisor_survived', 'survivor_progress'):
         assert fault[key], (fault['fault'], key)
+android_process = json.loads((root / 'android-process.json').read_text())
+assert android_process['passed'] and android_process['resources_empty']
+assert android_process['ui_ticks'] > 0
+assert android_process['ui_pid'] != android_process['survivor_pid']
+assert {f['fault'] for f in android_process['faults']} == {'native_abort', 'native_hang'}
+for fault in android_process['faults']:
+    assert fault['watchdog'] == (fault['fault'] == 'native_hang')
+    assert len({android_process['ui_pid'], android_process['survivor_pid'],
+                fault['old_pid'], fault['replacement_pid']}) == 4
+    for key in ('binder_death', 'pending_command_rejected', 'resources_retired',
+                'survivor_progress', 'fresh_process', 'baseline_restored',
+                'stale_generation_rejected', 'colliding_request_ids', 'replacement_full_suite'):
+        assert fault[key], (fault['fault'], key)
+print('Android service processes: native abort/hang, Binder death and fresh rebind checks pass.')
 print('Native: 16 abuse cases pass on Linux and Android; Linux child abort/hang recovery passes.')
 print('Browser bridge: 23 abuse cases plus exact resource boundaries pass.')
 print('Capped disposable Workers pass the full suite, OOM isolation and watchdog recovery.')

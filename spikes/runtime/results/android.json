@@ -17,7 +17,7 @@
     "engine side effect"
   ],
   "cycles": 20,
-  "elapsed_ms": 156,
+  "elapsed_ms": 155,
   "engine_effect_survives": true,
   "fresh_context": true,
   "heap_limit": true,
@@ -58,8 +58,8 @@
     "subscriptions": 16,
     "wire_bytes": 32768
   },
-  "ui_ticks": 14,
   "android_release": "16",
   "android_sdk": 36,
-  "harness": "native Activity / JNI / background thread"
+  "harness": "native Activity / JNI / background thread",
+  "ui_ticks": 16
 }

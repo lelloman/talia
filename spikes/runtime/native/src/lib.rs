@@ -1,3 +1,4 @@
+mod android_service;
 mod policy;
 pub mod process;
 use rquickjs::{Context, Function, Runtime};

@@ -6,7 +6,7 @@ required in the first milestone.** The product decisions in the
 [dashboard model](dashboards.md) remain authoritative. Proposed technical choices
 below are evaluation inputs, not additional signed-off requirements.
 
-The P0 experiments now include browser/native bridge abuse tests and Linux child-process crash containment; see [runtime findings](runtime-prototype.md).
+The P0 experiments now include browser/native bridge abuse tests, Linux child-process containment and Android service death/rebind; see [runtime findings](runtime-prototype.md).
 P0 is not fully qualified and later phases have not started.
 
 ## Outcome

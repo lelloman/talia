@@ -47,7 +47,13 @@ adb -s <emulator> logcat -d -v raw -s TaliaRuntimeSpike:I '*:S'
 ```
 
 Wait for the Activity to display its report before collecting the dedicated log
-tag. A fresh app process is needed to rerun; old log entries and existing report
+tag. In addition to the original native JSON and `UI_TICKS`, the log now includes
+`PROCESS_RESULT=` with the Android service-process report. The app deliberately
+aborts one runtime service and watchdog-kills a hung service; the Activity and a
+second runtime service must stay responsive. Replacements rerun the native suite.
+Faults are confined to non-exported test services in dedicated app processes.
+The process report is also saved as `android-process.json` in device-protected
+files. Keep the latest complete run together when recording results. A fresh app process is needed to rerun; old log entries and existing report
 files are not proof of a fresh run. Clear only this app's process/run as needed;
 do not rely on wiping the device log. Reports also remain in device-protected
 storage, but run-as cannot access them while the Android user is locked.
@@ -106,18 +112,23 @@ commands are trusted harness controls and are not exposed to guest scripts.
 
 - No server persistence, real monitoring, renderer compiler, MCP routing,
   authentication, or production engine is implemented.
-- JNI is a coarse run-test entry point. Per-operation Kotlin/coroutine-to-JS
-  bridging and a native dashboard renderer are not qualified.
+- JNI uses coarse fixture entry points and fixed service test actions. Production
+  Kotlin/coroutine bridging, Binder validation/budgets and a native dashboard renderer
+  are not qualified.
 - The serialization helper lives in trusted fixture JS; enforcement against
   malicious scripts bypassing that helper is not established.
 - A missing global is not a security proof. Browser and native fixtures validate
   requests and bound their implemented queues/resources. Production authorization,
   complete native scheduling/backpressure and malicious native-code isolation remain open.
 - Linux child-process tests contain an injected abort and hang, release parent-owned
-  fixture resources and rerun the full native suite in replacements. Android JNI
-  still runs in the app process; separate-service crash containment is untested.
+  fixture resources and rerun the full native suite in replacements. Android bound
+  services now pass equivalent injected faults, Binder death, generation cleanup
+  and fresh-process rebind tests. These processes share the app UID; this is not
+  an OS permission sandbox. The original JNI smoke test still runs in the Activity
+  process separately.
 - Cross-generation routing and forced disposal are tested with simulated host
-  resources. Reconnect and cancellation of external effects remain unqualified.
+  resources. Android service rebind is tested; server/network reconnect and
+  cancellation of external effects remain unqualified.
 - The cache test checks initial concurrency, not the full dependency/invalidation
   contract. Local state is in memory; no durable-state claim is made.
 - Timeout interrupts and heap errors are observed, but hard process-level CPU/RSS
