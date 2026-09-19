@@ -7,6 +7,7 @@ export class DashboardHost {
   bindExecution(guest, authority, task) { this.#execution.set(guest,{authority,task}); }
   #views = new WeakMap();
   view(guest) { return structuredClone(this.#views.get(guest)); }
+  remote = null;
   value = 0;
   next = 0;
   generation = 0;
@@ -25,7 +26,7 @@ export class DashboardHost {
     this.#grants.set(guest, new Set(grants));
     this.#views.set(guest, structuredClone(view));
     guest.command = (op, value, timeout = 3000) => new Promise((resolve, reject) => {
-      if (!guest.active) { reject(Error('retired Worker')); return; }
+      if (!guest.active || guest.paused) { reject(Error(guest.paused?'paused':'retired Worker')); return; }
       const id = ++next;
       try {
         boundedText(JSON.stringify({id, op, value}), LIMITS.commandBytes);
@@ -56,6 +57,19 @@ export class DashboardHost {
     await guest.command('init', bridge);
     return guest;
   }
+  pause(guest) {
+    if(!guest.active || guest.paused)return;
+    guest.paused=true;
+    for(const [id,g] of this.subscriptions)if(g===guest.generation)this.subscriptions.delete(id);
+    this.stalled=this.stalled.filter(r=>r.generation!==guest.generation);
+    for(const [timer,g] of this.timers)if(g===guest.generation){clearTimeout(timer);this.timers.delete(timer);}
+    for(const p of guest.pending.values()){clearTimeout(p.timer);p.reject(Error('paused'));}guest.pending.clear();
+  }
+  async resume(guest) {
+    if(!guest.active || !guest.paused)return;
+    guest.paused=false;
+    await guest.eval('engine.cancelPending();void 0;');
+  }
   retire(guest, reason = 'reload') {
     if (!guest.active) return;
     guest.active = false; guest.reason = reason;
@@ -72,12 +86,12 @@ export class DashboardHost {
     guest.pending.clear();
   }
   deliver(guest, message, generation = guest.generation) {
-    if (!guest.active || generation !== guest.generation) return false;
+    if (!guest.active || guest.paused || generation !== guest.generation) return false;
     guest.command('deliver', message).catch(() => {}); // Retirement owns pending rejection.
     return true;
   }
   request(guest, raw) {
-    if (!guest.active) return;
+    if (!guest.active || guest.paused) return;
     let request;
     try {
       request = validateRequest(raw);
@@ -105,6 +119,7 @@ export class DashboardHost {
         }
       }
     } catch (error) { this.retire(guest, 'bridge policy: ' + error.message); return; }
+    if(this.remote && ['read','write'].includes(request.op)){this.remote(guest,request);return;}
     const {id, op, value} = request;
     let result = null;
     switch (op) {

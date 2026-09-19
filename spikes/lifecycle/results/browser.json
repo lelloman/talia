@@ -1,0 +1,27 @@
+{
+  "passed": true,
+  "checks": [
+    "server action completes while hidden",
+    "local execution and subscription paused",
+    "resume retains dirty state and reconciles without resubmission",
+    "repeated actual visibility transitions",
+    "reload restores saved baseline and preserves server effect"
+  ],
+  "browser": "Chrome/145.0.7632.6",
+  "final": {
+    "active": true,
+    "epoch": 1,
+    "local": {
+      "dirty": false,
+      "ticks": 1
+    },
+    "snapshot": {
+      "revision": 4,
+      "value": 62
+    },
+    "outcomes": {},
+    "pending": 0,
+    "ignored": 0,
+    "subscriptions": 1
+  }
+}

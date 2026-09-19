@@ -5,6 +5,7 @@
    <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
   </activity>
   <activity android:name=".TransportActivity" android:exported="true" android:directBootAware="true" />
+  <activity android:name=".LifecycleActivity" android:exported="true" android:directBootAware="true" android:launchMode="singleTop" />
   <service android:name=".RuntimeService$A" android:process=":runtime_a" android:exported="false" android:directBootAware="true" android:stopWithTask="true" />
   <service android:name=".RuntimeService$B" android:process=":runtime_b" android:exported="false" android:directBootAware="true" android:stopWithTask="true" />
  </application>

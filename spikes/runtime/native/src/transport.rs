@@ -13,7 +13,7 @@ use std::{
 };
 const CLIENT: &str = include_str!("../../../transport/shared/client.js");
 const SUITE: &str = include_str!("../../../transport/shared/suite.js");
-fn http(port: u16, request: &Value) -> Result<Value, String> {
+pub(crate) fn http(port: u16, request: &Value) -> Result<Value, String> {
     let mut socket = TcpStream::connect_timeout(
         &format!("127.0.0.1:{port}").parse().unwrap(),
         Duration::from_secs(2),

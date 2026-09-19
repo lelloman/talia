@@ -11,3 +11,5 @@ spikes/runtime/android/local.properties
 spikes/runtime/jniLibs/
 spikes/transport/server/target/
 spikes/transport/web/dist/
+
+spikes/lifecycle/dist/

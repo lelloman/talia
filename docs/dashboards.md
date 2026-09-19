@@ -211,3 +211,13 @@ version selection and adoption behavior have not yet been decided.
 - Exact MCP tools for discovery, validation, preview, editing and live targeting.
 - Whether authors interact through an assistant inside Talìa, external MCP agents,
   or both; this has not been selected.
+
+## P0 lifecycle implementation evidence
+
+The [lifecycle fixture](../spikes/lifecycle/README.md) now exercises actual browser
+visibility and Android Activity transitions against the loopback server. Pausing
+stops local guest pumping and snapshot polling; resumed clients refresh and query
+recorded action IDs rather than resubmitting writes. Host epochs reject old replies.
+Retained runtimes keep temporary edits, while process recreation/reload restores
+the saved source. This qualifies the recorded fixture paths on Chromium and the
+Android emulator, not the future P1 renderer or physical-device lifecycle coverage.

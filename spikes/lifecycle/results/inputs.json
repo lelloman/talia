@@ -1,0 +1,10 @@
+{
+  "lifecycle/dashboard.js": "43b50b301f444a76faef87f625e090a41eb070f7ec2092d8293fcc5af1799906",
+  "lifecycle/web.js": "0c054d5937d345c9c13d4752d0333cc31875a33b8f493d7a8e3acb2cd5cf64a6",
+  "lifecycle/test-browser.mjs": "98ca8a4b0c635dba24b28bf0dfc26f5ca5f7b5fc0d1ce4cf472ca032a94c894c",
+  "lifecycle/test-android.py": "43bda49524be34d1ca800ce7156e2deb4a44e6f17d04e377e663f66333b656ee",
+  "runtime/native/src/lifecycle.rs": "0ecba5f10aa702e32d15045e572cd81e3416d5d7d670378c4ffa13e5519d38ec",
+  "runtime/native/src/transport.rs": "2c39db1661b66fb87de509a95b622bde82ff1eae9fc065502a795e1317766f04",
+  "runtime/web/dashboard-host.js": "4a4228cb2e6e05f47cf4c8f24f9ec83a901043adf53a990faa2b63474fa9c0b8",
+  "runtime/android/app/src/main/java/com/lelloman/talia/spike/LifecycleActivity.java": "a20d82e7ea1c596220cb2f7790533a3eb17fcfaa778e3eddaa4871ea535faa14"
+}

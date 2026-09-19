@@ -1,5 +1,6 @@
 mod android_service;
 mod authority;
+mod lifecycle;
 mod policy;
 pub mod process;
 pub mod transport;

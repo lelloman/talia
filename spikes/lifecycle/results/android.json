@@ -1,0 +1,28 @@
+{
+  "passed": true,
+  "checks": [
+    "temporary edit",
+    "pause during dispatched action; server continues",
+    "resume reconciles without resubmission; dirty retained",
+    "repeated transitions refresh without duplicate subscriptions",
+    "process recreation restores saved baseline and server effects"
+  ],
+  "final": {
+    "active": true,
+    "epoch": 1,
+    "ignored": 0,
+    "local": {
+      "dirty": false,
+      "ticks": 4
+    },
+    "outcomes": {},
+    "pending": 1,
+    "snapshot": {
+      "revision": 4,
+      "value": 62
+    },
+    "subscriptions": 1
+  },
+  "sdk": "36",
+  "model": "sdk_gphone64_x86_64"
+}
