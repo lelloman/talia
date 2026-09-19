@@ -36,8 +36,8 @@ public class RuntimeService extends Service {
     @Override public void onDestroy() {
         thread.quitSafely();
         super.onDestroy();
-        // Each test service owns its dedicated process, including the native runtime.
-        android.os.Process.killProcess(android.os.Process.myPid());
+        // The parent owns process retirement. Killing here can kill a new binding
+        // that arrives in this process while destruction of the old service drains.
     }
     public static class A extends RuntimeService { }
     public static class B extends RuntimeService { }

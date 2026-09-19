@@ -1,13 +1,13 @@
 {
   "passed": true,
   "host": "android-service-process",
-  "ui_pid": 2859,
-  "survivor_pid": 3153,
+  "ui_pid": 25199,
+  "survivor_pid": 25250,
   "faults": [
     {
       "fault": "native_abort",
-      "old_pid": 3299,
-      "replacement_pid": 3514,
+      "old_pid": 25265,
+      "replacement_pid": 25289,
       "binder_death": true,
       "pending_command_rejected": true,
       "resources_retired": true,
@@ -21,8 +21,8 @@
     },
     {
       "fault": "native_hang",
-      "old_pid": 3650,
-      "replacement_pid": 3983,
+      "old_pid": 25321,
+      "replacement_pid": 25341,
       "binder_death": true,
       "pending_command_rejected": true,
       "resources_retired": true,
@@ -35,10 +35,14 @@
       "watchdog": true
     }
   ],
-  "ui_ticks": 461,
+  "ui_ticks": 270,
   "resources_empty": true,
-  "elapsed_ms": 7941,
+  "elapsed_ms": 4475,
   "android_release": "16",
   "android_sdk": 36,
-  "arch": "x86_64"
+  "arch": "aarch64",
+  "manufacturer": "OnePlus",
+  "model": "CPH2493",
+  "device_kind": "physical",
+  "date": "2026-09-19"
 }

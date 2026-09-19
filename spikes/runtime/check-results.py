@@ -1,13 +1,19 @@
 #!/usr/bin/env python3
 """Validate recorded evidence parity, not full runtime qualification."""
 import json
+import hashlib
 from pathlib import Path
 root = Path(__file__).parent / 'results'
+# Prevent accepting matching reports against source files that have since changed.
+for manifest in ('inputs.json', 'inputs-arm64.json'):
+    inputs = json.loads((root / manifest).read_text())
+    for source, digest in inputs['sha256'].items():
+        assert hashlib.sha256((root.parent / source).read_bytes()).hexdigest() == digest, (manifest, source)
 reports = {name: json.loads((root / f'{name}.json').read_text())
            for name in ('linux', 'android', 'android-arm64', 'browser')}
 expected = reports['linux']['checks']
 execution = reports['linux']['execution']
-assert len(execution) == 13 and len(set(execution)) == 13
+assert len(execution) == 27 and len(set(execution)) == 27
 assert len(expected) == 14 and len(set(expected)) == 14
 for name, report in reports.items():
     assert report['execution'] == execution, (name, 'execution fixture mismatch')
@@ -80,7 +86,7 @@ for process_report in ('android-process.json', 'android-process-arm64.json'):
                     'survivor_progress', 'fresh_process', 'baseline_restored',
                     'stale_generation_rejected', 'colliding_request_ids', 'replacement_full_suite'):
             assert fault[key], (fault['fault'], key)
-print('13 cycle/cancellation/recovery checks match on all 4 recorded hosts and capped browser Workers.')
+print('27 async-interleaving/state/cancellation checks match on all 4 recorded hosts and capped browser Workers.')
 print('Android service processes: native abort/hang, Binder death and fresh rebind checks pass.')
 print('Native: 16 abuse cases pass on Linux and Android; Linux child abort/hang recovery passes.')
 print('Browser bridge: 23 abuse cases plus exact resource boundaries pass.')

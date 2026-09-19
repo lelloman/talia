@@ -96,8 +96,10 @@ final class ProcessChecks implements AutoCloseable {
                 main.removeCallbacks(call.timeout); call.future.completeExceptionally(new IllegalStateException(reason));
             }
             pending.clear();
-            if (kill && pid != 0 && pid != android.os.Process.myPid()) android.os.Process.killProcess(pid);
+            // Remove BIND_AUTO_CREATE before killing: otherwise Android can launch a
+            // replacement for a binding that this generation is about to abandon.
             if (bound) { context.unbindService(this); bound=false; }
+            if (kill && pid != 0 && pid != android.os.Process.myPid()) android.os.Process.killProcess(pid);
         }
         void close() {
             // Explicit teardown also detaches death notification registrations.

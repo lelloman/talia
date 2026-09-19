@@ -1,7 +1,7 @@
 {
   "date": "2026-09-19",
   "abi": "arm64-v8a",
-  "installed_apk_sha256": "d49b716983d3e47404c96752ae9dea62a58ddf0ec2b0393029e56aa1e81e763b",
+  "installed_apk_sha256": "1e782d56d9a59c4189eb1d9de563dd28d13f89e6541bb553018966a75bd7eed3",
   "rust_target": "aarch64-linux-android",
   "device": {
     "manufacturer": "OnePlus",
@@ -10,8 +10,8 @@
     "android_release": "16",
     "kind": "physical"
   },
-  "apk_sha256": "d49b716983d3e47404c96752ae9dea62a58ddf0ec2b0393029e56aa1e81e763b",
-  "packaged_library_sha256": "78221069e8f6a81a9351c3fb43f1e4a6d138f99841747d1fc14116ab60b5d1cb",
+  "apk_sha256": "1e782d56d9a59c4189eb1d9de563dd28d13f89e6541bb553018966a75bd7eed3",
+  "packaged_library_sha256": "ecebc522302fde5a71ba3e70b5eb04dc71d0bbf684edbe9c8aeb1d8bc7e28071",
   "sha256": {
     "build-android.sh": "abd2e894ea44325e66696c43cc3d75623b22df18c47d17f0c4e3832fc771b68a",
     "android/app/build.gradle": "5f766252c6c04be2f8ca7111b0b4bc5ff7ae52d1326f46444d9e7e55ddc88e59",
@@ -26,10 +26,10 @@
     "native/src/process.rs": "550cb9b301f62d69b87db97b04a3451a6ec5bb3ebc8b41744eca94c3540775a1",
     "android/app/src/main/AndroidManifest.xml": "42741cd3060fe536b25bd26d7ca58f4cd222991f15f45c8edcfd5a65e4d5a0c2",
     "android/app/src/main/java/com/lelloman/talia/spike/MainActivity.java": "179690ec734091b2af8a987c2b3fae34781fcd89ff54b5026b253761d16a6dbd",
-    "android/app/src/main/java/com/lelloman/talia/spike/ProcessChecks.java": "81641a2205f149673bfe972deb4d80ebfe58e81714e56faeaca236793f82a556",
-    "android/app/src/main/java/com/lelloman/talia/spike/RuntimeService.java": "ac161e03b5f5b37232669cc5de50cc6c9ae195564a7e5b885dd6f085c2ab7135",
-    "shared/bridge.js": "d8c670d56663a587a46df7d76f7500ea7c1434c6a2ba973178a7244c34f03aaf",
-    "shared/suite.js": "8be703f645be5a8eb43c36359d35f07aa2839d0b37c96405c1df840d3ec3b5a6",
+    "android/app/src/main/java/com/lelloman/talia/spike/ProcessChecks.java": "d0006fcc170a342c4c187ebb9c83580be7fcb0c83556ee563c94e2105ed449b3",
+    "android/app/src/main/java/com/lelloman/talia/spike/RuntimeService.java": "1539c8950d8de9cb64d2494417fbf94472801231b64d5aaa52bd9b0de9929301",
+    "shared/bridge.js": "ab23fc1804358f7b2c0ae55a9cbff508d3ccbdc4dc895c7cd4b3caa106b4d8cb",
+    "shared/suite.js": "8a6bac5ed5655fc646aae88ccce4b02fbbd041c50f21a5dde8ec9bb53ed105d6",
     "shared/lifecycle.json": "14a451c3ba084669241562721cc49427008d4a6d38a007c67732af1958a5a00e"
   }
 }

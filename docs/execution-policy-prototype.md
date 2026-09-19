@@ -1,6 +1,6 @@
-# Execution policy decisions and historical experiment
+# Execution policy decisions and async experiment
 
-Status: **async interleaving agreed; serialized prototype superseded.** The
+Status: **async interleaving agreed; revised fixture tested on all four hosts.** The
 [engine model](engine.md#async-execution-and-atomic-updates) is authoritative for
 these decisions. The remaining API details and overall detailed specification are
 not signed off.
@@ -26,15 +26,75 @@ The earlier agreement to retain a running operation's queue slot across await wa
 explicitly revised. Cycle failure, skipping cancelled work and no rollback remain;
 the non-interleaving guarantee for an entire async operation does not.
 
-## Required follow-up
+## Current candidate API and evidence
 
-The implementation and results below have **not** been changed by this documentation
-update. `ExecutionScheduler`, the original `serial` helper and their tests still
-exercise the old model. In particular, checks for holding a slot after cancellation
-and preventing same-instance interleaving are no longer desired product behavior.
-Replace those tests and rerun all hosts before recording evidence for the new model.
-The [implementation plan](implementation-plan.md#execution-contract-follow-up)
-tracks this work, including stale results, shared refresh and reader cancellation.
+The shared fixture now has no per-instance operation queue. `start(key, action)`
+and `read(key)` schedule ordinary Promise jobs; suspended operations do not block
+same-instance getters, setters or invalidation. `define` explicitly selects
+`shared` or `independent` reads. There is no implicit default mode or cache policy.
+These helper signatures and the policies below are **prototype choices**, not
+additional signed-off requirements.
+
+Each instance owns JSON state and a revision. `snapshot()` returns a detached copy
+with an internal revision stamp. `commit(snapshot, nextValue)` validates and copies
+plain JSON, checks the stamp and replaces the state synchronously. It accepts a
+value, not an update callback; Promise values and accessors are rejected. No await
+can occur inside the replacement. A successful commit advances the revision;
+other operations based on the previous revision become stale. Snapshot reuse is
+rejected. Definition replacement and explicit invalidation also advance the
+revision. In this fixture, definition replacement resets state to the supplied
+initial value; production state migration remains undecided. Resumed operations must pass cancellation/revision checks before reads,
+commits, effect dispatch or successful result publication, including Promise adoption jobs between callback
+completion and delivery to readers. Falsy thrown errors remain rejections. This candidate rejects
+stale work rather than automatically retrying or merging it.
+
+Shared reads join one current in-flight getter. They wait for its result; the
+helper does not implement stale-while-revalidate or persistent cached results.
+Setters can run during shared refresh. Mutation/invalidation detaches the old
+refresh so a new read can start immediately. Each reader has its own cancellation
+lease. Cancelling one reader rejects that reader immediately; cancelling the last
+reader marks the producer cancelled and releases its dependent leases. A child
+shared with another caller survives parent cancellation. Already dispatched I/O
+may continue physically, but its old continuation cannot use guarded operations
+or publish a successful result. Earlier commits and dispatched effects survive.
+Settled contexts cannot dispatch detached effects.
+
+The helper detects recursive instance reads and tracks actual task wait edges,
+including joins between independently started shared roots. No FIFO predecessor
+edges exist. Cycle admission fails immediately. Completed tasks release their
+readers and edges; cancellation does not promise to terminate arbitrary JavaScript
+or physically cancel external I/O. Host retirement remains the fallback for
+non-cooperative code.
+
+On 2026-09-19, Linux, Chromium, capped browser Workers, Android x86_64 and physical
+ARM64 passed the revised 14 behavior checks plus 27 execution checks, over 20 fresh
+contexts each. Linux child replacement and Android service rebind rerun the suite.
+Coverage includes overlapping independent reads; setters during suspended getters
+and shared refresh; competing commits; detached state copies; rejected async
+updates; stale results after invalidation/definition replacement; shared-reader
+and dependency cancellation; immediate cycles; preserved effects; and cleanup.
+`spikes/runtime/check-results.py` requires matching reports across hosts.
+The physical test app was stopped and uninstalled after collection.
+
+## Remaining work and limits
+
+Choose the production API, default read mode, freshness/retry policy and definition
+state migration explicitly. The conservative policies above are evaluated options.
+The trusted helper is not authoritative server scheduling or a security boundary:
+arbitrary guest JS can bypass it by mutating its own objects or calling the raw
+fixture engine bridge. It sees context-mediated reads, not arbitrary Promise or
+external dependency graphs. It does not implement durable transactions, automatic
+dependency invalidation, remote cancellation acknowledgement or crash recovery.
+Single-event-loop atomic replacement does not establish cross-client/database
+atomicity. Production enforcement, backpressure and external action outcomes remain
+open in the [implementation plan](implementation-plan.md).
+
+## Historical record
+
+The following describes the former implementation only. Its unchanged reports and
+input hashes are archived in
+[`results/history/serialized-2026-09-19`](../spikes/runtime/results/history/serialized-2026-09-19/README.md).
+The active fixture and top-level result files now exercise async interleaving.
 
 ## Superseded prototype behavior
 
@@ -89,5 +149,4 @@ replacement mechanism. Deadline policy, remote cancellation acknowledgement,
 action status after disconnect, retry/idempotency rules and durable recovery still
 need design and tests. Local queue recovery is not crash-atomic database recovery.
 
-This helper must be revised before it can qualify the current execution contract.
-The old passing checks must not be presented as current concurrency acceptance.
+These archived passing checks are not current concurrency acceptance.

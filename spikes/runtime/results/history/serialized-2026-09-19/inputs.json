@@ -1,8 +1,8 @@
 {
   "date": "2026-09-19",
   "sha256": {
-    "shared/bridge.js": "d8c670d56663a587a46df7d76f7500ea7c1434c6a2ba973178a7244c34f03aaf",
-    "shared/suite.js": "8be703f645be5a8eb43c36359d35f07aa2839d0b37c96405c1df840d3ec3b5a6",
+    "shared/bridge.js": "ab23fc1804358f7b2c0ae55a9cbff508d3ccbdc4dc895c7cd4b3caa106b4d8cb",
+    "shared/suite.js": "8a6bac5ed5655fc646aae88ccce4b02fbbd041c50f21a5dde8ec9bb53ed105d6",
     "shared/lifecycle.json": "14a451c3ba084669241562721cc49427008d4a6d38a007c67732af1958a5a00e",
     "native/src/lib.rs": "e243a41f872fc9513692cfcaf42df0e554e5d9452bf484125c86d18ca4378fb3",
     "native/Cargo.lock": "b2f8b6a5ce5c87614c6b462d3d7f6adb89fc1b5461fbbf0809e240882e60f111",
@@ -25,7 +25,7 @@
     "native/src/android_service.rs": "f71bb5ce9168e26e13a9bc4ccbec19b35341b6dedb9a58b8d132f29fd70b6af9",
     "android/app/src/main/AndroidManifest.xml": "42741cd3060fe536b25bd26d7ca58f4cd222991f15f45c8edcfd5a65e4d5a0c2",
     "android/app/src/main/java/com/lelloman/talia/spike/MainActivity.java": "179690ec734091b2af8a987c2b3fae34781fcd89ff54b5026b253761d16a6dbd",
-    "android/app/src/main/java/com/lelloman/talia/spike/RuntimeService.java": "ac161e03b5f5b37232669cc5de50cc6c9ae195564a7e5b885dd6f085c2ab7135",
-    "android/app/src/main/java/com/lelloman/talia/spike/ProcessChecks.java": "81641a2205f149673bfe972deb4d80ebfe58e81714e56faeaca236793f82a556"
+    "android/app/src/main/java/com/lelloman/talia/spike/RuntimeService.java": "1539c8950d8de9cb64d2494417fbf94472801231b64d5aaa52bd9b0de9929301",
+    "android/app/src/main/java/com/lelloman/talia/spike/ProcessChecks.java": "d0006fcc170a342c4c187ebb9c83580be7fcb0c83556ee563c94e2105ed449b3"
   }
 }

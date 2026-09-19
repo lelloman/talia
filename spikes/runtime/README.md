@@ -1,10 +1,9 @@
 # P0 runtime experiment
 
 An executable feasibility experiment, not the Talìa engine or a production
-sandbox. **Its execution fixtures still implement the superseded whole-operation
-serialization model.** The agreed contract now allows same-instance interleaving
-across `await`, short atomic updates and configurable read sharing. The fixtures
-and recorded results need revision; passing them does not qualify the new contract. The same `shared/bridge.js` and `shared/suite.js` execute in:
+sandbox. Its execution fixtures exercise same-instance interleaving across
+`await`, synchronous revision-checked state replacement and configurable read
+sharing. Helper API details remain candidates. The same `shared/bridge.js` and `shared/suite.js` execute in:
 
 - Linux Rust/rquickjs (QuickJS-NG).
 - Android Rust/rquickjs via a JNI entry point, on a background thread in a minimal
@@ -51,6 +50,9 @@ adb -s <emulator> shell am start -W -n com.lelloman.talia.spike/.MainActivity
 adb -s <emulator> logcat -d -v raw -s TaliaRuntimeSpike:I '*:S'
 ```
 
+After collecting results, force-stop and uninstall the test package; verify no
+test processes remain. Do not leave the test shell running on a personal phone.
+
 Wait for the Activity to display its report before collecting the dedicated log
 tag. In addition to the original native JSON and `UI_TICKS`, the log now includes
 `PROCESS_RESULT=` with the Android service-process report. The app deliberately
@@ -83,8 +85,8 @@ Each host runs 20 fresh-context cycles over the identical source fixtures:
 
 - Async JSON-only host messages, roundtrip values, rejection of unsupported
   transport values, and host errors.
-- Per-instance queue serialization over a suspended Promise, independent instance
-  progress, rejection recovery, and one cache load for concurrent getter calls.
+- Same-instance progress over a suspended Promise, stale result rejection,
+  rejection recovery, and one shared getter for concurrent reads.
 - Event subscriptions, unsubscribe, explicit pending-call cancellation, and
   ignored duplicate/late replies within the context.
 - Forced reload with active subscriptions and pending calls: host-owned generation
@@ -118,12 +120,12 @@ The Linux `--process-check` command uses separate runtime children, bounded IPC,
 parent-owned subscription/call records and injected abort/hang recovery. Its fault
 commands are trusted harness controls and are not exposed to guest scripts.
 
-The shared suite also reports 13 `execution` checks using the candidate
-`ExecutionScheduler`: wait-cycle rejection, cancellation propagation, queue
-recovery, guarded commits and preserved dispatched effects. See the
-[execution-policy proposal](../../docs/execution-policy-prototype.md) for the tested
-semantics and limits. These results are separate from the original 14 checks and
-describe the superseded policy, not acceptance of the current async contract.
+The shared suite also reports 27 `execution` checks using the candidate
+`ExecutionScheduler`: async overlap, revision guards, synchronous updates, read
+sharing, dependency cycles, reader-owned cancellation and preserved effects.
+See the [execution-policy proposal](../../docs/execution-policy-prototype.md) for
+policies, evidence and limits. These checks are separate from the 14 behavior
+checks. The old serialized reports remain in `results/history/serialized-2026-09-19`.
 
 ## Limits of the evidence
 
@@ -132,7 +134,7 @@ describe the superseded policy, not acceptance of the current async contract.
 - JNI uses coarse fixture entry points and fixed service test actions. Production
   Kotlin/coroutine bridging, Binder validation/budgets and a native dashboard renderer
   are not qualified.
-- The serialization helper lives in trusted fixture JS; enforcement against
+- The execution helper lives in trusted fixture JS; enforcement against
   malicious scripts bypassing that helper is not established.
 - A missing global is not a security proof. Browser and native fixtures validate
   requests and bound their implemented queues/resources. Production authorization,
@@ -146,8 +148,8 @@ describe the superseded policy, not acceptance of the current async contract.
 - Cross-generation routing and forced disposal are tested with simulated host
   resources. Android service rebind is tested; server/network reconnect and
   cancellation of external effects remain unqualified.
-- The cache test checks initial concurrency, not the full dependency/invalidation
-  contract. Local state is in memory; no durable-state claim is made.
+- Read sharing and explicit invalidation are tested, not automatic dependency
+  propagation or a full cache/freshness contract. Local state is in memory; no durable-state claim is made.
 - Timeout interrupts and heap errors are observed, but hard process-level CPU/RSS
   limits are not established. Aggregate browser runtime limits fail across the three tested builds.
   A separately supplied capped WASM memory stops the pressure probes; it is a

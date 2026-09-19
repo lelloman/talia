@@ -147,8 +147,9 @@ already dispatched. Underlying I/O may still finish; remote cancellation,
 deadlines, shared-work cancellation ownership and recovery details remain open.
 
 The [execution-policy record](execution-policy-prototype.md) distinguishes these
-agreed decisions from the superseded serialized prototype. That prototype and its
-stored results require replacement tests before they qualify this contract.
+agreed decisions from candidate API policies. Revised async-interleaving fixtures
+pass on Linux, browser and both Android targets; the record preserves historical
+serialized results separately. Production enforcement and API defaults remain open.
 
 ## Pipeline execution
 

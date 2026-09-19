@@ -7,10 +7,10 @@ required in the first milestone.** The product decisions in the
 below are evaluation inputs, not additional signed-off requirements.
 
 The P0 experiments now include browser/native bridge abuse tests, Linux child-process containment and Android service death/rebind on x86_64 emulator and physical ARM64 hardware; see [runtime findings](runtime-prototype.md).
-The [execution-policy record](execution-policy-prototype.md) contains historical
-cycle/cancellation/recovery evidence for a superseded serialized model. The agreed
-async-interleaving contract needs revised fixtures and a new qualification run. P0 is not fully qualified and later phases
-have not started.
+The [execution-policy record](execution-policy-prototype.md) now includes revised
+async-interleaving fixtures and matching Linux, browser, emulator and physical
+ARM64 results. The helper API and conservative freshness/cancellation policies
+remain proposals. P0 is not fully qualified and later phases have not started.
 
 ## Outcome
 
@@ -193,22 +193,24 @@ transactions or exactly-once external effects. Keep those claims separate.
 ## Execution contract follow-up
 
 The agreed async-interleaving model replaces the serialized runtime experiment.
-The following work is pending; historical reports do not satisfy these checks:
+The following prototype work is complete; production API policy remains open:
 
-- [ ] Replace the `serial`/`ExecutionScheduler` whole-operation queue assumptions in
+- [x] Replace the `serial`/`ExecutionScheduler` whole-operation queue assumptions in
   shared fixtures and update result validation without rewriting historical evidence.
-- [ ] Demonstrate same-instance getter, setter and read progress while another
+- [x] Demonstrate same-instance getter, setter and read progress while another
   operation awaits I/O; verify that atomic update blocks cannot await.
-- [ ] Define revision/commit helpers and test concurrent writes, invalidation and
+- [x] Define revision/commit helpers and test concurrent writes, invalidation and
   definition changes so obsolete computations cannot overwrite newer state.
-- [ ] Implement and test configurable shared refresh versus independent reads;
+- [x] Implement and test configurable shared refresh versus independent reads;
   setters and other operations must remain available in both modes.
-- [ ] Specify and test cancellation ownership for shared refresh: one reader
+- [x] Specify and test cancellation ownership for shared refresh: one reader
   leaving, all readers leaving and invalidation during a refresh. Choose freshness
-  and default read policies explicitly rather than inheriting the old queue behavior.
-- [ ] Preserve immediate cycle failure, skipped not-yet-started cancelled work,
+  and read policies explicitly: require a mode, reject stale work and cancel the
+  producer only when its last reader leaves. These are prototype choices; product
+  defaults and API sign-off remain open.
+- [x] Preserve immediate cycle failure, skipped not-yet-started cancelled work,
   rejection of late cancelled commits and no rollback of dispatched effects.
-- [ ] Rerun Linux, capped browser Workers, Android emulator and physical ARM64
+- [x] Rerun Linux, capped browser Workers, Android emulator and physical ARM64
   behavior/recovery tests and record evidence for the revised contract.
 
 

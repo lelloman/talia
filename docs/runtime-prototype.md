@@ -1,14 +1,11 @@
 # P0 runtime findings
 
-Status: execution contract revised to async interleaving; earlier serialization
-findings are superseded. **P0 qualification is incomplete.**
+Status: async-interleaving fixture tested across all four hosts; earlier
+serialization findings are archived. **P0 qualification is incomplete.**
 
-The agreed model now permits same-instance interleaving across `await`, short
-atomic updates and configurable shared-refresh/independent-read behavior. The
-recorded runtime tests below still contain whole-operation serialization and
-cancellation-slot retention checks. Those are historical observations, not current
-acceptance criteria. Implementation and new qualification runs are pending; see the
-[execution-policy record](execution-policy-prototype.md).
+The current reports cover same-instance progress across `await`, short atomic
+updates, stale result rejection and shared/independent reads. Helper API details
+remain candidate policies; see the [execution-policy record](execution-policy-prototype.md).
 Runnable code and commands are in the [runtime experiment](../spikes/runtime/README.md).
 The implementation plan's full runtime gate is not passed by these smoke tests.
 
@@ -30,7 +27,7 @@ engines. Fixtures share source code. Runtime selection must retain that distinct
 ## Results
 
 The shared behavioral suite executes 20 times with a fresh context each time.
-It covers typed JSON transport, host errors, async serialization, cache
+It covers typed JSON transport, host errors, async interleaving, shared-read
 concurrency, subscription delivery/unsubscribe, cancellation, late/duplicate
 responses, host effects and restoration of baseline VM state. Temporary live
 function and state modifications are made by the harness between reloads.
@@ -268,22 +265,28 @@ guarantees. This verifies the previously missing
 ARM64/physical-device case on one device; it does not establish coverage across
 OEMs, Android versions or background lifecycle conditions.
 
-### Historical dependency cycles and cancellation/recovery
+The first ARM64 rerun passed the native suite but timed out binding a runtime
+service. The [failed attempt](../spikes/runtime/results/attempts/android-arm64-bind-timeout.json)
+is retained. Harness teardown now removes the auto-create binding before killing
+the process, and service destruction no longer kills a process that may already
+be accepting another binding. The parent owns retirement. Revised emulator and
+physical runs exercise abort/hang and rebind with this ordering; this is a harness
+fix, not qualification of production Android lifecycle handling.
 
-The superseded [execution-policy experiment](execution-policy-prototype.md) added 13 shared
-checks without changing the original 14-check report. Linux, Chromium, capped
-browser Workers, Android x86_64 and physical ARM64 all pass. The candidate tracks
-queue and dependency wait edges, rejects cycles before deadlock, and recovers the
-queues after rejection. Cancellation skips queued work, propagates to child reads,
-fences late guarded commits and retains a running operation's queue slot until it
-settles. Previously dispatched engine effects remain visible. All tracked tasks
-and queue tails are released after the tested operations settle.
+### Async interleaving and guarded state updates
 
-The implementation lives in trusted fixture JS. This establishes supported runtime
-semantics under the former serialized model, not qualification of the now-agreed
-async-interleaving model. It also does not prove authoritative server scheduling,
-remote cancellation or durable recovery. The linked record identifies the changed
-rules and the required replacement tests.
+The revised [execution experiment](execution-policy-prototype.md) passes 27 shared
+execution checks alongside 14 behavior checks on Linux, Chromium, capped Workers,
+Android x86_64 and physical ARM64. Suspended getters permit same-instance reads and
+setters; stale or cancelled continuations cannot commit or publish successful
+results through the helper. Shared refresh has per-reader cancellation ownership.
+The suite also covers synchronous JSON replacement, definition changes, cycles,
+preserved effects and cleanup. Process/Worker replacements rerun the revised suite.
+
+The helper lives in trusted fixture JS. These results establish behavioral
+feasibility, not authoritative server scheduling, malicious-code enforcement,
+remote cancellation or durable recovery. Earlier serialized results are preserved
+under `results/history/serialized-2026-09-19`; they are historical evidence only.
 
 The candidate rquickjs and quickjs-emscripten packages declare MIT licenses;
 full release dependency/license review remains separate.
@@ -302,10 +305,9 @@ the candidate hosting strategy. Its full fixture suite and failure recovery now
 pass in Chromium, including malformed-request validation and bridge budgets.
 Linux child-process and Android service-process fault containment now have fixture
 evidence, including Binder death, cleanup and explicit rebind on emulator and physical
-ARM64 hardware. Next, replace the serialized execution fixture with same-instance
-async interleaving, guarded commits and both read-sharing modes, then rerun the
-cross-platform suite. Remote action outcomes and production transport recovery
-also remain to be qualified. Preserve the uncapped
+ARM64 hardware. Revised async-interleaving and read-sharing fixtures pass on
+all four hosts. Next, qualify remote action outcomes and production transport
+recovery and settle the remaining helper API policies. Preserve the uncapped
 regression probes so upgrades cannot silently reintroduce reliance on the broken
 aggregate runtime limit.
 
