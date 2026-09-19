@@ -1,0 +1,36 @@
+<Dashboard id="monitor">
+  <Screen id="navigation">
+    <Row id="nav" gap="8dp">
+      <Button id="overview" text="Overview" onClick={actions.overview} />
+      <Button id="controls" text="Controls" onClick={actions.controls} />
+    </Row>
+  </Screen>
+  <Screen id="overviewScreen">
+    <Scroll id="scroll">
+      <Column id="overviewContent" gap="12dp" padding="16dp">
+        <Text id="title" text="Talìa · monitoring" />
+        <Status id="status" text={state.status} />
+        <Chart id="history" values={state.history} label="Observed server values" height="120dp" />
+        <Width id="wide" min="640dp"><Text id="wideLabel" text="Expanded monitoring surface" /></Width>
+        <Width id="narrow" max="640dp"><Text id="narrowLabel" text="Compact monitoring surface" /></Width>
+        <For id="services" items={state.services} key={item.id}>
+          <Text id="service" text={item.label} />
+        </For>
+      </Column>
+    </Scroll>
+  </Screen>
+  <Screen id="controlsScreen">
+    <Column id="controlContent" gap="12dp" padding="16dp">
+      <Slider id="value" label="Server value" min={0} max={100} step={1} value={state.value} onChange={actions.setValue} />
+      <Switch id="enabled" label="Show details" value={state.details} onChange={actions.details} />
+      <If id="details" when={state.details}><Text id="explanation" text="Writes change server state and survive dashboard reload." /></If>
+      <Button id="apply" text="Apply value" enabled={!state.busy} onClick={actions.apply} />
+    </Column>
+  </Screen>
+  <Surface id="surface">
+    <Column id="shell" gap="8dp">
+      <ScreenRef id="destination" screen={state.screen} />
+      <ScreenRef id="persistentNavigation" screen="navigation" />
+    </Column>
+  </Surface>
+</Dashboard>

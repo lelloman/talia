@@ -103,8 +103,8 @@ it with their own parameters and independent state where applicable.
 
 Editing a shared definition updates all references; editing one instance's
 parameters affects only that instance. This is reuse by reference, not copying.
-Exact adoption timing for running dashboards and migration of existing state
-remain open. These are persistent authoring changes, not permission for live MCP
+Running dashboards show Update available and adopt a coherent saved revision only
+on explicit reload, resetting local state and discarding temporary edits. These are persistent authoring changes, not permission for live MCP
 to edit View definitions. Local temporary script changes are not shared edits.
 
 ## Authoring language
@@ -194,7 +194,7 @@ local state, not a historical snapshot of the world.
 
 Live MCP operations need to target a particular running client/dashboard
 instance. Saving a definition is distinct from applying it to a live instance;
-version selection and adoption behavior have not yet been decided.
+explicit reload adopts the latest coherent saved revision.
 
 ## Open details
 
@@ -232,3 +232,13 @@ The subsequent [combined qualification run](p0-qualification.md) now passes on
 Linux, Chromium, Android x86_64 and physical ARM64, including the newer capability,
 execution, lifecycle and failure adapters. Earlier reports and their stated limits
 remain historical; the combined report supplies current cross-platform evidence.
+
+## P1 implementation contract
+
+The [versioned UI/VM contract](../dashboard/contracts/v1/README.md) defines the
+restricted grammar, initial vocabulary, bindings and host envelopes. Navigation
+preserves dashboard state and subscriptions. Width rules are dashboard-authored
+in dp or px; web px means CSS pixels and web dp uses a manual per-client scale.
+Hidden retains space, collapsed removes it, and neither pauses the ViewModel.
+Repeated content requires stable unique keys and preserves control identity.
+This contract supersedes the earlier illustrative/open details for those topics.

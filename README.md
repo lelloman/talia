@@ -52,6 +52,7 @@ or deployed.
   behavioral questions.
 - [Server engine](docs/engine.md): runtime primitives, execution, persistence,
   and reusable definitions with independent instance state.
+- [UI/VM contract v1](dashboard/contracts/v1/README.md): shared authoring and rendering semantics.
 - [Dashboard model](docs/dashboards.md): shared UI and logic, client composition,
   engine bindings, and persistent versus live MCP operations.
 - [Architecture boundaries](docs/architecture.md): integration responsibilities
