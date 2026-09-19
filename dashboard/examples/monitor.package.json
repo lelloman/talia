@@ -1,0 +1,7 @@
+{
+  "id": "monitor",
+  "ui": "monitor.ui",
+  "viewModel": "monitor.vm.js",
+  "params": {"sidebar": false},
+  "definitions": {"notice": "notice.ui"}
+}

@@ -6,7 +6,7 @@ const {compile,resolve}=globalThis.TaliaUI;
 const wrap=body=>`<Dashboard id="d"><Surface id="s"><Column id="c">${body}</Column></Surface></Dashboard>`;
 test('complete example compiles and binds without evaluating source',()=>{
  const tree=compile(readFileSync(new URL('../examples/monitor.ui',import.meta.url),'utf8'));
- const result=resolve(tree,{screen:'overviewScreen',status:'Ready',history:[1,2],services:[]},{params:{sidebar:false}});
+ const result=resolve(tree,{screen:'overviewScreen',status:'Ready',title:{text:'Talìa'},history:[1,2],services:[]},{params:{sidebar:false},definitions:{notice:TaliaUI.compileDefinition('<Text id="noticeText" text={params.text}/>')}});
  assert.equal(tree.version,1);assert.equal(result.children[0].children.length,2);
 });
 test('compiler diagnoses unsafe expressions and invalid structures',()=>{
@@ -28,4 +28,13 @@ test('unknown references and malformed precompiled versions are rejected',()=>{
  const tree=compile(wrap('<ScreenRef id="r" screen="absent"/>'));
  assert.throws(()=>resolve(tree,{}),/unknown screen/);
  assert.throws(()=>resolve({version:2},{}),/version/);
+});
+test('reusable definitions are validated, scoped and parameterized',()=>{
+ const t=compile(wrap('<Use id="a" definition="notice" params={state.a}/><Use id="b" definition="notice" params={state.b}/>'));
+ const definitions={notice:TaliaUI.compileDefinition('<Text id="text" text={params.text}/>')};
+ const rendered=resolve(t,{a:{text:'A'},b:{text:'B'}},{definitions});
+ assert.equal(rendered.children[0].children[0].children[0].props.text,'A');assert.equal(rendered.children[0].children[1].children[0].props.text,'B');
+ assert.notEqual(rendered.children[0].children[0].children[0].id,rendered.children[0].children[1].children[0].id);
+ const invalid={notice:{...definitions.notice,type:'Script'}};assert.throws(()=>resolve(t,{},{definitions:invalid}),/unknown component/);
+ const cyclic={notice:TaliaUI.compileDefinition('<Use id="again" definition="notice" params={params.x}/>')};assert.throws(()=>resolve(t,{},{definitions:cyclic}),/reference cycle/);
 });

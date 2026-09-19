@@ -5,6 +5,6 @@ android {
  compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
  defaultConfig { applicationId 'com.lelloman.talia.dashboard'; minSdk 26; targetSdk 36; versionCode 1; versionName '0.1'; ndk { abiFilters(project.findProperty('taliaAbi') ?: 'x86_64') } }
  sourceSets.main.jniLibs.srcDirs = ['../../jniLibs']
- sourceSets.main.assets.srcDirs = ['../../shared', '../../examples']
+ sourceSets.main.assets.srcDirs = ['../../shared', '../../examples', '../../generated']
  buildFeatures { buildConfig true }
 }

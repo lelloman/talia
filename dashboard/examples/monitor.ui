@@ -8,7 +8,7 @@
   <Screen id="overviewScreen">
     <Scroll id="scroll">
       <Column id="overviewContent" gap="12dp" padding="16dp">
-        <Text id="title" text="Talìa · monitoring" />
+        <Use id="title" definition="notice" params={state.title} />
         <Status id="status" text={state.status} />
         <Chart id="history" values={state.history} label="Observed server values" height="120dp" />
         <Width id="wide" min="640dp"><Text id="wideLabel" text="Expanded monitoring surface" /></Width>
@@ -23,7 +23,7 @@
     <Column id="controlContent" gap="12dp" padding="16dp">
       <Slider id="value" label="Server value" min={0} max={100} step={1} value={state.value} onChange={actions.setValue} />
       <Switch id="enabled" label="Show details" value={state.details} onChange={actions.details} />
-      <If id="details" when={state.details}><Text id="explanation" text="Writes change server state and survive dashboard reload." /></If>
+      <If id="details" when={state.details}><Use id="explanation" definition="notice" params={state.explanation} /></If>
       <Button id="apply" text="Apply value" enabled={!state.busy} onClick={actions.apply} />
     </Column>
   </Screen>

@@ -24,3 +24,5 @@ dashboard/android/app/build/
 dashboard/android/local.properties
 dashboard/jniLibs/
 dashboard/__pycache__/
+
+dashboard/generated/

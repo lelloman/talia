@@ -120,3 +120,26 @@ atomicity applies within this frontend instance; server state has server authori
 See [the example](../../examples/monitor.ui) and its
 [ViewModel](../../examples/monitor.vm.js). These are shared authoring inputs, not
 HTML or Android layouts. Compilation and host qualification are separate steps.
+
+## Implemented package workflow
+
+`node dashboard/compile.mjs` links the example manifest, validates referenced UI
+fragments and JavaScript syntax, and emits `dashboard/generated/monitor.json`.
+The package's `ui` is the versioned `{version,root}` compiler result. Its SHA-256
+revision covers UI, referenced definitions, parameters and ViewModel source.
+`build-web.sh` and `build-android.sh` compile the same package; Android also bundles
+it as an offline initial baseline. The development host serves one complete saved
+package at `/dashboard/package.json`. Replace a published file atomically.
+
+Clients poll for newer saved revisions while foregrounded. Failed update checks
+leave the loaded dashboard running. Explicit Reload/Restart fetches the latest
+complete package, with the locally saved baseline as offline fallback. Web display
+settings and Android composition preferences belong to the client. Shared UI
+references are validated before use; an invalid package cannot replace a loaded
+UI through an update notification.
+
+The web host's `talia.live(source)` and the Android debug build's `live` intent
+extra exercise the future live-MCP boundary: source runs in the VM context and
+marks it dirty. They are development adapters, not the authenticated MCP API.
+A web client can opt into the `talia-dashboard-failure` host event via its
+`failureSignals` configuration. Alert delivery belongs to the later alert story.

@@ -105,7 +105,9 @@
     if(tree.root.type!=='Dashboard')fail(tree.root,'root must be Dashboard');
     if(tree.root.children.filter(n=>n.type==='Surface').length!==1||tree.root.children.some(n=>!['Screen','Surface'].includes(n.type)))fail(tree.root,'Dashboard needs screens and one Surface');
     const screens=new Set(tree.root.children.filter(n=>n.type==='Screen').map(n=>n.id));
+    let referenceCount=0;
     function references(n,stack=[]){
+      if(++referenceCount>4096)fail(n,'reference expansion limit');
       if(n.type==='ScreenRef'&&typeof n.props.screen==='string'&&!screens.has(n.props.screen))fail(n,'unknown screen');
       if(n.type==='Use'){
         const name=n.props.definition;
@@ -117,7 +119,12 @@
     }
     // Definition validation is performed when a package is linked; compile may
     // produce references before the corresponding registry is supplied.
-    if(arguments.length>1)references(tree.root);
+    if(arguments.length>1){
+      if(!definitions||typeof definitions!=='object'||Array.isArray(definitions)||Object.keys(definitions).length>64)throw Error('definition registry limit/type');
+      for(const definition of Object.values(definitions)){ids.clear();count=0;visit(definition);if(['Dashboard','Screen','Surface'].includes(definition.type))fail(definition,'definition must be a ViewGroup or View');}
+      references(tree.root);
+      for(const [name,definition]of Object.entries(definitions))references(definition,[name]);
+    }
     return tree;
   }
   function lookup(path,scope,n){
@@ -133,7 +140,7 @@
       const id=path+'/'+n.id,p={};
       for(const [key,v]of Object.entries(n.props)){
         if(n.type==='For'&&key==='key'){p[key]=v;continue;}
-        p[key]=v&&typeof v==='object'&&v.bind?(v.not?!lookup(v.bind,scope,n):lookup(v.bind,scope,n)):v;
+        if(v&&typeof v==='object'&&v.bind){const value=lookup(v.bind,scope,n);if(v.not&&typeof value!=='boolean')fail(n,'negation requires boolean');p[key]=v.not?!value:value;}else p[key]=v;
         checkValue(schema[n.type][key],p[key],n);
       }
       if(n.type==='Slider'&&(p.max<=p.min||p.value<p.min||p.value>p.max))fail(n,'invalid slider range/value');
@@ -161,5 +168,10 @@
     }
     return walk(tree.root.children.find(n=>n.type==='Surface'),{state,params},tree.root.id);
   }
-  globalThis.TaliaUI=Object.freeze({compile,validate,resolve,px,schema});
+  function compileDefinition(source){return compile('<Dashboard id="DefinitionRoot"><Surface id="DefinitionSurface">'+source+'</Surface></Dashboard>').root.children[0].children[0];}
+  function validatePackage(pkg){
+    if(!pkg||pkg.version!==1||typeof pkg.id!=='string'||!pkg.id||typeof pkg.revision!=='string'||!pkg.revision||typeof pkg.viewModel!=='string'||pkg.viewModel.length>131072)throw Error('invalid dashboard package');
+    validate(pkg.ui,pkg.definitions||{});return pkg;
+  }
+  globalThis.TaliaUI=Object.freeze({compile,compileDefinition,validate,validatePackage,resolve,px,schema});
 })();

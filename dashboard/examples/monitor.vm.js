@@ -1,5 +1,5 @@
 defineVM({
-  initial: () => ({screen:'overviewScreen', value:25, details:true, busy:false,
+  initial: () => ({title:{text:'Talìa · monitoring'},explanation:{text:'Writes change server state and survive dashboard reload.'},screen:'overviewScreen', value:25, details:true, busy:false,
     status:'Connecting…', history:[], services:[{id:'engine',label:'Engine connection'}]}),
   async start(ctx) { await ctx.subscribe('value', 'snapshot'); },
   actions: {

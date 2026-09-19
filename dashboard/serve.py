@@ -9,6 +9,10 @@ signal.signal(signal.SIGTERM,stop)
 class Handler(http.server.SimpleHTTPRequestHandler):
  def __init__(self,*a,**kw):super().__init__(*a,directory=str(ROOT),**kw)
  def do_GET(self):
+  if self.path=='/dashboard/package.json':
+   try:body=pathlib.Path(sys.argv[2] if len(sys.argv)>2 else ROOT/'dashboard/generated/monitor.json').read_bytes()
+   except OSError:self.send_error(404);return
+   self.send_response(200);self.send_header('Content-Type','application/json');self.send_header('Cache-Control','no-store');self.end_headers();self.wfile.write(body);return
   if self.path=='/':self.path='/dashboard/web/index.html'
   super().do_GET()
  def do_POST(self):
