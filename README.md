@@ -40,6 +40,7 @@ Isolated [runtime](docs/runtime-prototype.md) and [client–server transport](do
 prototypes have been implemented and tested; the product has not been implemented
 or deployed.
 
+- [P0 qualification status](docs/p0-qualification.md): passing four-platform evidence and acceptance scope.
 - [Runtime contract](docs/runtime-contract.md): approved execution, authority, lifecycle and failure behavior.
 - [Transport findings](docs/transport-prototype.md): real HTTP reads/writes, subscriptions,
   reconnect and action outcomes across all four hosts.

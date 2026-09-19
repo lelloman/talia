@@ -167,3 +167,8 @@ boundary; the old in-guest helper remains a behavioral fixture, not that boundar
 The operation-per-guest binding is an evaluation adapter, not a finalized public
 API or a production multi-client scheduler. Physical-device requalification remains
 TALIA-15; persistence and server restart recovery remain P2.
+
+The subsequent [combined qualification run](p0-qualification.md) now passes on
+Linux, Chromium, Android x86_64 and physical ARM64, including the newer capability,
+execution, lifecycle and failure adapters. Earlier reports and their stated limits
+remain historical; the combined report supplies current cross-platform evidence.

@@ -227,3 +227,8 @@ and manual saved-baseline Restart. Script exceptions, runaway execution and memo
 exhaustion were exercised with an unrelated surviving guest on Chromium and native
 Android x86_64. External probe errors remain recoverable. Recorded evidence is in
 `spikes/lifecycle/results/failures`; full notification delivery is not implemented.
+
+The subsequent [combined qualification run](p0-qualification.md) now passes on
+Linux, Chromium, Android x86_64 and physical ARM64, including the newer capability,
+execution, lifecycle and failure adapters. Earlier reports and their stated limits
+remain historical; the combined report supplies current cross-platform evidence.

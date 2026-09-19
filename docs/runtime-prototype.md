@@ -338,3 +338,8 @@ pending under TALIA-15. Earlier top-level reports are preserved unchanged and th
 source manifests intentionally do not certify these new source revisions; full
 cross-platform source-qualified evidence must be renewed before P0 completion.
 These are local runtime capabilities, not network authentication or production ACLs.
+
+The subsequent [combined qualification run](p0-qualification.md) now passes on
+Linux, Chromium, Android x86_64 and physical ARM64, including the newer capability,
+execution, lifecycle and failure adapters. Earlier reports and their stated limits
+remain historical; the combined report supplies current cross-platform evidence.

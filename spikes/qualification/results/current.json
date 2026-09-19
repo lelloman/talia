@@ -1,0 +1,1212 @@
+{
+  "date": "2026-09-19T16:15:19.359930+00:00",
+  "base_commit": "fcd32f6e5ea6ee0315e618aaf355e28dda482560",
+  "source_sha256": {
+    "spikes/transport/check-results.py": "da1904998ec98b1d9696e09d87ecab5a9b1872b08ca1acfc1f9dfe22d1f7a662",
+    "spikes/transport/run-android.py": "86497434db7f7d1f4c8c9cc0713ee2e3695455960dac3e1125de2c57cb51bf5e",
+    "spikes/transport/build-web.sh": "d21c1251e945ad61095c2cd36e34b3e40bbae1a25a2afad1d593a669d2ac2073",
+    "spikes/transport/record-inputs.py": "ab3e8a28b5b15299b909288a2822d151613067173793a78c0927b8760b730e92",
+    "spikes/transport/run-browser.mjs": "ab0da725404086c517a43ec73aef08edaff06adb57b83a99dc54d8ec8166371e",
+    "spikes/transport/test-server.py": "671840ded196cb318e4ae05fbfaf3b19bc3f9d7f18ed03e4a43c4baddd06b475",
+    "spikes/transport/server/Cargo.toml": "ff816aacef071201acf1b3acc44041db8ef0f16b74d4ecd7ef0adbd3d7f14987",
+    "spikes/transport/server/Cargo.lock": "b1dc00060891ecfa344649de828b63d8bce4b4602a13c2a5824c4ed778cda06e",
+    "spikes/transport/server/src/main.rs": "b68e841d450b43f0e273266d9c50165a1f0d4ebabc670c2aa29831c3763d93e4",
+    "spikes/transport/shared/client.js": "bacb280f5749e05aaee33d0c886c5921fede79003cf139f93ec7226523876a0d",
+    "spikes/transport/shared/suite.js": "78bc8e667863375d79f8235ed05b2961d1828c53bea597340a25988a47a0cc42",
+    "spikes/transport/web/index.html": "75d32a895872a8c145c38aca5c434017fb6f5ad9343b74201a240d05a4986477",
+    "spikes/transport/web/worker.js": "ae266041588d7e96f5e5b8b0ea38f558ca66f09c34d78b08825fa530f54df20e",
+    "spikes/runtime/check-results.py": "85ed2a2857d097470aff90ba8c98df45a8a468dee57ff0d97bfd754f663ce94f",
+    "spikes/runtime/compare-memory.mjs": "bbdea7bf8138473f7245503b9296a4005d656aeeef2ae8e441ecfaccae652489",
+    "spikes/runtime/bridge-policy.test.mjs": "db84b6f2f29b75a8e97911551bef65e5b52140723cabb02b74cb5f85ed5f01df",
+    "spikes/runtime/build-android.sh": "abd2e894ea44325e66696c43cc3d75623b22df18c47d17f0c4e3832fc771b68a",
+    "spikes/runtime/memory-probe.mjs": "d1f0ff73b86837fae3756e14814968dc0366b9b940dd37d229782415347fb27b",
+    "spikes/runtime/capped-memory.mjs": "9b90d18bd494b68f658dad200000bdac3c54db40d24440d63ffb62a039187824",
+    "spikes/runtime/package-lock.json": "8ece00b75ee6cef5a26565fe64f822b0c6144451083c0bfa4dad01d28542d443",
+    "spikes/runtime/run-browser.mjs": "8fe4578b2679a77fd0241f95b0420476427524ca3a6ae33df6b93e0b5350e910",
+    "spikes/runtime/test-capped-memory.mjs": "9e67e1da356f83ac614658471dd1227406f29e8b73b517a4584af9b438de30ee",
+    "spikes/runtime/check-capabilities.py": "dabf558495b75dd43bd95f993c6d8b4e0046bb2e0bebb85fa4eb5c0621ad031f",
+    "spikes/runtime/package.json": "322bf3d25d25009e4ce6b127931c086da0cea3599971742e16d73147fc56f170",
+    "spikes/runtime/android/app/src/main/AndroidManifest.xml": "0252b0ae3d9186029fcc2909c919eef043cbdfdbdf06b4ce59123340444037b2",
+    "spikes/runtime/android/app/src/main/java/com/lelloman/talia/spike/ProcessChecks.java": "81641a2205f149673bfe972deb4d80ebfe58e81714e56faeaca236793f82a556",
+    "spikes/runtime/android/app/src/main/java/com/lelloman/talia/spike/TransportActivity.java": "feb0514dc1a96e0c76cb41f764e67a2284a8527b1e7bb35f3fa22bf90b6f3289",
+    "spikes/runtime/android/app/src/main/java/com/lelloman/talia/spike/MainActivity.java": "179690ec734091b2af8a987c2b3fae34781fcd89ff54b5026b253761d16a6dbd",
+    "spikes/runtime/android/app/src/main/java/com/lelloman/talia/spike/RuntimeService.java": "ac161e03b5f5b37232669cc5de50cc6c9ae195564a7e5b885dd6f085c2ab7135",
+    "spikes/runtime/android/app/src/main/java/com/lelloman/talia/spike/LifecycleActivity.java": "47ffc3ecc90c25341d182ed919cac6334f94b528451abd3789e993fe493bef8d",
+    "spikes/runtime/host/execution.js": "17425eb5b94faa15e32f19e0e202518f1aeacd28d7a09ad155fdf95a2e82c008",
+    "spikes/runtime/host/execution-suite.js": "55b38cd351d96b83115f46c98a10672af0c1d2900563f5e2fbfb0f0673871498",
+    "spikes/runtime/shared/capabilities.json": "23ac0fa67609fc01c180682934a1b404bea02d661a3ea210f2700716d746d087",
+    "spikes/runtime/shared/suite.js": "8be703f645be5a8eb43c36359d35f07aa2839d0b37c96405c1df840d3ec3b5a6",
+    "spikes/runtime/shared/lifecycle.json": "14a451c3ba084669241562721cc49427008d4a6d38a007c67732af1958a5a00e",
+    "spikes/runtime/shared/bridge.js": "d8c670d56663a587a46df7d76f7500ea7c1434c6a2ba973178a7244c34f03aaf",
+    "spikes/runtime/web/disposable-suite.js": "2513fe97d4a304e0bfb9c876ed038426fb8a84377dd5de4c1488dd0f5313fcd6",
+    "spikes/runtime/web/dashboard-host.js": "770a3daba11841205046ff37873e45c83b9d6350f0cc762eace97d5f21349b70",
+    "spikes/runtime/web/policy-suite.js": "6b78e261ded352ea96ade8d4d0d7dfa294684d267d4f61c1fb93e4e4f7fff53b",
+    "spikes/runtime/web/execution-suite.js": "6b4cfc37a11986adc4081fcda58718b8fe9e77bebcf471998a358a3fe3e726f6",
+    "spikes/runtime/web/index.html": "ac8485145e7721044a1c6bdcf7c6e417b7faf0b3f00982b4c4023cae86b766f5",
+    "spikes/runtime/web/worker.js": "86f172813c5f5bd231ff268ce0650639ef5d0b84d1524f572c59ddc3792b7218",
+    "spikes/runtime/web/capability-suite.js": "c2828454792d84947bb87193dfe4c0d066d3c44b9857969e63fb92706d56357f",
+    "spikes/runtime/web/dashboard-worker.js": "b833300259d67485c89a45a8fc538ca8bd3066a44cd395aeba7eff0f09d56a4c",
+    "spikes/runtime/web/bridge-policy.js": "5cbf5603db973a4e8146aad929e3d3ab44b66ee2b498a52909efb378fb7b631a",
+    "spikes/runtime/native/Cargo.toml": "a5fb4e72c95083f2f4d57c9af0c7559bc22ed02b1fe3b96f5efde45240922f59",
+    "spikes/runtime/native/Cargo.lock": "b2f8b6a5ce5c87614c6b462d3d7f6adb89fc1b5461fbbf0809e240882e60f111",
+    "spikes/runtime/native/src/authority.rs": "5138a5999a38e60698ae5b873cdd8ede640f8893bc25044b2f669721e045a76c",
+    "spikes/runtime/native/src/transport.rs": "2c39db1661b66fb87de509a95b622bde82ff1eae9fc065502a795e1317766f04",
+    "spikes/runtime/native/src/process.rs": "550cb9b301f62d69b87db97b04a3451a6ec5bb3ebc8b41744eca94c3540775a1",
+    "spikes/runtime/native/src/android_service.rs": "f71bb5ce9168e26e13a9bc4ccbec19b35341b6dedb9a58b8d132f29fd70b6af9",
+    "spikes/runtime/native/src/lifecycle.rs": "88bbe3fe0dffe972839f4a44da9e339f72cb52e8294006dc665bf4f25f1741c2",
+    "spikes/runtime/native/src/lib.rs": "a3a8f75a7152db132837600bc897f07cbb7c0395c69a241edb0edc65f89e8014",
+    "spikes/runtime/native/src/main.rs": "2eb63924425ba8a4e6a8c17d78a0a85e0c0519c896debbd7ba1c406cb38c897f",
+    "spikes/runtime/native/src/policy.rs": "5ea5ea743ff59155ca631c88dee4213207aec32f2c3d2f03d8fd48639ad50338",
+    "spikes/qualification/check.py": "4ecded3b2ac115115d399e4b5a7f425dbeaac626c5488d710f5f49596f92c8f9",
+    "spikes/qualification/run.py": "6a21e262e2e36318a6cff69029fde02c8b6cc54b0c00876b8f3c9100330b13a3",
+    "spikes/qualification/collect-android.py": "c4cbb00f8a3c7721b26fc53064a21869124c0e8206053d9d81b4e2daacd90ddb",
+    "spikes/lifecycle/test-android.py": "ec3134cbf0eb28c8e864db85e9caf82e7bc9e1797e95c6d65ec2b7edb1bd13b4",
+    "spikes/lifecycle/web.js": "9f24029941d39ea9c8ff3f27e1ff94ffec5c795329b152061fcec5592087b05b",
+    "spikes/lifecycle/test-browser.mjs": "a93bce8053b9c45702ca5eef07d6c0477ff3282b78598336dfef3d5a8cfece49",
+    "spikes/lifecycle/dashboard.js": "43b50b301f444a76faef87f625e090a41eb070f7ec2092d8293fcc5af1799906",
+    "spikes/lifecycle/index.html": "836930005f6fb2e085d171b9288dd60fdb3503847a4763897a62701d7ca37c1c",
+    "docs/runtime-contract.md": "133f3acb7e2fed8b4793eae224396b511de5a8bf56cd718e4ba1ff381a86272a"
+  },
+  "commands": [
+    [
+      "git",
+      "rev-parse",
+      "HEAD"
+    ],
+    [
+      "rustc",
+      "--version"
+    ],
+    [
+      "node",
+      "--version"
+    ],
+    [
+      "cargo",
+      "build",
+      "--manifest-path",
+      "spikes/runtime/native/Cargo.toml",
+      "--locked"
+    ],
+    [
+      "cargo",
+      "build",
+      "--manifest-path",
+      "spikes/transport/server/Cargo.toml",
+      "--locked"
+    ],
+    [
+      "npm",
+      "--prefix",
+      "spikes/runtime",
+      "run",
+      "build"
+    ],
+    [
+      "bash",
+      "spikes/transport/build-web.sh"
+    ],
+    [
+      "spikes/runtime/node_modules/.bin/esbuild",
+      "spikes/lifecycle/web.js",
+      "--bundle",
+      "--format=esm",
+      "--outfile=spikes/lifecycle/dist/web.js"
+    ],
+    [
+      "node",
+      "--test",
+      "spikes/runtime/bridge-policy.test.mjs"
+    ],
+    [
+      "python3",
+      "spikes/transport/test-server.py",
+      "45521"
+    ],
+    [
+      "spikes/runtime/native/target/debug/talia-runtime-spike"
+    ],
+    [
+      "spikes/runtime/native/target/debug/talia-runtime-spike",
+      "--process-check"
+    ],
+    [
+      "spikes/runtime/native/target/debug/talia-runtime-spike",
+      "--transport",
+      "45521"
+    ],
+    [
+      "node",
+      "spikes/runtime/run-browser.mjs"
+    ],
+    [
+      "node",
+      "spikes/transport/run-browser.mjs",
+      "45521"
+    ],
+    [
+      "node",
+      "spikes/lifecycle/test-browser.mjs",
+      "45521"
+    ],
+    [
+      "bash",
+      "spikes/runtime/build-android.sh"
+    ],
+    [
+      "python3",
+      "spikes/qualification/collect-android.py",
+      "emulator-5558",
+      "45521"
+    ],
+    [
+      "python3",
+      "spikes/lifecycle/test-android.py",
+      "emulator-5558",
+      "45521"
+    ]
+  ],
+  "versions": {
+    "rust": "rustc 1.96.0 (ac68faa20 2026-05-25)",
+    "node": "v24.13.0"
+  },
+  "platforms": {
+    "linux": {
+      "runtime": {
+        "arch": "x86_64",
+        "capabilities": {
+          "cases": [
+            "saved: ungranted write",
+            "saved: forged grants",
+            "saved: forged identity",
+            "saved: filesystem",
+            "saved: credentials",
+            "saved: arbitrary network",
+            "saved: view mutation",
+            "saved: unknown variable",
+            "live: ungranted write",
+            "live: forged grants",
+            "live: forged identity",
+            "live: filesystem",
+            "live: credentials",
+            "live: arbitrary network",
+            "live: view mutation",
+            "live: unknown variable"
+          ],
+          "dispatch_recheck": true,
+          "granted_operations": true,
+          "passed": true,
+          "survivor_works": true,
+          "view_unchanged": true
+        },
+        "checks": [
+          "no ambient platform or renderer APIs",
+          "baseline ViewModel restored",
+          "JSON roundtrip",
+          "unsupported wire values rejected",
+          "host rejection",
+          "same-instance setter progresses during awaited getter",
+          "stale getter cannot overwrite setter",
+          "operation progresses after rejection including falsy errors",
+          "shared refresh executes one getter",
+          "subscription delivers host event",
+          "unsubscribe stops host events",
+          "pending host operation cancellation",
+          "late and duplicate replies ignored",
+          "engine side effect"
+        ],
+        "cycles": 20,
+        "elapsed_ms": 313,
+        "engine_effect_survives": true,
+        "execution": [
+          "direct dependency cycle rejected",
+          "indirect dependency cycle rejected",
+          "concurrent shared roots reject dependency cycle",
+          "acyclic diamond shares dependency",
+          "same-instance independent getters overlap",
+          "competing stale commit rejected",
+          "snapshot cannot be reused after commit",
+          "async state update rejected",
+          "state snapshots and commits do not alias caller objects",
+          "invalidation fences suspended getter publication",
+          "setter progresses during shared refresh",
+          "setter fences old shared refresh result",
+          "publication rechecks revision after Promise adoption",
+          "replacement definition runs during old getter",
+          "definition replacement fences old result",
+          "cancelled work skipped before start",
+          "cancelled suspended work does not block same instance",
+          "cancelled running commit rejected",
+          "one cancelled reader preserves shared refresh for others",
+          "last reader cancellation permits immediate replacement refresh",
+          "cancelled continuation cannot dispatch new effect",
+          "parent cancellation preserves dependency owned by another reader",
+          "sole parent cancellation cancels dependency",
+          "settled operation cannot dispatch detached effects",
+          "cancellation preserves earlier state and dispatched engine effects",
+          "execution tasks readers and wait edges released",
+          "disposal cancels pending work and releases tasks"
+        ],
+        "fresh_context": true,
+        "heap_limit": true,
+        "host": "linux",
+        "interruption_ms": 50,
+        "lifecycle": {
+          "colliding_request_ids": true,
+          "forced_reload_cleanup": true,
+          "other_instance_survives": true,
+          "stale_event_rejected": true,
+          "stale_response_rejected": true
+        },
+        "policy": {
+          "cases": [
+            "malformed JSON",
+            "non-string wire",
+            "oversized command",
+            "wrong envelope",
+            "invalid write",
+            "extra routing field",
+            "unsafe ID",
+            "unknown capability",
+            "oversized UTF8",
+            "deep JSON",
+            "wide JSON",
+            "caught flood",
+            "replayed ID",
+            "subscription budget",
+            "stalled budget",
+            "subscription ownership"
+          ],
+          "exact_boundaries": true,
+          "parent_validation": true,
+          "passed": true,
+          "queued_requests": 32,
+          "resources_empty": true,
+          "stalled_calls": 16,
+          "subscriptions": 16,
+          "wire_bytes": 32768
+        },
+        "protected_execution": {
+          "checks": [
+            "explicit mode",
+            "shared producer",
+            "reader cancellation",
+            "remaining reader survives",
+            "last reader cancels",
+            "cancelled publication",
+            "stale commit",
+            "stale publication",
+            "explicit fresh read",
+            "no async update",
+            "no accessor update",
+            "direct cycle",
+            "indirect cycle",
+            "owned dependency cancellation",
+            "concurrent root cycle",
+            "shared child survives",
+            "independent reads",
+            "skip cancelled before start",
+            "prior mutation survives",
+            "definition fences continuation",
+            "cleanup"
+          ],
+          "passed": true,
+          "prior_effect_survives": true,
+          "protected_state": true,
+          "raw_cancelled_effect_rejected": true,
+          "raw_stale_effect_rejected": true
+        }
+      },
+      "process": {
+        "faults": [
+          {
+            "fault": "abort",
+            "replacement_full_suite": true,
+            "replacement_works": true,
+            "resources_retired": true,
+            "supervisor_survived": true,
+            "survivor_progress": true
+          },
+          {
+            "fault": "hang",
+            "replacement_full_suite": true,
+            "replacement_works": true,
+            "resources_retired": true,
+            "supervisor_survived": true,
+            "survivor_progress": true
+          }
+        ],
+        "host": "linux",
+        "isolation": "child process",
+        "resources_empty": true
+      },
+      "transport": {
+        "arch": "x86_64",
+        "checks": [
+          "clients read initial server snapshot",
+          "read and write progress while another read awaits network IO",
+          "late read cannot replace newer observed revision",
+          "subscription delivers ordered live changes from another client",
+          "unsubscribe stops delivery to listener",
+          "cancelled work before dispatch never reaches server",
+          "server cancels accepted work before its effect",
+          "cancelled accepted action produces no effect",
+          "cancellation after completion does not undo server effect",
+          "disconnect rejects pending reads",
+          "reconnect installs current snapshot after missed changes",
+          "old generation reply cannot resolve colliding new request ID",
+          "replacement generation remains usable",
+          "lost HTTP response reports unknown action outcome with stable ID",
+          "action status reconciles lost response after reconnect",
+          "explicit retry with same action ID does not repeat effect",
+          "reusing action ID with different arguments fails",
+          "disconnect does not imply cancellation of accepted server work",
+          "accepted action completes independently of requester connection",
+          "older successful action response preserves newer displayed state",
+          "retained subscription receives reconnect snapshot",
+          "subscription resumes live delivery after reconnect",
+          "missing action record remains unknown rather than inferred failure",
+          "server rejects unsupported capabilities",
+          "disconnect releases local pending operations"
+        ],
+        "done": true,
+        "elapsed_ms": 635,
+        "host": "linux",
+        "http_requests_remaining": 0,
+        "peak_http_requests": 3
+      }
+    },
+    "browser": {
+      "runtime": {
+        "host": "browser-wasm",
+        "variant": "quickjs-ng 0.32.0",
+        "cycles": 20,
+        "checks": [
+          "no ambient platform or renderer APIs",
+          "baseline ViewModel restored",
+          "JSON roundtrip",
+          "unsupported wire values rejected",
+          "host rejection",
+          "same-instance setter progresses during awaited getter",
+          "stale getter cannot overwrite setter",
+          "operation progresses after rejection including falsy errors",
+          "shared refresh executes one getter",
+          "subscription delivers host event",
+          "unsubscribe stops host events",
+          "pending host operation cancellation",
+          "late and duplicate replies ignored",
+          "engine side effect"
+        ],
+        "execution": [
+          "direct dependency cycle rejected",
+          "indirect dependency cycle rejected",
+          "concurrent shared roots reject dependency cycle",
+          "acyclic diamond shares dependency",
+          "same-instance independent getters overlap",
+          "competing stale commit rejected",
+          "snapshot cannot be reused after commit",
+          "async state update rejected",
+          "state snapshots and commits do not alias caller objects",
+          "invalidation fences suspended getter publication",
+          "setter progresses during shared refresh",
+          "setter fences old shared refresh result",
+          "publication rechecks revision after Promise adoption",
+          "replacement definition runs during old getter",
+          "definition replacement fences old result",
+          "cancelled work skipped before start",
+          "cancelled suspended work does not block same instance",
+          "cancelled running commit rejected",
+          "one cancelled reader preserves shared refresh for others",
+          "last reader cancellation permits immediate replacement refresh",
+          "cancelled continuation cannot dispatch new effect",
+          "parent cancellation preserves dependency owned by another reader",
+          "sole parent cancellation cancels dependency",
+          "settled operation cannot dispatch detached effects",
+          "cancellation preserves earlier state and dispatched engine effects",
+          "execution tasks readers and wait edges released",
+          "disposal cancels pending work and releases tasks"
+        ],
+        "lifecycle": {
+          "forced_reload_cleanup": true,
+          "stale_response_rejected": true,
+          "stale_event_rejected": true,
+          "colliding_request_ids": true,
+          "other_instance_survives": true
+        },
+        "fresh_context": true,
+        "engine_effect_survives": true,
+        "interruption_ms": 50.69999999925494,
+        "heap_limit": false,
+        "memory_comparison": {
+          "bellard_0_31_0": [
+            {
+              "name": "single_buffer",
+              "limit_bytes": 16777216,
+              "rejected": true,
+              "error": {
+                "name": "InternalError",
+                "message": "out of memory",
+                "stack": "    at <eval> (eval.js:1)\n"
+              },
+              "retained": null,
+              "memory_used_bytes": 68842
+            },
+            {
+              "name": "repeated_buffers",
+              "limit_bytes": 16777216,
+              "rejected": false,
+              "error": null,
+              "retained": 64,
+              "memory_used_bytes": 67184327
+            },
+            {
+              "name": "repeated_strings",
+              "limit_bytes": 16777216,
+              "rejected": false,
+              "error": null,
+              "retained": 8,
+              "memory_used_bytes": 33623687
+            },
+            {
+              "name": "objects",
+              "limit_bytes": 16777216,
+              "rejected": false,
+              "error": null,
+              "retained": 400000,
+              "memory_used_bytes": 37957992
+            }
+          ],
+          "bellard_0_32_0": [
+            {
+              "name": "single_buffer",
+              "limit_bytes": 16777216,
+              "rejected": true,
+              "error": {
+                "name": "InternalError",
+                "message": "out of memory",
+                "stack": "    at <eval> (eval.js:1:35)\n"
+              },
+              "retained": null,
+              "memory_used_bytes": 86235
+            },
+            {
+              "name": "repeated_buffers",
+              "limit_bytes": 16777216,
+              "rejected": false,
+              "error": null,
+              "retained": 64,
+              "memory_used_bytes": 67201955
+            },
+            {
+              "name": "repeated_strings",
+              "limit_bytes": 16777216,
+              "rejected": false,
+              "error": null,
+              "retained": 8,
+              "memory_used_bytes": 86483
+            },
+            {
+              "name": "objects",
+              "limit_bytes": 16777216,
+              "rejected": false,
+              "error": null,
+              "retained": 400000,
+              "memory_used_bytes": 37975364
+            }
+          ],
+          "quickjs_ng_0_32_0": [
+            {
+              "name": "single_buffer",
+              "limit_bytes": 16777216,
+              "rejected": true,
+              "error": {
+                "name": "InternalError",
+                "message": "out of memory",
+                "stack": "    at <eval> (eval.js:1:23)\n"
+              },
+              "retained": null,
+              "memory_used_bytes": 95164
+            },
+            {
+              "name": "repeated_buffers",
+              "limit_bytes": 16777216,
+              "rejected": false,
+              "error": null,
+              "retained": 64,
+              "memory_used_bytes": 67210917
+            },
+            {
+              "name": "repeated_strings",
+              "limit_bytes": 16777216,
+              "rejected": false,
+              "error": null,
+              "retained": 8,
+              "memory_used_bytes": 95445
+            },
+            {
+              "name": "objects",
+              "limit_bytes": 16777216,
+              "rejected": false,
+              "error": null,
+              "retained": 400000,
+              "memory_used_bytes": 42784350
+            }
+          ]
+        },
+        "capped_memory": {
+          "probes": [
+            {
+              "name": "single_buffer",
+              "rejected": true,
+              "error": {
+                "name": "InternalError",
+                "message": "out of memory",
+                "stack": "    at <eval> (eval.js:1:23)\n"
+              },
+              "disposed": true,
+              "failure": null,
+              "growth_rejected": true,
+              "memory_bytes": 16777216
+            },
+            {
+              "name": "repeated_buffers",
+              "rejected": true,
+              "error": {
+                "name": "InternalError",
+                "message": "out of memory",
+                "stack": "    at <eval> (eval.js:1:54)\n"
+              },
+              "disposed": true,
+              "failure": null,
+              "growth_rejected": true,
+              "memory_bytes": 16777216
+            },
+            {
+              "name": "repeated_strings",
+              "rejected": true,
+              "error": {
+                "name": "InternalError",
+                "message": "out of memory",
+                "stack": "    at <eval> (eval.js:1:63)\n"
+              },
+              "disposed": true,
+              "failure": null,
+              "growth_rejected": true,
+              "memory_bytes": 16777216
+            },
+            {
+              "name": "objects",
+              "rejected": true,
+              "error": null,
+              "disposed": true,
+              "failure": null,
+              "growth_rejected": true,
+              "memory_bytes": 16777216
+            }
+          ],
+          "fresh_module_works": true
+        },
+        "qualified": false,
+        "elapsed_ms": 3099.10000000149,
+        "disposable": {
+          "passed": true,
+          "capabilities": {
+            "passed": true,
+            "cases": [
+              "saved: ungranted write",
+              "saved: forged grants",
+              "saved: forged identity",
+              "saved: filesystem",
+              "saved: credentials",
+              "saved: arbitrary network",
+              "saved: view mutation",
+              "saved: unknown variable",
+              "live: ungranted write",
+              "live: forged grants",
+              "live: forged identity",
+              "live: filesystem",
+              "live: credentials",
+              "live: arbitrary network",
+              "live: view mutation",
+              "live: unknown variable"
+            ],
+            "dispatch_recheck": true,
+            "granted_operations": true,
+            "view_unchanged": true,
+            "survivor_works": true
+          },
+          "protected_execution": {
+            "passed": true,
+            "checks": [
+              "explicit mode",
+              "shared producer",
+              "reader cancellation",
+              "remaining reader survives",
+              "last reader cancels",
+              "cancelled publication",
+              "stale commit",
+              "stale publication",
+              "explicit fresh read",
+              "no async update",
+              "no accessor update",
+              "direct cycle",
+              "indirect cycle",
+              "owned dependency cancellation",
+              "concurrent root cycle",
+              "shared child survives",
+              "independent reads",
+              "skip cancelled before start",
+              "prior mutation survives",
+              "definition fences continuation",
+              "cleanup"
+            ],
+            "raw_cancelled_effect_rejected": true,
+            "raw_stale_effect_rejected": true,
+            "protected_state": true,
+            "prior_effect_survives": true
+          },
+          "policy": {
+            "passed": true,
+            "limits": {
+              "wireBytes": 32768,
+              "commandBytes": 65536,
+              "depth": 16,
+              "nodes": 2048,
+              "inFlight": 32,
+              "commands": 64,
+              "subscriptions": 16,
+              "timers": 16,
+              "stalled": 16,
+              "workers": 8
+            },
+            "cases": [
+              "malformed JSON",
+              "non-string wire",
+              "oversized result",
+              "wrong envelope",
+              "extra routing field",
+              "invalid write type",
+              "unknown capability",
+              "unsafe ID",
+              "replayed ID",
+              "oversized UTF-8",
+              "deep JSON",
+              "wide JSON",
+              "request flood caught by guest",
+              "subscription budget",
+              "timer budget",
+              "stalled budget",
+              "cross-instance unsubscribe",
+              "parent rejects 17",
+              "parent rejects 18",
+              "parent rejects 19",
+              "oversized command",
+              "command queue budget",
+              "fanout isolation"
+            ],
+            "worker_budget": true,
+            "exact_boundaries": true,
+            "resources_empty": true
+          },
+          "cycles": 20,
+          "checks": [
+            "no ambient platform or renderer APIs",
+            "baseline ViewModel restored",
+            "JSON roundtrip",
+            "unsupported wire values rejected",
+            "host rejection",
+            "same-instance setter progresses during awaited getter",
+            "stale getter cannot overwrite setter",
+            "operation progresses after rejection including falsy errors",
+            "shared refresh executes one getter",
+            "subscription delivers host event",
+            "unsubscribe stops host events",
+            "pending host operation cancellation",
+            "late and duplicate replies ignored",
+            "engine side effect"
+          ],
+          "execution": [
+            "direct dependency cycle rejected",
+            "indirect dependency cycle rejected",
+            "concurrent shared roots reject dependency cycle",
+            "acyclic diamond shares dependency",
+            "same-instance independent getters overlap",
+            "competing stale commit rejected",
+            "snapshot cannot be reused after commit",
+            "async state update rejected",
+            "state snapshots and commits do not alias caller objects",
+            "invalidation fences suspended getter publication",
+            "setter progresses during shared refresh",
+            "setter fences old shared refresh result",
+            "publication rechecks revision after Promise adoption",
+            "replacement definition runs during old getter",
+            "definition replacement fences old result",
+            "cancelled work skipped before start",
+            "cancelled suspended work does not block same instance",
+            "cancelled running commit rejected",
+            "one cancelled reader preserves shared refresh for others",
+            "last reader cancellation permits immediate replacement refresh",
+            "cancelled continuation cannot dispatch new effect",
+            "parent cancellation preserves dependency owned by another reader",
+            "sole parent cancellation cancels dependency",
+            "settled operation cannot dispatch detached effects",
+            "cancellation preserves earlier state and dispatched engine effects",
+            "execution tasks readers and wait edges released",
+            "disposal cancels pending work and releases tasks"
+          ],
+          "module_limit_bytes": 16777216,
+          "lifecycle": {
+            "forced_reload_cleanup": true,
+            "stale_response_rejected": true,
+            "stale_event_rejected": true,
+            "colliding_request_ids": true,
+            "other_instance_survives": true
+          },
+          "failures": [
+            {
+              "name": "single_buffer",
+              "retired": true,
+              "memory_bytes": 16777216,
+              "error": "Error: guest failure: Error: {\"name\":\"InternalError\",\"message\":\"out of memory\",\"stack\":\"    at <eval> (eval.js:1:23)\\n\"}",
+              "resources_released": true,
+              "survivor_works": true,
+              "replacement_works": true
+            },
+            {
+              "name": "repeated_buffers",
+              "retired": true,
+              "memory_bytes": 16777216,
+              "error": "Error: guest failure: Error: {\"name\":\"InternalError\",\"message\":\"out of memory\",\"stack\":\"    at <eval> (eval.js:1:54)\\n\"}",
+              "resources_released": true,
+              "survivor_works": true,
+              "replacement_works": true
+            },
+            {
+              "name": "repeated_strings",
+              "retired": true,
+              "memory_bytes": 16777216,
+              "error": "Error: guest failure: Error: {\"name\":\"InternalError\",\"message\":\"out of memory\",\"stack\":\"    at <eval> (eval.js:1:63)\\n\"}",
+              "resources_released": true,
+              "survivor_works": true,
+              "replacement_works": true
+            },
+            {
+              "name": "objects",
+              "retired": true,
+              "memory_bytes": 16777216,
+              "error": "Error: guest failure: Error: null",
+              "resources_released": true,
+              "survivor_works": true,
+              "replacement_works": true
+            }
+          ],
+          "interruption_ms": 50.5,
+          "watchdog_cleanup": true,
+          "progress_during_hang": true,
+          "full_suite_after_recovery": true,
+          "host_resources_empty": true,
+          "elapsed_ms": 3129
+        },
+        "renderer_ticks": 628,
+        "browser": "145.0.7632.6"
+      },
+      "transport": {
+        "done": true,
+        "checks": [
+          "clients read initial server snapshot",
+          "read and write progress while another read awaits network IO",
+          "late read cannot replace newer observed revision",
+          "subscription delivers ordered live changes from another client",
+          "unsubscribe stops delivery to listener",
+          "cancelled work before dispatch never reaches server",
+          "server cancels accepted work before its effect",
+          "cancelled accepted action produces no effect",
+          "cancellation after completion does not undo server effect",
+          "disconnect rejects pending reads",
+          "reconnect installs current snapshot after missed changes",
+          "old generation reply cannot resolve colliding new request ID",
+          "replacement generation remains usable",
+          "lost HTTP response reports unknown action outcome with stable ID",
+          "action status reconciles lost response after reconnect",
+          "explicit retry with same action ID does not repeat effect",
+          "reusing action ID with different arguments fails",
+          "disconnect does not imply cancellation of accepted server work",
+          "accepted action completes independently of requester connection",
+          "older successful action response preserves newer displayed state",
+          "retained subscription receives reconnect snapshot",
+          "subscription resumes live delivery after reconnect",
+          "missing action record remains unknown rather than inferred failure",
+          "server rejects unsupported capabilities",
+          "disconnect releases local pending operations"
+        ],
+        "host": "browser",
+        "peak_http_requests": 3,
+        "http_requests_remaining": 0,
+        "memory_bytes": 16777216,
+        "renderer_ticks": 41,
+        "browser": "145.0.7632.6"
+      },
+      "lifecycle": {
+        "passed": true,
+        "checks": [
+          "server action completes while hidden",
+          "local execution and subscription paused",
+          "resume retains dirty state and reconciles without resubmission",
+          "repeated actual visibility transitions",
+          "reload restores saved baseline and preserves server effect",
+          "external failure is recoverable",
+          "crash visible stopped state, cleanup and signal",
+          "crash does not restart on resume; survivor progresses",
+          "crash manual saved-baseline restart preserves server effects",
+          "runaway visible stopped state, cleanup and signal",
+          "runaway does not restart on resume; survivor progresses",
+          "runaway manual saved-baseline restart preserves server effects",
+          "memory visible stopped state, cleanup and signal",
+          "memory does not restart on resume; survivor progresses",
+          "memory manual saved-baseline restart preserves server effects"
+        ],
+        "browser": "Chrome/145.0.7632.6",
+        "final": {
+          "survivor_ticks": 16,
+          "failure": null,
+          "external_error": "capability/arguments",
+          "signals": [
+            {
+              "type": "dashboard-failure",
+              "diagnostic": "guest failure: Error: {\"name\":\"Error\",\"message\":\"fixture internal error\",\"stack\":\"    at <eval> (eval.js:1:6)\\n\"}"
+            },
+            {
+              "type": "dashboard-failure",
+              "diagnostic": "guest failure: Error: {\"name\":\"InternalError\",\"message\":\"interrupted\",\"stack\":\"    at <eval> (eval.js:1:1)\\n\"}"
+            },
+            {
+              "type": "dashboard-failure",
+              "diagnostic": "guest failure: Error: {\"name\":\"InternalError\",\"message\":\"out of memory\",\"stack\":\"    at <eval> (eval.js:1:62)\\n\"}"
+            }
+          ],
+          "pending_waits": 0,
+          "active": true,
+          "epoch": 7,
+          "local": {
+            "dirty": false,
+            "ticks": 1
+          },
+          "snapshot": {
+            "revision": 4,
+            "value": 62
+          },
+          "outcomes": {},
+          "pending": 0,
+          "ignored": 0,
+          "subscriptions": 1
+        }
+      }
+    },
+    "android": {
+      "runtime": {
+        "arch": "x86_64",
+        "capabilities": {
+          "cases": [
+            "saved: ungranted write",
+            "saved: forged grants",
+            "saved: forged identity",
+            "saved: filesystem",
+            "saved: credentials",
+            "saved: arbitrary network",
+            "saved: view mutation",
+            "saved: unknown variable",
+            "live: ungranted write",
+            "live: forged grants",
+            "live: forged identity",
+            "live: filesystem",
+            "live: credentials",
+            "live: arbitrary network",
+            "live: view mutation",
+            "live: unknown variable"
+          ],
+          "dispatch_recheck": true,
+          "granted_operations": true,
+          "passed": true,
+          "survivor_works": true,
+          "view_unchanged": true
+        },
+        "checks": [
+          "no ambient platform or renderer APIs",
+          "baseline ViewModel restored",
+          "JSON roundtrip",
+          "unsupported wire values rejected",
+          "host rejection",
+          "same-instance setter progresses during awaited getter",
+          "stale getter cannot overwrite setter",
+          "operation progresses after rejection including falsy errors",
+          "shared refresh executes one getter",
+          "subscription delivers host event",
+          "unsubscribe stops host events",
+          "pending host operation cancellation",
+          "late and duplicate replies ignored",
+          "engine side effect"
+        ],
+        "cycles": 20,
+        "elapsed_ms": 744,
+        "engine_effect_survives": true,
+        "execution": [
+          "direct dependency cycle rejected",
+          "indirect dependency cycle rejected",
+          "concurrent shared roots reject dependency cycle",
+          "acyclic diamond shares dependency",
+          "same-instance independent getters overlap",
+          "competing stale commit rejected",
+          "snapshot cannot be reused after commit",
+          "async state update rejected",
+          "state snapshots and commits do not alias caller objects",
+          "invalidation fences suspended getter publication",
+          "setter progresses during shared refresh",
+          "setter fences old shared refresh result",
+          "publication rechecks revision after Promise adoption",
+          "replacement definition runs during old getter",
+          "definition replacement fences old result",
+          "cancelled work skipped before start",
+          "cancelled suspended work does not block same instance",
+          "cancelled running commit rejected",
+          "one cancelled reader preserves shared refresh for others",
+          "last reader cancellation permits immediate replacement refresh",
+          "cancelled continuation cannot dispatch new effect",
+          "parent cancellation preserves dependency owned by another reader",
+          "sole parent cancellation cancels dependency",
+          "settled operation cannot dispatch detached effects",
+          "cancellation preserves earlier state and dispatched engine effects",
+          "execution tasks readers and wait edges released",
+          "disposal cancels pending work and releases tasks"
+        ],
+        "fresh_context": true,
+        "heap_limit": true,
+        "host": "android",
+        "interruption_ms": 50,
+        "lifecycle": {
+          "colliding_request_ids": true,
+          "forced_reload_cleanup": true,
+          "other_instance_survives": true,
+          "stale_event_rejected": true,
+          "stale_response_rejected": true
+        },
+        "policy": {
+          "cases": [
+            "malformed JSON",
+            "non-string wire",
+            "oversized command",
+            "wrong envelope",
+            "invalid write",
+            "extra routing field",
+            "unsafe ID",
+            "unknown capability",
+            "oversized UTF8",
+            "deep JSON",
+            "wide JSON",
+            "caught flood",
+            "replayed ID",
+            "subscription budget",
+            "stalled budget",
+            "subscription ownership"
+          ],
+          "exact_boundaries": true,
+          "parent_validation": true,
+          "passed": true,
+          "queued_requests": 32,
+          "resources_empty": true,
+          "stalled_calls": 16,
+          "subscriptions": 16,
+          "wire_bytes": 32768
+        },
+        "protected_execution": {
+          "checks": [
+            "explicit mode",
+            "shared producer",
+            "reader cancellation",
+            "remaining reader survives",
+            "last reader cancels",
+            "cancelled publication",
+            "stale commit",
+            "stale publication",
+            "explicit fresh read",
+            "no async update",
+            "no accessor update",
+            "direct cycle",
+            "indirect cycle",
+            "owned dependency cancellation",
+            "concurrent root cycle",
+            "shared child survives",
+            "independent reads",
+            "skip cancelled before start",
+            "prior mutation survives",
+            "definition fences continuation",
+            "cleanup"
+          ],
+          "passed": true,
+          "prior_effect_survives": true,
+          "protected_state": true,
+          "raw_cancelled_effect_rejected": true,
+          "raw_stale_effect_rejected": true
+        },
+        "ui_ticks": 40
+      },
+      "process": {
+        "passed": true,
+        "host": "android-service-process",
+        "ui_pid": 7280,
+        "survivor_pid": 7377,
+        "faults": [
+          {
+            "fault": "native_abort",
+            "old_pid": 7399,
+            "replacement_pid": 7686,
+            "binder_death": true,
+            "pending_command_rejected": true,
+            "resources_retired": true,
+            "survivor_progress": true,
+            "fresh_process": true,
+            "baseline_restored": true,
+            "stale_generation_rejected": true,
+            "colliding_request_ids": true,
+            "replacement_full_suite": true,
+            "watchdog": false
+          },
+          {
+            "fault": "native_hang",
+            "old_pid": 7711,
+            "replacement_pid": 7740,
+            "binder_death": true,
+            "pending_command_rejected": true,
+            "resources_retired": true,
+            "survivor_progress": true,
+            "fresh_process": true,
+            "baseline_restored": true,
+            "stale_generation_rejected": true,
+            "colliding_request_ids": true,
+            "replacement_full_suite": true,
+            "watchdog": true
+          }
+        ],
+        "ui_ticks": 299,
+        "resources_empty": true,
+        "elapsed_ms": 5129
+      },
+      "transport": {
+        "arch": "x86_64",
+        "checks": [
+          "clients read initial server snapshot",
+          "read and write progress while another read awaits network IO",
+          "late read cannot replace newer observed revision",
+          "subscription delivers ordered live changes from another client",
+          "unsubscribe stops delivery to listener",
+          "cancelled work before dispatch never reaches server",
+          "server cancels accepted work before its effect",
+          "cancelled accepted action produces no effect",
+          "cancellation after completion does not undo server effect",
+          "disconnect rejects pending reads",
+          "reconnect installs current snapshot after missed changes",
+          "old generation reply cannot resolve colliding new request ID",
+          "replacement generation remains usable",
+          "lost HTTP response reports unknown action outcome with stable ID",
+          "action status reconciles lost response after reconnect",
+          "explicit retry with same action ID does not repeat effect",
+          "reusing action ID with different arguments fails",
+          "disconnect does not imply cancellation of accepted server work",
+          "accepted action completes independently of requester connection",
+          "older successful action response preserves newer displayed state",
+          "retained subscription receives reconnect snapshot",
+          "subscription resumes live delivery after reconnect",
+          "missing action record remains unknown rather than inferred failure",
+          "server rejects unsupported capabilities",
+          "disconnect releases local pending operations"
+        ],
+        "done": true,
+        "elapsed_ms": 687,
+        "host": "android",
+        "http_requests_remaining": 0,
+        "peak_http_requests": 3,
+        "ui_ticks": 28
+      },
+      "apk_sha256": "95d7fbf179470912a53d618e87117b9495749fffb4d3d9b2730e57a2502d65bb",
+      "library": {
+        "path": "lib/x86_64/libtalia_runtime_spike.so",
+        "sha256": "a3ffbe82156229b434cfdd54e1cc2ab4f537b97c94cb02b3111da6d7fcc25de2"
+      },
+      "sdk": "36",
+      "model": "sdk_gphone64_x86_64",
+      "abi": "x86_64",
+      "cleanup_verified": true,
+      "lifecycle": {
+        "passed": true,
+        "checks": [
+          "temporary edit",
+          "pause during dispatched action; server continues",
+          "resume reconciles without resubmission; dirty retained",
+          "repeated transitions refresh without duplicate subscriptions",
+          "process recreation restores saved baseline and server effects",
+          "external failure is recoverable",
+          "4 visible stopped state, signal, cleanup, survivor progress and no resume restart",
+          "4 manual restart preserves server effects",
+          "5 visible stopped state, signal, cleanup, survivor progress and no resume restart",
+          "5 manual restart preserves server effects",
+          "6 visible stopped state, signal, cleanup, survivor progress and no resume restart",
+          "6 manual restart preserves server effects"
+        ],
+        "final": {
+          "active": true,
+          "epoch": 1,
+          "external_error": null,
+          "failure": null,
+          "ignored": 0,
+          "local": {
+            "dirty": false,
+            "ticks": 2
+          },
+          "outcomes": {},
+          "pending": 1,
+          "pending_waits": 1,
+          "signals": [
+            {
+              "diagnostic": "called `Result::unwrap()` on an `Err` value: \"Exception generated by QuickJS: Exception(\\nException { message: Some(\\\"fixture internal error\\\"), stack: Some(\\\"    at <eval> (eval_script:1:6)\\\\n\\\") })\\n\"",
+              "type": "dashboard-failure"
+            },
+            {
+              "diagnostic": "called `Result::unwrap()` on an `Err` value: \"Exception generated by QuickJS: Exception(\\nException { message: Some(\\\"interrupted\\\"), stack: Some(\\\"    at <eval> (eval_script:1:1)\\\\n\\\") })\\n\"",
+              "type": "dashboard-failure"
+            },
+            {
+              "diagnostic": "called `Result::unwrap()` on an `Err` value: \"Exception generated by QuickJS: Exception(\\nException { message: Some(\\\"out of memory\\\"), stack: Some(\\\"    at <eval> (eval_script:1:62)\\\\n\\\") })\\n\"",
+              "type": "dashboard-failure"
+            }
+          ],
+          "snapshot": {
+            "revision": 4,
+            "value": 62
+          },
+          "subscriptions": 1,
+          "survivor_ticks": 2
+        },
+        "sdk": "36",
+        "model": "sdk_gphone64_x86_64"
+      }
+    }
+  },
+  "server": {
+    "passed": true,
+    "checks": [
+      "non-object envelope rejected",
+      "oversized body rejected",
+      "out-of-range mutation rejected without panic",
+      "unknown action fields rejected",
+      "invalid namespace rejected",
+      "read progresses while server action awaits",
+      "concurrent duplicate actions share one effect",
+      "conflicting idempotency payload rejected",
+      "pre-effect timeout records failure without changing state",
+      "retry cannot revive an action recorded as failed"
+    ]
+  },
+  "missing_platforms": [
+    "android-arm64"
+  ],
+  "qualified": false
+}
