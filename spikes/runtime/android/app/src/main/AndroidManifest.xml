@@ -1,8 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+ <uses-permission android:name="android.permission.INTERNET" />
  <application android:directBootAware="true" android:label="Talìa runtime spike" android:theme="@android:style/Theme.Material.Light.NoActionBar" android:allowBackup="false">
   <activity android:directBootAware="true" android:name=".MainActivity" android:exported="true">
    <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
   </activity>
+  <activity android:name=".TransportActivity" android:exported="true" android:directBootAware="true" />
   <service android:name=".RuntimeService$A" android:process=":runtime_a" android:exported="false" android:directBootAware="true" android:stopWithTask="true" />
   <service android:name=".RuntimeService$B" android:process=":runtime_b" android:exported="false" android:directBootAware="true" android:stopWithTask="true" />
  </application>

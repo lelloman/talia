@@ -10,7 +10,9 @@ The P0 experiments now include browser/native bridge abuse tests, Linux child-pr
 The [execution-policy record](execution-policy-prototype.md) now includes revised
 async-interleaving fixtures and matching Linux, browser, emulator and physical
 ARM64 results. The helper API and conservative freshness/cancellation policies
-remain proposals. P0 is not fully qualified and later phases have not started.
+remain proposals. The [transport experiment](transport-prototype.md) adds real
+loopback HTTP, reconnect snapshots, generation routing and action reconciliation
+on all four hosts. P0 is not fully qualified and later phases have not started.
 
 ## Outcome
 
@@ -213,6 +215,28 @@ The following prototype work is complete; production API policy remains open:
 - [x] Rerun Linux, capped browser Workers, Android emulator and physical ARM64
   behavior/recovery tests and record evidence for the revised contract.
 
+
+## Transport contract follow-up
+
+The [transport prototype](transport-prototype.md) connects the shared JavaScript
+client to a real loopback Rust server in Linux, browser and both Android targets.
+The following fixture work is complete:
+
+- [x] Async reads and mutations proceed while another request awaits network I/O.
+- [x] Live subscriptions, unsubscribe, reconnect snapshots and resumed listeners.
+- [x] Pending reads fail on disconnect; old generations cannot resolve new requests.
+- [x] Stable action IDs, explicit status reconciliation after HTTP response loss,
+  deduplicated retries and conflicting-payload rejection.
+- [x] Distinguish local cancellation from server acceptance/completion; preserve
+  completed effects and record pre-effect timeout failure.
+- [x] Match shared results across four hosts and rerun native embedding regressions.
+
+This does not complete P0. Production authorization/transport, durable action
+records, server incarnation/restart recovery, dependency propagation and Android
+background lifecycle remain open. Subscription snapshots coalesce changes and do
+not constitute durable alert/event delivery. These helper policies need API review.
+The next runnable increment is P1's minimal shared UI/VM slice connected to this
+boundary, with both native Android and web controls.
 
 ## Acceptance matrix
 

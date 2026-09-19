@@ -36,9 +36,12 @@ updates and configurable shared-refresh or independent-read behavior.
 
 These documents record the **high-level product direction discussed with the
 user**, not a signed-off detailed specification or implementation architecture.
-An isolated [runtime prototype](docs/runtime-prototype.md) has been implemented
-and tested; the product has not been implemented or deployed.
+Isolated [runtime](docs/runtime-prototype.md) and [client–server transport](docs/transport-prototype.md)
+prototypes have been implemented and tested; the product has not been implemented
+or deployed.
 
+- [Transport findings](docs/transport-prototype.md): real HTTP reads/writes, subscriptions,
+  reconnect and action outcomes across all four hosts.
 - [Runtime findings](docs/runtime-prototype.md): executable P0 evidence and
   unresolved qualification gaps.
 - [Implementation plan](docs/implementation-plan.md): first milestone with both

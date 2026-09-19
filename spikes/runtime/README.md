@@ -127,6 +127,11 @@ See the [execution-policy proposal](../../docs/execution-policy-prototype.md) fo
 policies, evidence and limits. These checks are separate from the 14 behavior
 checks. The old serialized reports remain in `results/history/serialized-2026-09-19`.
 
+The separate [transport experiment](../transport/README.md) connects these runtime
+families to a real loopback Rust server. Its own shared fixture covers reconnect,
+subscriptions and action outcomes; the original suite here remains a simulated-host
+runtime/recovery test.
+
 ## Limits of the evidence
 
 - No server persistence, real monitoring, renderer compiler, MCP routing,

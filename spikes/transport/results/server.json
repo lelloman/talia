@@ -1,0 +1,15 @@
+{
+  "passed": true,
+  "checks": [
+    "non-object envelope rejected",
+    "oversized body rejected",
+    "out-of-range mutation rejected without panic",
+    "unknown action fields rejected",
+    "invalid namespace rejected",
+    "read progresses while server action awaits",
+    "concurrent duplicate actions share one effect",
+    "conflicting idempotency payload rejected",
+    "pre-effect timeout records failure without changing state",
+    "retry cannot revive an action recorded as failed"
+  ]
+}

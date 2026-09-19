@@ -4,7 +4,7 @@
     "shared/bridge.js": "d8c670d56663a587a46df7d76f7500ea7c1434c6a2ba973178a7244c34f03aaf",
     "shared/suite.js": "8be703f645be5a8eb43c36359d35f07aa2839d0b37c96405c1df840d3ec3b5a6",
     "shared/lifecycle.json": "14a451c3ba084669241562721cc49427008d4a6d38a007c67732af1958a5a00e",
-    "native/src/lib.rs": "e243a41f872fc9513692cfcaf42df0e554e5d9452bf484125c86d18ca4378fb3",
+    "native/src/lib.rs": "023d529edb90c84ee26f98210787190d513ae8c7383b98bf0d9bde4464f2d7f3",
     "native/Cargo.lock": "b2f8b6a5ce5c87614c6b462d3d7f6adb89fc1b5461fbbf0809e240882e60f111",
     "package-lock.json": "8ece00b75ee6cef5a26565fe64f822b0c6144451083c0bfa4dad01d28542d443",
     "web/worker.js": "86f172813c5f5bd231ff268ce0650639ef5d0b84d1524f572c59ddc3792b7218",
@@ -19,13 +19,17 @@
     "web/bridge-policy.js": "73e8e916b47dfd56d9286dfedb24be7ff11561b3eae9a62b6535c60f6d3ee7e9",
     "web/policy-suite.js": "6b78e261ded352ea96ade8d4d0d7dfa294684d267d4f61c1fb93e4e4f7fff53b",
     "bridge-policy.test.mjs": "db84b6f2f29b75a8e97911551bef65e5b52140723cabb02b74cb5f85ed5f01df",
-    "native/src/main.rs": "1ef5765f9d9c86f0e8204adbc00ab3905a1446bc1bf01e4c151b02f3360be558",
+    "native/src/main.rs": "2eb63924425ba8a4e6a8c17d78a0a85e0c0519c896debbd7ba1c406cb38c897f",
     "native/src/policy.rs": "8494f2157ff6ffca98a2da0133dfa918ec82d0de75438065130679d8b112c33f",
     "native/src/process.rs": "550cb9b301f62d69b87db97b04a3451a6ec5bb3ebc8b41744eca94c3540775a1",
     "native/src/android_service.rs": "f71bb5ce9168e26e13a9bc4ccbec19b35341b6dedb9a58b8d132f29fd70b6af9",
-    "android/app/src/main/AndroidManifest.xml": "42741cd3060fe536b25bd26d7ca58f4cd222991f15f45c8edcfd5a65e4d5a0c2",
+    "android/app/src/main/AndroidManifest.xml": "0f52c735f4d4d524351f583239e2a4765b08f204e3836815b967c1281040bea8",
     "android/app/src/main/java/com/lelloman/talia/spike/MainActivity.java": "179690ec734091b2af8a987c2b3fae34781fcd89ff54b5026b253761d16a6dbd",
     "android/app/src/main/java/com/lelloman/talia/spike/RuntimeService.java": "ac161e03b5f5b37232669cc5de50cc6c9ae195564a7e5b885dd6f085c2ab7135",
-    "android/app/src/main/java/com/lelloman/talia/spike/ProcessChecks.java": "81641a2205f149673bfe972deb4d80ebfe58e81714e56faeaca236793f82a556"
+    "android/app/src/main/java/com/lelloman/talia/spike/ProcessChecks.java": "81641a2205f149673bfe972deb4d80ebfe58e81714e56faeaca236793f82a556",
+    "native/src/transport.rs": "03abb4c11fff0c463babea4ce974d77283280562a3bdaaefc5433c07e46daae5",
+    "../transport/shared/client.js": "bacb280f5749e05aaee33d0c886c5921fede79003cf139f93ec7226523876a0d",
+    "../transport/shared/suite.js": "78bc8e667863375d79f8235ed05b2961d1828c53bea597340a25988a47a0cc42",
+    "android/app/src/main/java/com/lelloman/talia/spike/TransportActivity.java": "feb0514dc1a96e0c76cb41f764e67a2284a8527b1e7bb35f3fa22bf90b6f3289"
   }
 }

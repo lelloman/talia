@@ -17,7 +17,7 @@
     "engine side effect"
   ],
   "cycles": 20,
-  "elapsed_ms": 423,
+  "elapsed_ms": 318,
   "engine_effect_survives": true,
   "execution": [
     "direct dependency cycle rejected",

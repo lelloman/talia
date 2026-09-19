@@ -1,7 +1,7 @@
 {
   "date": "2026-09-19",
   "abi": "arm64-v8a",
-  "installed_apk_sha256": "d49b716983d3e47404c96752ae9dea62a58ddf0ec2b0393029e56aa1e81e763b",
+  "installed_apk_sha256": "886008ced55e1f7acb35c668739aa21bf92d84edc57dd89a04e65bbdd1bc4dce",
   "rust_target": "aarch64-linux-android",
   "device": {
     "manufacturer": "OnePlus",
@@ -10,8 +10,8 @@
     "android_release": "16",
     "kind": "physical"
   },
-  "apk_sha256": "d49b716983d3e47404c96752ae9dea62a58ddf0ec2b0393029e56aa1e81e763b",
-  "packaged_library_sha256": "78221069e8f6a81a9351c3fb43f1e4a6d138f99841747d1fc14116ab60b5d1cb",
+  "apk_sha256": "886008ced55e1f7acb35c668739aa21bf92d84edc57dd89a04e65bbdd1bc4dce",
+  "packaged_library_sha256": "6590e7093b759c57317a243ebdea475582a44588f6d38da5a6b497f7ea1d106a",
   "sha256": {
     "build-android.sh": "abd2e894ea44325e66696c43cc3d75623b22df18c47d17f0c4e3832fc771b68a",
     "android/app/build.gradle": "5f766252c6c04be2f8ca7111b0b4bc5ff7ae52d1326f46444d9e7e55ddc88e59",
@@ -20,16 +20,20 @@
     "native/Cargo.toml": "a5fb4e72c95083f2f4d57c9af0c7559bc22ed02b1fe3b96f5efde45240922f59",
     "native/Cargo.lock": "b2f8b6a5ce5c87614c6b462d3d7f6adb89fc1b5461fbbf0809e240882e60f111",
     "native/src/android_service.rs": "f71bb5ce9168e26e13a9bc4ccbec19b35341b6dedb9a58b8d132f29fd70b6af9",
-    "native/src/lib.rs": "e243a41f872fc9513692cfcaf42df0e554e5d9452bf484125c86d18ca4378fb3",
-    "native/src/main.rs": "1ef5765f9d9c86f0e8204adbc00ab3905a1446bc1bf01e4c151b02f3360be558",
+    "native/src/lib.rs": "023d529edb90c84ee26f98210787190d513ae8c7383b98bf0d9bde4464f2d7f3",
+    "native/src/main.rs": "2eb63924425ba8a4e6a8c17d78a0a85e0c0519c896debbd7ba1c406cb38c897f",
     "native/src/policy.rs": "8494f2157ff6ffca98a2da0133dfa918ec82d0de75438065130679d8b112c33f",
     "native/src/process.rs": "550cb9b301f62d69b87db97b04a3451a6ec5bb3ebc8b41744eca94c3540775a1",
-    "android/app/src/main/AndroidManifest.xml": "42741cd3060fe536b25bd26d7ca58f4cd222991f15f45c8edcfd5a65e4d5a0c2",
+    "android/app/src/main/AndroidManifest.xml": "0f52c735f4d4d524351f583239e2a4765b08f204e3836815b967c1281040bea8",
     "android/app/src/main/java/com/lelloman/talia/spike/MainActivity.java": "179690ec734091b2af8a987c2b3fae34781fcd89ff54b5026b253761d16a6dbd",
     "android/app/src/main/java/com/lelloman/talia/spike/ProcessChecks.java": "81641a2205f149673bfe972deb4d80ebfe58e81714e56faeaca236793f82a556",
     "android/app/src/main/java/com/lelloman/talia/spike/RuntimeService.java": "ac161e03b5f5b37232669cc5de50cc6c9ae195564a7e5b885dd6f085c2ab7135",
     "shared/bridge.js": "d8c670d56663a587a46df7d76f7500ea7c1434c6a2ba973178a7244c34f03aaf",
     "shared/suite.js": "8be703f645be5a8eb43c36359d35f07aa2839d0b37c96405c1df840d3ec3b5a6",
-    "shared/lifecycle.json": "14a451c3ba084669241562721cc49427008d4a6d38a007c67732af1958a5a00e"
+    "shared/lifecycle.json": "14a451c3ba084669241562721cc49427008d4a6d38a007c67732af1958a5a00e",
+    "native/src/transport.rs": "03abb4c11fff0c463babea4ce974d77283280562a3bdaaefc5433c07e46daae5",
+    "../transport/shared/client.js": "bacb280f5749e05aaee33d0c886c5921fede79003cf139f93ec7226523876a0d",
+    "../transport/shared/suite.js": "78bc8e667863375d79f8235ed05b2961d1828c53bea597340a25988a47a0cc42",
+    "android/app/src/main/java/com/lelloman/talia/spike/TransportActivity.java": "feb0514dc1a96e0c76cb41f764e67a2284a8527b1e7bb35f3fa22bf90b6f3289"
   }
 }

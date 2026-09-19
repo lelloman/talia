@@ -306,8 +306,10 @@ pass in Chromium, including malformed-request validation and bridge budgets.
 Linux child-process and Android service-process fault containment now have fixture
 evidence, including Binder death, cleanup and explicit rebind on emulator and physical
 ARM64 hardware. Revised async-interleaving and read-sharing fixtures pass on
-all four hosts. Next, qualify remote action outcomes and production transport
-recovery and settle the remaining helper API policies. Preserve the uncapped
+all four hosts. The [transport follow-up](transport-prototype.md) now tests real
+HTTP disconnect/reconnect and remote action reconciliation on these hosts. Settle
+the remaining helper API policies and qualify durable outcomes and production
+transport recovery. Preserve the uncapped
 regression probes so upgrades cannot silently reintroduce reliance on the broken
 aggregate runtime limit.
 

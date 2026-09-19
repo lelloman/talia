@@ -9,3 +9,5 @@ spikes/runtime/android/app/build/
 spikes/runtime/android/local.properties
 
 spikes/runtime/jniLibs/
+spikes/transport/server/target/
+spikes/transport/web/dist/

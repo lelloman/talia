@@ -149,7 +149,10 @@ deadlines, shared-work cancellation ownership and recovery details remain open.
 The [execution-policy record](execution-policy-prototype.md) distinguishes these
 agreed decisions from candidate API policies. Revised async-interleaving fixtures
 pass on Linux, browser and both Android targets; the record preserves historical
-serialized results separately. Production enforcement and API defaults remain open.
+serialized results separately. The [transport prototype](transport-prototype.md)
+exercises actual HTTP response loss, action-status reconciliation and reconnect
+snapshots with candidate policies. Production enforcement, durability and API
+defaults remain open.
 
 ## Pipeline execution
 

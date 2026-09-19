@@ -1,0 +1,26 @@
+{
+  "date": "2026-09-19",
+  "sha256": {
+    "server/Cargo.toml": "ff816aacef071201acf1b3acc44041db8ef0f16b74d4ecd7ef0adbd3d7f14987",
+    "server/Cargo.lock": "b1dc00060891ecfa344649de828b63d8bce4b4602a13c2a5824c4ed778cda06e",
+    "server/src/main.rs": "b68e841d450b43f0e273266d9c50165a1f0d4ebabc670c2aa29831c3763d93e4",
+    "shared/client.js": "bacb280f5749e05aaee33d0c886c5921fede79003cf139f93ec7226523876a0d",
+    "shared/suite.js": "78bc8e667863375d79f8235ed05b2961d1828c53bea597340a25988a47a0cc42",
+    "web/worker.js": "ae266041588d7e96f5e5b8b0ea38f558ca66f09c34d78b08825fa530f54df20e",
+    "web/index.html": "75d32a895872a8c145c38aca5c434017fb6f5ad9343b74201a240d05a4986477",
+    "build-web.sh": "d21c1251e945ad61095c2cd36e34b3e40bbae1a25a2afad1d593a669d2ac2073",
+    "run-browser.mjs": "ab0da725404086c517a43ec73aef08edaff06adb57b83a99dc54d8ec8166371e",
+    "run-android.py": "86497434db7f7d1f4c8c9cc0713ee2e3695455960dac3e1125de2c57cb51bf5e",
+    "test-server.py": "671840ded196cb318e4ae05fbfaf3b19bc3f9d7f18ed03e4a43c4baddd06b475",
+    "../runtime/native/Cargo.toml": "a5fb4e72c95083f2f4d57c9af0c7559bc22ed02b1fe3b96f5efde45240922f59",
+    "../runtime/native/Cargo.lock": "b2f8b6a5ce5c87614c6b462d3d7f6adb89fc1b5461fbbf0809e240882e60f111",
+    "../runtime/native/src/lib.rs": "023d529edb90c84ee26f98210787190d513ae8c7383b98bf0d9bde4464f2d7f3",
+    "../runtime/native/src/main.rs": "2eb63924425ba8a4e6a8c17d78a0a85e0c0519c896debbd7ba1c406cb38c897f",
+    "../runtime/native/src/transport.rs": "03abb4c11fff0c463babea4ce974d77283280562a3bdaaefc5433c07e46daae5",
+    "../runtime/package-lock.json": "8ece00b75ee6cef5a26565fe64f822b0c6144451083c0bfa4dad01d28542d443",
+    "../runtime/build-android.sh": "abd2e894ea44325e66696c43cc3d75623b22df18c47d17f0c4e3832fc771b68a",
+    "../runtime/android/app/build.gradle": "5f766252c6c04be2f8ca7111b0b4bc5ff7ae52d1326f46444d9e7e55ddc88e59",
+    "../runtime/android/app/src/main/AndroidManifest.xml": "0f52c735f4d4d524351f583239e2a4765b08f204e3836815b967c1281040bea8",
+    "../runtime/android/app/src/main/java/com/lelloman/talia/spike/TransportActivity.java": "feb0514dc1a96e0c76cb41f764e67a2284a8527b1e7bb35f3fa22bf90b6f3289"
+  }
+}

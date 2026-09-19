@@ -1,0 +1,6 @@
+{
+  "apk_sha256": "c5ad9ad9f175091bc4dbca485b5502d7df6843b35e836b5d866c8463eed22327",
+  "installed_apk_sha256": "c5ad9ad9f175091bc4dbca485b5502d7df6843b35e836b5d866c8463eed22327",
+  "packaged_library": "lib/x86_64/libtalia_runtime_spike.so",
+  "packaged_library_sha256": "23ea0dd62831b4e99c22fadf3f959daa0b47f90659bdfb4111c2e1320dd838ea"
+}

@@ -1,0 +1,12 @@
+<!doctype html><meta charset="utf-8"><title>Talìa transport experiment</title>
+<p id="heartbeat"></p><pre id="result">Running…</pre>
+<script type="module">
+let ticks=0;const timer=setInterval(()=>{document.querySelector('#heartbeat').textContent=`UI heartbeat: ${++ticks}`;},10);
+const worker=new Worker('/worker.js',{type:'module'});
+const deadline=setTimeout(()=>finish({error:'transport suite deadline'}),60000);
+function finish(report){worker.terminate();clearTimeout(deadline);clearInterval(timer);window.transportResult={...report,renderer_ticks:ticks};document.querySelector('#result').textContent=JSON.stringify(window.transportResult,null,2);}
+worker.onmessage=({data})=>finish(data);
+worker.onerror=event=>finish({error:event.message});
+const [client,suite]=await Promise.all(['/client.js','/suite.js'].map(path=>fetch(path).then(r=>r.text())));
+worker.postMessage({client,suite});
+</script>

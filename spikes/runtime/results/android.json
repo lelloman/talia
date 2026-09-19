@@ -17,7 +17,7 @@
     "engine side effect"
   ],
   "cycles": 20,
-  "elapsed_ms": 892,
+  "elapsed_ms": 411,
   "engine_effect_survives": true,
   "execution": [
     "direct dependency cycle rejected",
@@ -51,7 +51,7 @@
   "fresh_context": true,
   "heap_limit": true,
   "host": "android",
-  "interruption_ms": 52,
+  "interruption_ms": 50,
   "lifecycle": {
     "colliding_request_ids": true,
     "forced_reload_cleanup": true,
@@ -87,7 +87,7 @@
     "subscriptions": 16,
     "wire_bytes": 32768
   },
-  "ui_ticks": 32,
+  "ui_ticks": 25,
   "android_release": "16",
   "android_sdk": 36,
   "harness": "native Activity / JNI / background thread"
