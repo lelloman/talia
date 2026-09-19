@@ -1,0 +1,10 @@
+[
+  {"name":"ungranted write","request":{"id":1,"op":"write","value":99}},
+  {"name":"forged grants","request":{"id":1,"op":"write","value":99,"grants":["write"]}},
+  {"name":"forged identity","request":{"id":1,"op":"read","value":"value","generation":1}},
+  {"name":"filesystem","request":{"id":1,"op":"file.read","value":"/etc/passwd"}},
+  {"name":"credentials","request":{"id":1,"op":"credentials.read","value":"prometheus"}},
+  {"name":"arbitrary network","request":{"id":1,"op":"fetch","value":"https://example.com"}},
+  {"name":"view mutation","request":{"id":1,"op":"view.write","value":{"text":"changed"}}},
+  {"name":"unknown variable","request":{"id":1,"op":"read","value":"secret"}}
+]

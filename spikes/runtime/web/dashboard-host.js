@@ -1,6 +1,9 @@
 import {LIMITS, boundedText, validateRequest} from './bridge-policy.js';
 // Parent-owned resources survive Worker failures and are retired by generation.
 export class DashboardHost {
+  #grants = new WeakMap();
+  #views = new WeakMap();
+  view(guest) { return structuredClone(this.#views.get(guest)); }
   value = 0;
   next = 0;
   generation = 0;
@@ -9,13 +12,15 @@ export class DashboardHost {
   stalled = [];
   timers = new Map();
 
-  async create(bridge) {
+  async create(bridge, grants = ['echo','read','write','subscribe','unsubscribe','publish','delay','fail','stall','late'], view = {type:'Text',text:'saved'}) {
     if (this.guests.size >= LIMITS.workers) throw Error('Worker limit');
     const generation = ++this.generation;
     const worker = new Worker('/web/dist/dashboard-worker.js', {type:'module'});
     const pending = new Map();
     let next = 0;
     const guest = {generation, worker, pending, active:true, memory_bytes:0, reason:null, lastRequest:0};
+    this.#grants.set(guest, new Set(grants));
+    this.#views.set(guest, structuredClone(view));
     guest.command = (op, value, timeout = 3000) => new Promise((resolve, reject) => {
       if (!guest.active) { reject(Error('retired Worker')); return; }
       const id = ++next;
@@ -73,6 +78,7 @@ export class DashboardHost {
     let request;
     try {
       request = validateRequest(raw);
+      if (!this.#grants.get(guest)?.has(request.op)) throw Error('operation not granted');
       if (request.id <= guest.lastRequest) throw Error('request ID replay/order');
       guest.lastRequest = request.id;
       const owned = collection => [...collection.values()].filter(g => g === guest.generation).length;

@@ -1,0 +1,12 @@
+{
+  "native/src/lib.rs": "28e987ff4bff7f591d8e71feaea5c852b4d8c789270feb5f8496b89a13f55fd9",
+  "native/src/policy.rs": "8494f2157ff6ffca98a2da0133dfa918ec82d0de75438065130679d8b112c33f",
+  "native/Cargo.lock": "b2f8b6a5ce5c87614c6b462d3d7f6adb89fc1b5461fbbf0809e240882e60f111",
+  "shared/bridge.js": "d8c670d56663a587a46df7d76f7500ea7c1434c6a2ba973178a7244c34f03aaf",
+  "shared/capabilities.json": "23ac0fa67609fc01c180682934a1b404bea02d661a3ea210f2700716d746d087",
+  "web/dashboard-host.js": "b392c4e7f9425184c9ce3299ef36cec91659ee17e775dfec1a8346e73885cc28",
+  "web/dashboard-worker.js": "b833300259d67485c89a45a8fc538ca8bd3066a44cd395aeba7eff0f09d56a4c",
+  "web/capability-suite.js": "c2828454792d84947bb87193dfe4c0d066d3c44b9857969e63fb92706d56357f",
+  "web/disposable-suite.js": "fc05838097ad3fcdb14c6041b55d38d0e0602ebacf4c9801d4b9a2b8214216f5",
+  "package-lock.json": "8ece00b75ee6cef5a26565fe64f822b0c6144451083c0bfa4dad01d28542d443"
+}

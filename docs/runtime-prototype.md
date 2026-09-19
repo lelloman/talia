@@ -319,3 +319,22 @@ Android background lifecycle. The [experiment limits](../spikes/runtime/README.m
 distinguish what is demonstrated from what still needs implementation.
 
 The current conclusion is **behavioral feasibility with tested browser, Linux process and Android service containment**, not completion of qualification for the selected P0 baseline or of the first milestone.
+
+## Explicit capability grants (TALIA-11)
+
+The native Guest and browser parent now hold per-instance operation grants outside
+QuickJS. The legacy full fixture profile remains a trusted harness choice; the new
+read-only profile cannot write even via raw bridge calls. Native admission and
+dispatch both check grants; browser dispatch checks a private parent-owned grant
+set. Neither consumes script-supplied authority. Host-owned fixture Views are copied
+for inspection and have no guest mutation operation.
+
+Fresh reports in `spikes/runtime/results/capabilities` record 16 matching saved/live
+bypass cases on Linux, Chromium and native Android x86_64, plus independent dispatch
+injection, granted read/write and survivor progress checks. Run
+`python3 spikes/runtime/check-capabilities.py spikes/runtime/results/capabilities`.
+The emulator app was uninstalled after testing. Physical ARM64 requalification is
+pending under TALIA-15. Earlier top-level reports are preserved unchanged and their
+source manifests intentionally do not certify these new source revisions; full
+cross-platform source-qualified evidence must be renewed before P0 completion.
+These are local runtime capabilities, not network authentication or production ACLs.

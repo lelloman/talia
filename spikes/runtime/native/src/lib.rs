@@ -19,6 +19,7 @@ const SUITE: &str = include_str!("../../shared/suite.js");
 
 #[derive(Default)]
 struct Host {
+    view: Option<Value>,
     value: f64,
     subscriptions: Vec<(u64, String)>,
     stalled: Vec<(u64, Value)>,
@@ -37,9 +38,25 @@ struct Guest {
     out: Rc<RefCell<VecDeque<String>>>,
     violation: Rc<RefCell<Option<String>>>,
     last_request: Cell<u64>,
+    grants: Vec<String>,
 }
 impl Guest {
     fn new() -> Self {
+        Self::with_grants(&[
+            "echo",
+            "read",
+            "write",
+            "subscribe",
+            "unsubscribe",
+            "publish",
+            "delay",
+            "fail",
+            "stall",
+            "late",
+        ])
+    }
+    fn with_grants(operations: &[&str]) -> Self {
+        let grants: Vec<String> = operations.iter().map(|s| s.to_string()).collect();
         let rt = Runtime::new().unwrap();
         rt.set_memory_limit(16 * 1024 * 1024);
         rt.set_max_stack_size(512 * 1024);
@@ -51,6 +68,7 @@ impl Guest {
         ctx.with(|c| {
             let queue = out.clone();
             let failed = violation.clone();
+            let allowed = grants.clone();
             c.globals()
                 .set(
                     "__send",
@@ -68,7 +86,15 @@ impl Guest {
                         let error = if queue.borrow().len() >= policy::QUEUED {
                             Some("request queue limit".to_string())
                         } else {
-                            policy::request(&s).err()
+                            policy::request(&s)
+                                .and_then(|request| {
+                                    if allowed.iter().any(|op| request["op"] == *op) {
+                                        Ok(request)
+                                    } else {
+                                        Err("operation not granted".into())
+                                    }
+                                })
+                                .err()
                         };
                         if let Some(error) = error {
                             *failed.borrow_mut() = Some(error);
@@ -88,6 +114,7 @@ impl Guest {
             out,
             violation,
             last_request: Cell::new(0),
+            grants,
         }
     }
     fn eval(&self, s: &str) -> Result<(), String> {
@@ -163,6 +190,9 @@ impl Guest {
                     return Err(error);
                 }
                 let req = policy::request(&raw)?;
+                if !self.grants.iter().any(|op| req["op"] == *op) {
+                    return Err("operation not granted".into());
+                }
                 let request_id = req["id"].as_u64().unwrap();
                 if request_id <= self.last_request.get() {
                     return Err("request ID replay/order".into());
@@ -402,8 +432,47 @@ fn check_policy() -> Value {
     host.retire(survivor.generation);
     json!({"passed":true,"cases":checked,"parent_validation":true,"exact_boundaries":true,"resources_empty":host.subscriptions.is_empty() && host.stalled.is_empty(),"wire_bytes":policy::WIRE_BYTES,"queued_requests":policy::QUEUED,"subscriptions":policy::RESOURCES,"stalled_calls":policy::RESOURCES})
 }
+fn check_capabilities() -> Value {
+    let cases: Value =
+        serde_json::from_str(include_str!("../../shared/capabilities.json")).unwrap();
+    let mut host = Host {
+        view: Some(json!({"type":"Text","text":"saved"})),
+        ..Host::default()
+    };
+    let survivor = Guest::with_grants(&["read"]);
+    let mut checked = Vec::new();
+    for phase in ["saved", "live"] {
+        for case in cases.as_array().unwrap() {
+            let guest = Guest::with_grants(&["read"]);
+            if phase == "live" {
+                guest.eval("globalThis.engine={call(){}}; globalThis.grants=['write']; globalThis.view={text:'changed'};").unwrap();
+            }
+            let raw = case["request"].to_string();
+            let result = guest.eval(&format!("__send({});", json!(raw)));
+            assert!(result.is_err());
+            assert!(guest.try_drive(&mut host).is_err());
+            assert_eq!(host.value, 0.0);
+            assert_eq!(host.view, Some(json!({"type":"Text","text":"saved"})));
+            assert_eq!(survivor.read("1+1"), json!(2));
+            checked.push(format!("{}: {}", phase, case["name"].as_str().unwrap()));
+        }
+    }
+    // Independently validate at dispatch even if an adapter were bypassed.
+    let guest = Guest::with_grants(&["read"]);
+    guest
+        .out
+        .borrow_mut()
+        .push_back(json!({"id":1,"op":"write","value":99}).to_string());
+    assert!(guest.try_drive(&mut host).is_err());
+    assert_eq!(host.value, 0.0);
+    let allowed = Guest::with_grants(&["write", "read"]);
+    allowed.eval("(async()=>{await engine.write(8); assert(await engine.read('value')===8,'granted read/write');report.done=true;})()").unwrap();
+    allowed.drive(&mut host);
+    json!({"passed":true,"cases":checked,"dispatch_recheck":true,"granted_operations":true,"view_unchanged":true,"survivor_works":true})
+}
 pub fn run() -> Value {
     let start = Instant::now();
+    let capabilities = check_capabilities();
     let lifecycle = check_lifecycle();
     let policy = check_policy();
     let mut host = Host::default();
@@ -434,7 +503,7 @@ pub fn run() -> Value {
     assert!(allocation.eval("globalThis.buffers=[]; for(let i=0;i<1000;i++) buffers.push(new ArrayBuffer(1024*1024));").is_err());
     let after = Guest::new();
     assert_eq!(after.read("1+1"), json!(2));
-    json!({"host":std::env::consts::OS,"arch":std::env::consts::ARCH,"cycles":runs.len(),"lifecycle":lifecycle,"policy":policy,"checks":runs[0]["checks"],"execution":runs[0]["execution"],"fresh_context":true,"engine_effect_survives":true,"interruption_ms":interruption_ms,"heap_limit":true,"elapsed_ms":start.elapsed().as_millis()})
+    json!({"host":std::env::consts::OS,"arch":std::env::consts::ARCH,"cycles":runs.len(),"lifecycle":lifecycle,"capabilities":capabilities,"policy":policy,"checks":runs[0]["checks"],"execution":runs[0]["execution"],"fresh_context":true,"engine_effect_survives":true,"interruption_ms":interruption_ms,"heap_limit":true,"elapsed_ms":start.elapsed().as_millis()})
 }
 
 // Minimal JNI entry: P0 host embedding only, no Java object crosses the boundary.
