@@ -28,3 +28,24 @@ Recorded `results` cover Chromium and the Android x86_64 emulator. Input hashes
 identify this source revision; later revisions require fresh evidence. Physical
 Android qualification remains TALIA-15. The earlier isolated runtime/transport
 reports remain historical for source files changed by these additions.
+
+## Internal failure and manual recovery
+
+The shell now displays a prominent stopped/error state and a manual Restart
+control. A failed native dashboard drops its QuickJS guest; browser retirement
+terminates its Worker. Guest waits/subscriptions are released independently of
+already-dispatched HTTP actions. Background/foreground never revives a failed
+runtime. Restart loads saved source and keeps server effects. A second guest
+continues progressing during each failure scenario.
+
+Failure signals are opt-in (`failure_signals` in the Android test intent, or the
+web shell checkbox). The retained test receiver records one diagnostic event per
+failure; production alert delivery remains TALIA-7. External operation failures
+remain recoverable and are shown separately. Test-only controls inject a script
+exception, runaway loop and memory exhaustion. Do not expose this shell as a
+production application.
+
+`results/failures` records these cases on Chromium and native Android x86_64. The
+Android collector verifies visible diagnostics and taps the actual Restart button
+after foregrounding; browser tests click its DOM control. Both collectors also
+rerun lifecycle tests. Original lifecycle-only evidence remains unchanged.

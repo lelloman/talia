@@ -221,3 +221,9 @@ recorded action IDs rather than resubmitting writes. Host epochs reject old repl
 Retained runtimes keep temporary edits, while process recreation/reload restores
 the saved source. This qualifies the recorded fixture paths on Chromium and the
 Android emulator, not the future P1 renderer or physical-device lifecycle coverage.
+
+The fixture also implements visible stopped/error state, opt-in failure signals
+and manual saved-baseline Restart. Script exceptions, runaway execution and memory
+exhaustion were exercised with an unrelated surviving guest on Chromium and native
+Android x86_64. External probe errors remain recoverable. Recorded evidence is in
+`spikes/lifecycle/results/failures`; full notification delivery is not implemented.

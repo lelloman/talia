@@ -40,5 +40,19 @@ try{
  check(true,'repeated actual visibility transitions');
  await page.reload();await page.waitForFunction(()=>window.lifecycleReport?.snapshot?.value===62 && !window.lifecycleReport.local.dirty);
  check(true,'reload restores saved baseline and preserves server effect');
+ await page.click('#external');await page.waitForFunction(()=>window.lifecycleReport.external_error && window.lifecycleReport.active && !window.lifecycleReport.failure);
+ check(true,'external failure is recoverable');
+ await page.evaluate(()=>document.querySelector('#signals').checked=true);
+ for(const fault of ['crash','runaway','memory']){
+  await page.click('#dirty');await page.waitForFunction(()=>window.lifecycleReport.local.dirty);
+  const count=await page.evaluate(()=>window.lifecycleReport.signals.length);
+  await page.click('#'+fault);await page.waitForFunction(()=>!!window.lifecycleReport.failure);
+  check(await page.evaluate(n=>!window.lifecycleReport.active && !window.lifecycleReport.subscriptions && !window.lifecycleReport.pending_waits && window.lifecycleReport.signals.length===n+1 && !document.querySelector('#restart').hidden && document.querySelector('#status').textContent.includes('Dashboard stopped'),count),fault+' visible stopped state, cleanup and signal');
+  const ticks=await page.evaluate(()=>window.lifecycleReport.survivor_ticks);await page.waitForFunction(t=>window.lifecycleReport.survivor_ticks>t,ticks);
+  await other.bringToFront();await page.waitForFunction(()=>document.hidden);await page.bringToFront();await page.waitForFunction(()=>!document.hidden);
+  check(await page.evaluate(()=>!!window.lifecycleReport.failure && !window.lifecycleReport.active),fault+' does not restart on resume; survivor progresses');
+  await page.click('#restart');await page.waitForFunction(()=>window.lifecycleReport.active && !window.lifecycleReport.failure && !window.lifecycleReport.local.dirty && window.lifecycleReport.snapshot.value===62);
+  check(true,fault+' manual saved-baseline restart preserves server effects');
+ }
  console.log(JSON.stringify({passed:true,checks,browser:await browser.version(),final:await page.evaluate(()=>window.lifecycleReport)}));
 }finally{await browser?.close();chrome?.kill();server.close();xvfb.kill();if(userData)await rm(userData,{recursive:true,force:true});}

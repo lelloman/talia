@@ -8,6 +8,7 @@ export class DashboardHost {
   #views = new WeakMap();
   view(guest) { return structuredClone(this.#views.get(guest)); }
   remote = null;
+  onFailure = null;
   value = 0;
   next = 0;
   generation = 0;
@@ -84,6 +85,7 @@ export class DashboardHost {
     }
     for (const p of guest.pending.values()) { clearTimeout(p.timer); p.reject(Error(reason)); }
     guest.pending.clear();
+    if(!['reload','harness closed','manual restart'].includes(reason))this.onFailure?.(guest,reason);
   }
   deliver(guest, message, generation = guest.generation) {
     if (!guest.active || guest.paused || generation !== guest.generation) return false;

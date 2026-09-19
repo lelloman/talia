@@ -1,0 +1,55 @@
+{
+  "passed": true,
+  "checks": [
+    "server action completes while hidden",
+    "local execution and subscription paused",
+    "resume retains dirty state and reconciles without resubmission",
+    "repeated actual visibility transitions",
+    "reload restores saved baseline and preserves server effect",
+    "external failure is recoverable",
+    "crash visible stopped state, cleanup and signal",
+    "crash does not restart on resume; survivor progresses",
+    "crash manual saved-baseline restart preserves server effects",
+    "runaway visible stopped state, cleanup and signal",
+    "runaway does not restart on resume; survivor progresses",
+    "runaway manual saved-baseline restart preserves server effects",
+    "memory visible stopped state, cleanup and signal",
+    "memory does not restart on resume; survivor progresses",
+    "memory manual saved-baseline restart preserves server effects"
+  ],
+  "browser": "Chrome/145.0.7632.6",
+  "final": {
+    "survivor_ticks": 23,
+    "failure": null,
+    "external_error": "capability/arguments",
+    "signals": [
+      {
+        "type": "dashboard-failure",
+        "diagnostic": "guest failure: Error: {\"name\":\"Error\",\"message\":\"fixture internal error\",\"stack\":\"    at <eval> (eval.js:1:6)\\n\"}"
+      },
+      {
+        "type": "dashboard-failure",
+        "diagnostic": "guest failure: Error: {\"name\":\"InternalError\",\"message\":\"interrupted\",\"stack\":\"    at <eval> (eval.js:1:1)\\n\"}"
+      },
+      {
+        "type": "dashboard-failure",
+        "diagnostic": "guest failure: Error: {\"name\":\"InternalError\",\"message\":\"out of memory\",\"stack\":\"    at <eval> (eval.js:1:62)\\n\"}"
+      }
+    ],
+    "pending_waits": 0,
+    "active": true,
+    "epoch": 7,
+    "local": {
+      "dirty": false,
+      "ticks": 1
+    },
+    "snapshot": {
+      "revision": 8,
+      "value": 62
+    },
+    "outcomes": {},
+    "pending": 0,
+    "ignored": 1,
+    "subscriptions": 1
+  }
+}
