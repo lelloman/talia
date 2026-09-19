@@ -15,3 +15,12 @@ spikes/transport/web/dist/
 spikes/lifecycle/dist/
 
 spikes/qualification/__pycache__/
+
+dashboard/native/target/
+dashboard/web/dist/
+dashboard/android/.gradle/
+dashboard/android/build/
+dashboard/android/app/build/
+dashboard/android/local.properties
+dashboard/jniLibs/
+dashboard/__pycache__/
