@@ -1,4 +1,5 @@
 mod android_service;
+mod authority;
 mod policy;
 pub mod process;
 pub mod transport;
@@ -39,6 +40,7 @@ struct Guest {
     violation: Rc<RefCell<Option<String>>>,
     last_request: Cell<u64>,
     grants: Vec<String>,
+    execution: Option<(Rc<authority::Authority>, u64)>,
 }
 impl Guest {
     fn new() -> Self {
@@ -115,6 +117,7 @@ impl Guest {
             violation,
             last_request: Cell::new(0),
             grants,
+            execution: None,
         }
     }
     fn eval(&self, s: &str) -> Result<(), String> {
@@ -193,6 +196,9 @@ impl Guest {
                 if !self.grants.iter().any(|op| req["op"] == *op) {
                     return Err("operation not granted".into());
                 }
+                if let Some((authority, task)) = &self.execution {
+                    authority.call("check", json!([task]))?;
+                }
                 let request_id = req["id"].as_u64().unwrap();
                 if request_id <= self.last_request.get() {
                     return Err("request ID replay/order".into());
@@ -203,6 +209,25 @@ impl Guest {
                 let val = req["value"].clone();
                 let result =
                     match op {
+                        "state.read" | "state.commit" | "state.result" => {
+                            let (authority, task) = self
+                                .execution
+                                .as_ref()
+                                .ok_or("execution binding required")?;
+                            let method = match op {
+                                "state.read" => "snapshot",
+                                "state.commit" => "commit",
+                                _ => "settle",
+                            };
+                            authority.call(
+                                method,
+                                if op == "state.read" {
+                                    json!([task])
+                                } else {
+                                    json!([task, val])
+                                },
+                            )?
+                        }
                         "echo" | "delay" => val,
                         "read" => json!(host.value),
                         "write" => {
@@ -470,8 +495,49 @@ fn check_capabilities() -> Value {
     allowed.drive(&mut host);
     json!({"passed":true,"cases":checked,"dispatch_recheck":true,"granted_operations":true,"view_unchanged":true,"survivor_works":true})
 }
+fn check_execution_boundary() -> Value {
+    let authority = Rc::new(authority::Authority::new());
+    let checks = authority.test();
+    authority
+        .call("define", json!(["x", "independent", 0]))
+        .unwrap();
+    let mut host = Host::default();
+    for stale in [false, true] {
+        let task = authority.call("begin", json!(["x"])).unwrap();
+        let mut guest = Guest::with_grants(&["write"]);
+        guest.execution = Some((authority.clone(), task["task"].as_u64().unwrap()));
+        // Dispatch is delayed past cancellation/invalidation; raw bridge bypasses helpers.
+        guest
+            .eval("__send('{\"id\":1,\"op\":\"write\",\"value\":99}');")
+            .unwrap();
+        if stale {
+            authority.call("invalidate", json!(["x"])).unwrap();
+        } else {
+            authority.call("cancel", json!([task["lease"]])).unwrap();
+        }
+        let error = guest.try_drive(&mut host).unwrap_err();
+        assert!(error.contains(if stale { "stale" } else { "cancelled" }));
+        assert_eq!(host.value, 0.0);
+        authority.call("settle", json!([task["task"], 99])).unwrap();
+        assert!(!authority.call("outcome", json!([task["lease"]])).unwrap()["error"].is_null());
+    }
+    let task = authority.call("begin", json!(["x", "write"])).unwrap();
+    let mut guest = Guest::with_grants(&["write", "state.read", "state.commit"]);
+    guest.execution = Some((authority.clone(), task["task"].as_u64().unwrap()));
+    guest.eval("(async()=>{await engine.call('state.commit',7);assert(await engine.call('state.read')===7,'protected state');await engine.write(8);report.done=true;})()").unwrap();
+    guest.drive(&mut host);
+    authority.call("cancel", json!([task["lease"]])).unwrap();
+    assert_eq!(host.value, 8.0);
+    let fresh = authority.call("begin", json!(["x"])).unwrap();
+    assert_eq!(
+        authority.call("snapshot", json!([fresh["task"]])).unwrap(),
+        json!(7)
+    );
+    json!({"passed":true,"checks":checks,"raw_cancelled_effect_rejected":true,"raw_stale_effect_rejected":true,"protected_state":true,"prior_effect_survives":true})
+}
 pub fn run() -> Value {
     let start = Instant::now();
+    let protected_execution = check_execution_boundary();
     let capabilities = check_capabilities();
     let lifecycle = check_lifecycle();
     let policy = check_policy();
@@ -503,7 +569,7 @@ pub fn run() -> Value {
     assert!(allocation.eval("globalThis.buffers=[]; for(let i=0;i<1000;i++) buffers.push(new ArrayBuffer(1024*1024));").is_err());
     let after = Guest::new();
     assert_eq!(after.read("1+1"), json!(2));
-    json!({"host":std::env::consts::OS,"arch":std::env::consts::ARCH,"cycles":runs.len(),"lifecycle":lifecycle,"capabilities":capabilities,"policy":policy,"checks":runs[0]["checks"],"execution":runs[0]["execution"],"fresh_context":true,"engine_effect_survives":true,"interruption_ms":interruption_ms,"heap_limit":true,"elapsed_ms":start.elapsed().as_millis()})
+    json!({"host":std::env::consts::OS,"arch":std::env::consts::ARCH,"cycles":runs.len(),"lifecycle":lifecycle,"capabilities":capabilities,"protected_execution":protected_execution,"policy":policy,"checks":runs[0]["checks"],"execution":runs[0]["execution"],"fresh_context":true,"engine_effect_survives":true,"interruption_ms":interruption_ms,"heap_limit":true,"elapsed_ms":start.elapsed().as_millis()})
 }
 
 // Minimal JNI entry: P0 host embedding only, no Java object crosses the boundary.

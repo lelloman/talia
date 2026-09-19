@@ -148,3 +148,22 @@ action status after disconnect, retry/idempotency rules and durable recovery sti
 need design and tests. Local queue recovery is not crash-atomic database recovery.
 
 These archived passing checks are not current concurrency acceptance.
+
+## Protected execution authority (TALIA-12)
+
+`spikes/runtime/host/execution.js` now owns instance revisions, required read modes,
+producer/reader leases, dependency edges, cancellation and result settlement in a
+trusted realm outside authored code. Browser parents run it outside the Worker;
+native hosts use a separate QuickJS context which is never exposed to dashboard
+scripts. The host binds an operation to a guest; guest messages cannot choose its
+operation identity. Dispatch rechecks that binding before any bridge operation.
+Protected state read/commit/result operations address the bound instance only.
+
+Fresh `results/protected-execution` reports record matching host-authority tests and
+real raw-bridge stale/cancelled effect rejection on Linux, Chromium and Android
+x86_64, alongside the existing 27 asynchronous checks. Protected state access and
+preservation of previously dispatched effects also pass. This adds an enforcement
+boundary; the old in-guest helper remains a behavioral fixture, not that boundary.
+The operation-per-guest binding is an evaluation adapter, not a finalized public
+API or a production multi-client scheduler. Physical-device requalification remains
+TALIA-15; persistence and server restart recovery remain P2.

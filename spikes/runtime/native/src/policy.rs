@@ -44,7 +44,8 @@ pub fn request(raw: &str) -> Result<Value, String> {
     }
     let arg = &value["value"];
     match value["op"].as_str().ok_or("operation")? {
-        "echo" => (),
+        "echo" | "state.commit" | "state.result" => (),
+        "state.read" if arg.is_null() => (),
         "read" | "subscribe" if arg == "value" => (),
         "write" | "publish" if arg.as_f64().is_some_and(f64::is_finite) => (),
         "unsubscribe"

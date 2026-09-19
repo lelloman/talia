@@ -1,7 +1,10 @@
+import '../host/execution.js';
 import {LIMITS, boundedText, validateRequest} from './bridge-policy.js';
 // Parent-owned resources survive Worker failures and are retired by generation.
 export class DashboardHost {
   #grants = new WeakMap();
+  #execution = new WeakMap();
+  bindExecution(guest, authority, task) { this.#execution.set(guest,{authority,task}); }
   #views = new WeakMap();
   view(guest) { return structuredClone(this.#views.get(guest)); }
   value = 0;
@@ -79,6 +82,8 @@ export class DashboardHost {
     try {
       request = validateRequest(raw);
       if (!this.#grants.get(guest)?.has(request.op)) throw Error('operation not granted');
+      const execution=this.#execution.get(guest);
+      if(execution) execution.authority.check(execution.task);
       if (request.id <= guest.lastRequest) throw Error('request ID replay/order');
       guest.lastRequest = request.id;
       const owned = collection => [...collection.values()].filter(g => g === guest.generation).length;
@@ -103,6 +108,15 @@ export class DashboardHost {
     const {id, op, value} = request;
     let result = null;
     switch (op) {
+      case 'state.read': case 'state.commit': case 'state.result': {
+        const execution=this.#execution.get(guest);
+        if(!execution){this.retire(guest,'execution binding required');return;}
+        try {
+          const method=op==='state.read'?'snapshot':op==='state.commit'?'commit':'settle';
+          result=execution.authority[method](execution.task,value)??null;
+        } catch(error){this.retire(guest,error.message);return;}
+        break;
+      }
       case 'echo': result = value; break;
       case 'read': result = this.value; break;
       case 'write': result = this.value = value; break;

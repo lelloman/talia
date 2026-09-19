@@ -25,7 +25,8 @@ export function validateRequest(raw) {
       !Number.isSafeInteger(request.id) || request.id < 1) throw Error('request envelope');
   const {op, value} = request;
   switch (op) {
-    case 'echo': break;
+    case 'echo': case 'state.commit': case 'state.result': break;
+    case 'state.read': if(value!==null) throw Error('null argument required'); break;
     case 'read': case 'subscribe':
       if (value !== 'value') throw Error('unknown variable'); break;
     case 'write': case 'publish':
