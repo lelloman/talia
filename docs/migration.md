@@ -1,6 +1,8 @@
 # Existing systems and migration considerations
 
-Status: source inventory and planning input, not an approved rollout plan.
+Status: historical source inventory and refinement input, not an approved rollout plan.
+Current migration planning, decisions and cutover acceptance belong in
+[LLPR/TALIA-9](https://crumbles.lelloman.com/w/LLPR/TALIA/9).
 The [product specification](specification.md) records the current scope.
 
 Inspected 2026-09-17 from local source; no live infrastructure was queried.
@@ -76,7 +78,7 @@ Shared definitions are referenced with per-instance parameters and state, rather
 than copied. Migration planning must account for Watch state and shared-definition
 updates. The historical source inventory above is unchanged by these decisions.
 
-## Transition questions
+## Historical transition questions for Story refinement
 
 Talìa is intended to take over homelab health monitoring and provide a configurable
 dashboard and alert experience authored by agents through MCP. The following work needs planning after the

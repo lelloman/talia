@@ -4,6 +4,10 @@ Status: decisions recorded from discussion, 2026-09-18. The boundaries and
 language direction below are agreed; the grammar, runtime and detailed behavior
 still need specification. Examples illustrate intent, not an implemented schema.
 
+Planning, open-decision tracking and execution status live in the
+[Crumbles Stories](implementation-plan.md). This document is technical reference;
+its open questions are inputs to Story refinement.
+
 ## One definition for UI and logic
 
 A dashboard is a configurable application interface. It includes both declarative

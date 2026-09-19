@@ -5,6 +5,10 @@ Detailed behavior and architecture are not signed off. This document supersedes
 the earlier speculative v0.1 design; its numerical defaults and implementation
 choices are not requirements.
 
+Planning, open-decision tracking and execution status live in the
+[Crumbles Stories](implementation-plan.md). This document is technical reference;
+its open questions are inputs to Story refinement.
+
 ## 1. Dashboards for humans
 
 Talìa is LLM-driven: users ask agents to define and modify dashboards through

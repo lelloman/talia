@@ -44,8 +44,8 @@ or deployed.
   reconnect and action outcomes across all four hosts.
 - [Runtime findings](docs/runtime-prototype.md): executable P0 evidence and
   unresolved qualification gaps.
-- [Implementation plan](docs/implementation-plan.md): first milestone with both
-  web and native Android, technical prototypes, and acceptance gates.
+- [Crumbles roadmap](docs/implementation-plan.md): authoritative planning Stories in
+  `LLPR/TALIA`; refine each Story into actionable subtasks before implementation.
 - [Product specification](docs/specification.md): discussed scope and open
   behavioral questions.
 - [Server engine](docs/engine.md): runtime primitives, execution, persistence,

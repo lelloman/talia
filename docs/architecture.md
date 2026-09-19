@@ -4,6 +4,10 @@ Status: agreed conceptual boundaries and language direction, 2026-09-18.
 Detailed architecture remains open. See the [product specification](specification.md),
 [dashboard model](dashboards.md) and [server engine](engine.md).
 
+Planning, open-decision tracking and execution status live in the
+[Crumbles Stories](implementation-plan.md). This document is technical reference;
+its open questions are inputs to Story refinement.
+
 ## Client and engine model
 
 ```mermaid

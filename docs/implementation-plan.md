@@ -1,292 +1,50 @@
-# First implementation milestone
+# Roadmap and planning ownership
 
-Status: implementation plan draft, 2026-09-18. **Web and native Android are both
-required in the first milestone.** The product decisions in the
-[specification](specification.md), [engine model](engine.md) and
-[dashboard model](dashboards.md) remain authoritative. Proposed technical choices
-below are evaluation inputs, not additional signed-off requirements.
+**Crumbles project `LLPR/TALIA` is the authoritative planning backlog.** Scope,
+acceptance criteria, open decisions, sequencing, progress and implementation
+subtasks belong in its Stories. This file is a navigation index, not a second plan.
 
-The P0 experiments now include browser/native bridge abuse tests, Linux child-process containment and Android service death/rebind on x86_64 emulator and physical ARM64 hardware; see [runtime findings](runtime-prototype.md).
-The [execution-policy record](execution-policy-prototype.md) now includes revised
-async-interleaving fixtures and matching Linux, browser, emulator and physical
-ARM64 results. The helper API and conservative freshness/cancellation policies
-remain proposals. The [transport experiment](transport-prototype.md) adds real
-loopback HTTP, reconnect snapshots, generation routing and action reconciliation
-on all four hosts. P0 is not fully qualified and later phases have not started.
-
-## Outcome
-
-Deliver a local end-to-end system in which an MCP agent can define monitoring and
-an interactive dashboard while Talìa stays running. A browser and a native Android
-client load the same dashboard UI and JavaScript logic, receive server updates,
-and invoke engine actions. Monitoring survives client disconnection and server
-restart with its persisted state intact.
-
-This milestone establishes the foundation. Production homelab cutover, complete
-Grafana parity, and full Simple Agents/Crumbles integrations are later deliveries,
-not removed from the product scope. The first delegated action is a local probe
-Pipeline; adapters for sessions and tickets remain explicit follow-on work.
-
-## Demonstration scenario
-
-1. Start an isolated Prometheus fixture with controllable host metrics and an HTTP
-   endpoint that returns a per-service disk-usage breakdown. Do not depend on or
-   modify production homelab for deterministic tests.
-2. Through MCP, create the DataSources, collection Pipeline and typed Variables
-   for CPU, memory and available disk space, including quality and timestamps.
-3. Add a computed value with declared dependencies and a getter/setter using
-   internal state and injected time. Demonstrate cache expiry and invalidation.
-4. Create one reusable disk-pressure Watch definition and two instances with
-   different inputs/thresholds and independent persisted flags. A staged low-space
-   condition triggers the breakdown probe Pipeline and publishes its result.
-5. Author a dashboard through MCP containing a persistent navigation screen and
-   selectable content screens. Include a metric chart, status/text, a slider,
-   a switch and an action button. The slider affects the displayed time window,
-   the switch controls an authorized monitoring setting, and the button invokes
-   the same probe Pipeline explicitly.
-6. Load the exact same saved UI and ViewModel artifacts on web and native Android.
-   Also demonstrate per-client assignment using an alternate composition through
-   the same language. Shared definitions and instance parameters remain distinct.
-7. Subscribe from both clients. Disconnect them and verify monitoring continues;
-   reconnect and show current values with accurate age/quality.
-8. Target one live client through MCP, modify its ViewModel and observe its dirty
-   state. The other instance and saved definition are unchanged. Reject live View
-   definition edits. Reload clears the temporary modifications, while a server
-   action already performed remains in effect.
-9. Update a shared Watch definition and verify both references adopt it according
-   to the chosen activation policy. Changing only one instance's parameters must
-   not alter the other. Exercise equivalent shared UI/function references.
-10. Restart the server and verify definitions, retained values, computed internal
-    state and Watch flags recover. Values keep their original timestamps; restart
-    must not masquerade as a fresh observation or blindly repeat completed actions.
-
-## Proposed sequence
-
-Each step has a concrete exit condition. Client-facing capabilities are developed
-and tested on both platforms in the same step; Android is not a final port.
-
-| Step | Deliverables | Exit condition |
-|---|---|---|
-| P0: Runtime feasibility | Server, Android and browser runtime harnesses; shared JS fixtures; decision record | Same supported semantics and bounded failure behavior on all three hosts |
-| P1: Contracts and UI feasibility | Versioned value/operation envelopes, restricted UI grammar and typed tree, both minimal renderers | One UI/VM fixture works unchanged on web and Android; malformed definitions fail clearly |
-| P2: Durable engine | Rust/Axum service, storage adapter, definitions, Variables/computed state, atomic update guards, configurable shared refresh, subscriptions | Same-instance I/O overlaps safely; stale commits are rejected; restart and invalidation tests pass |
-| P3: Collection and Watches | Prometheus and HTTP adapters, automatic/explicit Pipelines, persisted Watch instances and actions | Staged and skipped-threshold scenarios have documented outcomes; both clients show results |
-| P4: MCP and live instances | Persistent authoring tools, validation, client registration/targeting, temporary VM execution and reload | Authoring and live capabilities stay separate; effects and client identities are traceable |
-| P5: Complete demonstration | Full scenario, repeatable startup, web build, Android debug APK, recovery instructions | Acceptance matrix passes with evidence from both clients and server |
-
-Minimal MCP tools can be introduced alongside P2/P3; P4 completes their lifecycle
-and isolation semantics. Each phase should leave a runnable increment. Do not
-build a full component library or all integration adapters before completing
-this slice.
-
-## Prototype P0: JavaScript hosts and bridge
-
-Evaluate a QuickJS-family implementation first; this is a candidate family, not
-an assumption of identical versions, feature sets or bytecode formats. Ship
-portable source/definitions initially, not cross-runtime bytecode.
-
-| Host | First candidate | Qualification work |
-|---|---|---|
-| Rust server | rquickjs | Async Rust/JS calls, same-instance interleaving, atomic updates, deadline interruption, heap limits, lifecycle and worker isolation |
-| Android | QuickJS binding; evaluate Zipline's low-level suitability or a thin native bridge | Arbitrary authored JS without requiring Kotlin/JS compilation, Promise bridging, interruption, supported ABIs and lifecycle cleanup |
-| Web | QuickJS compiled to WebAssembly inside a dedicated Worker | Async bridge, script globals/capabilities, memory behavior, worker termination and reload; compare native Worker JS if needed |
-
-Source basis checked 2026-09-18:
-
-- [rquickjs](https://github.com/DelSkayn/rquickjs) provides Rust bindings to
-  QuickJS-NG with async integration. Its
-  [AsyncRuntime API](https://docs.rs/rquickjs/latest/rquickjs/struct.AsyncRuntime.html)
-  exposes interrupt and memory controls. These are candidate controls to test,
-  not proof of Talìa's execution guarantees.
-- [Zipline](https://github.com/cashapp/zipline) embeds QuickJS and is oriented
-  toward Kotlin/JS modules. Its documented deployment path must not be mistaken
-  for a ready-made arbitrary-script runtime meeting Talìa's needs.
-- [quickjs-emscripten](https://github.com/justjake/quickjs-emscripten) supplies a
-  WebAssembly embedding candidate for browser execution.
-- [Worker termination](https://developer.mozilla.org/en-US/docs/Web/API/Worker/terminate)
-  stops a browser worker immediately; it does not run graceful cleanup. Host-side
-  subscription disposal and old-generation reply rejection now have simulated-host
-  tests; production transport cancellation and reconnect remain open.
-
-A browser Worker alone is not a capability sandbox: browser-native network and
-other APIs must not become an unreviewed route around the engine bridge. Likewise,
-a JS context alone is not assumed to contain native-runtime crashes. Evaluate
-server worker/process containment and Android recovery rather than claiming hard
-isolation from a library feature list.
-
-Run one shared fixture suite against each candidate:
-
-- Promises, async handlers, scalar/structured values, explicit errors and clock
-  injection. Fix a portable value representation; reject unsupported values.
-- A suspended getter with concurrent reads/setters: operations on the same
-  instance continue, as do other instances. Short atomic updates cannot await.
-- Shared-refresh readers join one getter; independent reads execute separately.
-  Setters/invalidation proceed during either mode and stale results cannot overwrite
-  newer state. Cancelled completion cannot publish a late result.
-- Host read/write/subscribe calls, cancellation, unsubscription, duplicate and
-  late replies, and reconnect/reload generation changes.
-- Infinite loops, allocation pressure, rejected Promises and stalled host calls:
-  bounded failure without freezing the renderer or unrelated server work.
-- Repeated load/dispose cycles, live function replacement and state mutation;
-  fresh reload restores baseline code/state and releases subscriptions.
-- Unauthorized host/network/file access is unavailable through the exposed API.
-  Verify that injected live code cannot reach the renderer's View definition.
-
-Record exact versions, supported platforms/ABIs, license, build reproducibility,
-startup/bridge latency, memory use, termination behavior and cleanup evidence.
-Measure on an Android device/emulator and actual browsers, not only a desktop
-JavaScript runner. Document any missing environment as unverified. Select the
-runtime only after this evidence exists. If no candidate meets the boundary,
-revise the hosting/isolation approach before implementation proceeds.
-
-## Prototype P1: Shared UI and live runtime
-
-Propose a minimal grammar with named components, typed literal properties, simple
-state bindings, named actions and explicit conditional/repeated content. Parse
-restricted JSX-like source to a validated versioned tree; do not execute arbitrary
-JSX expressions as application code. Evaluate an existing parser versus a small
-parser before selecting one. Produce useful source-location errors.
-
-A Kotlin/Compose Android renderer and a DOM-based web renderer are candidate
-implementations. The public contract is the shared tree and behavior, not either
-framework. Use native Android controls; an Android WebView rendering the web app
-does not demonstrate the agreed native client.
-
-Initial vocabulary proposal: row/column, grid, scroll container, text/status,
-button, slider, switch, line chart and navigation control. Cover screen composition,
-responsive sizing, bindings, a list and conditional content with a small fixture.
-This is milestone coverage, not a final language/component catalog.
-
-Compare observed states and actions after identical inputs, not pixel equality.
-Check narrow/wide layouts, long text, semantic labels, focus/touch interaction and
-observable errors. Reuse the existing [brand assets](branding.md) without changing
-the selected identity.
-
-## Prototype P2: Persistence, atomic updates and activation
-
-Evaluate SQLite as the initial storage candidate using the real execution path.
-Persist versioned definitions, instance parameters, values/quality, configured
-history, computed/Watch state and action records. Show consistent restart recovery
-and a backup/restore procedure; do not serialize live JS heaps or credentials into
-script state. Define the supported state value format explicitly.
-
-Allow asynchronous evaluations to overlap on the same instance. Restrict atomic
-state updates to short synchronous sections; hold no per-instance execution lock
-or database write transaction across network I/O. Provide guarded publication and
-configurable shared-refresh/independent-read policies. Probe cycles, recursive reads,
-concurrent invalidation, cancellation, timeout, server termination and late completion
-before fixing the commit and conflict-resolution APIs.
-
-Record decisions on these questions as part of the prototype, using concrete
-failure traces rather than leaving implementation to guess:
-
-- Whether failed evaluation commits or discards mutations to internal state.
-- When value/history/state and action intent become durable relative to responses.
-- How invalidation reaches an arbitrary user-managed cache without overriding its
-  private fields, and how subscribed results are refreshed/coalesced.
-- How shared-definition updates activate across references, drain/cancel in-flight
-  work and migrate incompatible state without a service restart.
-- How dependency-cycle rejection, reconnect snapshots and subscription event order
-  prevent stale or recursive work from becoming invisible failures.
-
-Successful atomic-update tests do not establish rollback, multi-variable
-transactions or exactly-once external effects. Keep those claims separate.
-
-## Execution contract follow-up
-
-The agreed async-interleaving model replaces the serialized runtime experiment.
-The following prototype work is complete; production API policy remains open:
-
-- [x] Replace the `serial`/`ExecutionScheduler` whole-operation queue assumptions in
-  shared fixtures and update result validation without rewriting historical evidence.
-- [x] Demonstrate same-instance getter, setter and read progress while another
-  operation awaits I/O; verify that atomic update blocks cannot await.
-- [x] Define revision/commit helpers and test concurrent writes, invalidation and
-  definition changes so obsolete computations cannot overwrite newer state.
-- [x] Implement and test configurable shared refresh versus independent reads;
-  setters and other operations must remain available in both modes.
-- [x] Specify and test cancellation ownership for shared refresh: one reader
-  leaving, all readers leaving and invalidation during a refresh. Choose freshness
-  and read policies explicitly: require a mode, reject stale work and cancel the
-  producer only when its last reader leaves. These are prototype choices; product
-  defaults and API sign-off remain open.
-- [x] Preserve immediate cycle failure, skipped not-yet-started cancelled work,
-  rejection of late cancelled commits and no rollback of dispatched effects.
-- [x] Rerun Linux, capped browser Workers, Android emulator and physical ARM64
-  behavior/recovery tests and record evidence for the revised contract.
-
-
-## Transport contract follow-up
-
-The [transport prototype](transport-prototype.md) connects the shared JavaScript
-client to a real loopback Rust server in Linux, browser and both Android targets.
-The following fixture work is complete:
-
-- [x] Async reads and mutations proceed while another request awaits network I/O.
-- [x] Live subscriptions, unsubscribe, reconnect snapshots and resumed listeners.
-- [x] Pending reads fail on disconnect; old generations cannot resolve new requests.
-- [x] Stable action IDs, explicit status reconciliation after HTTP response loss,
-  deduplicated retries and conflicting-payload rejection.
-- [x] Distinguish local cancellation from server acceptance/completion; preserve
-  completed effects and record pre-effect timeout failure.
-- [x] Match shared results across four hosts and rerun native embedding regressions.
-
-This does not complete P0. Production authorization/transport, durable action
-records, server incarnation/restart recovery, dependency propagation and Android
-background lifecycle remain open. Subscription snapshots coalesce changes and do
-not constitute durable alert/event delivery. These helper policies need API review.
-The next runnable increment is P1's minimal shared UI/VM slice connected to this
-boundary, with both native Android and web controls.
-
-## Acceptance matrix
-
-| Area | Required evidence |
+| Stage | Story |
 |---|---|
-| Shared clients | Same UI/VM artifact IDs in browser and Android; matching actions and state transitions |
-| Native Android | Runnable debug APK and instrumentation/device evidence, not just shared-code unit tests |
-| Runtime edits | Create/change definitions while service stays up; invalid change leaves active version usable |
-| Reuse | Shared definition change reaches references; instance parameters and mutable state stay independent |
-| Computed values | Cache/clock/state, setter, dependencies, refresh and invalidation with concurrent readers |
-| Atomicity | Same-instance operations progress across awaits; short updates are atomic; obsolete/cancelled results cannot overwrite state |
-| Collection | Automatic, Watch-triggered and explicit Pipeline runs; failed sources produce quality/errors |
-| Watches | Durable flags, re-arming policy, skipped thresholds, and action recovery tested |
-| MCP | Persistent edits, direct engine operations and targeted live VM actions follow distinct permissions |
-| Reload | Dirty VM resets; no View rewrite via live code; subscriptions clean up; server effects persist |
-| Recovery | Restart retains definitions/state and preserves measurement age; clients reconnect explicitly |
-| Failure isolation | Misbehaving JS can be stopped without freezing unrelated work or UI |
+| P0 — Runtime and transport foundations | [LLPR/TALIA-1](https://crumbles.lelloman.com/w/LLPR/TALIA/1) |
+| P1 — Shared UI and ViewModels on web and native Android | [LLPR/TALIA-2](https://crumbles.lelloman.com/w/LLPR/TALIA/2) |
+| P2 — Durable, runtime-configurable server engine | [LLPR/TALIA-3](https://crumbles.lelloman.com/w/LLPR/TALIA/3) |
+| P3 — Collection Pipelines and stateful Watches | [LLPR/TALIA-4](https://crumbles.lelloman.com/w/LLPR/TALIA/4) |
+| P4 — MCP authoring and live dashboard control | [LLPR/TALIA-5](https://crumbles.lelloman.com/w/LLPR/TALIA/5) |
+| P5 — Complete development-release demonstration | [LLPR/TALIA-6](https://crumbles.lelloman.com/w/LLPR/TALIA/6) |
+| Simple Agents, Crumbles and alert delivery | [LLPR/TALIA-7](https://crumbles.lelloman.com/w/LLPR/TALIA/7) |
+| Production qualification | [LLPR/TALIA-8](https://crumbles.lelloman.com/w/LLPR/TALIA/8) |
+| Homelab migration and cutover | [LLPR/TALIA-9](https://crumbles.lelloman.com/w/LLPR/TALIA/9) |
 
-Use deterministic clocks and source fixtures for semantics, plus real HTTP
-Prometheus integration and real client runtimes. Include a small cross-platform
-conformance suite in routine checks. Do not declare Android support from server
-or browser tests alone.
+## Working agreement
 
-## Proposed code organization
+Create actionable Sub-task children **before starting implementation of a Story**,
+not a speculative full subtask backlog in advance. Use Crumbles
+`prepare_ticket_refinement` to review the story, current repository evidence and
+unresolved decisions. Refine child scope, acceptance criteria, verification,
+repository ownership and execution order before implementation. Assignment and
+normal implementation/review workflow apply to that resulting work.
 
-After the prototypes establish the contracts, a starting layout is:
+The Stories record existing work separately from remaining work. P0 includes the
+completed runtime/transport experiments and unresolved qualification gaps; it is
+not marked complete merely because those experiments passed. P1 is the next
+functional increment. Consult the tickets for current status rather than updating
+another checklist here.
 
-```text
-crates/       Rust engine, API, persistence, JS host and MCP integration
-contracts/    Versioned shared schemas and cross-platform fixtures
-runtime/      Shared JS support code and conformance fixtures
-clients/web/  Web renderer, client bridge and application shell
-clients/android/  Native renderer, JS host and client bridge
-examples/     Shared dashboard/monitoring definitions for the milestone
-spikes/       Bounded runtime/compiler/recovery experiments with findings
-```
+## Repository documents
 
-This is a proposal, not a requirement to make each directory an independent
-service. Core logic belongs on the server; clients must not duplicate collection
-or Watch execution. MCP is an adapter to engine/authoring operations plus targeted
-live interaction, not a second implementation of those operations.
+The [specification](specification.md), [architecture](architecture.md),
+[engine model](engine.md) and [dashboard model](dashboards.md) retain product and
+technical reference material. Open-question sections are inputs to Story refinement,
+not independently maintained backlogs. Update these references when decisions are
+resolved in Crumbles; ticket creation does not sign off provisional API choices.
 
-## Subsequent work and production boundary
+[Runtime](runtime-prototype.md), [execution](execution-policy-prototype.md) and
+[transport](transport-prototype.md) findings retain implementation evidence.
+The [migration inventory](migration.md) retains historical source observations;
+current rollout planning belongs in LLPR/TALIA-9.
 
-After this milestone, implement Simple Agents lifecycle/result integration and
-Crumbles ticket lifecycle/outcome triggers, then notification channels and richer
-alert management. Production rollout also needs identity/permissions, operational
-limits, secret provisioning and the [migration work](migration.md).
-
-The first milestone must still enforce its explicit local-development access
-boundary and script capabilities. It is not an unauthenticated production service.
-It does not deploy to homelab or retire existing monitoring. Keep those actions
-separate from building and testing the foundation.
+The previous detailed implementation plan remains in Git at commit `c3c3e22`.
+Its stage scopes, acceptance scenario and unresolved planning topics were migrated
+to the Stories above on 2026-09-19. No production deployment, migration or legacy
+service retirement is authorized by this planning migration.

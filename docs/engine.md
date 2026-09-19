@@ -3,6 +3,10 @@
 Status: decisions recorded from discussion, 2026-09-18. This defines the agreed
 model and implementation direction, not finalized schemas or runtime semantics.
 
+Planning, open-decision tracking and execution status live in the
+[Crumbles Stories](implementation-plan.md). This document is technical reference;
+its open questions are inputs to Story refinement.
+
 ## Ownership and implementation
 
 The engine lives on the server. DataSources, Pipelines, Variables and Watches
