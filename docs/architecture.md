@@ -60,11 +60,19 @@ state supports caching and lazy evaluation without a separate lazy Variable kind
 Declared dependencies drive subscribed re-evaluation; external-source values also
 support refresh/invalidation. See [engine semantics](engine.md#variables-and-computed-values).
 
-Getter/setter execution is serialized per instance, including awaits. Server
-instances serialize all callers; local frontend instances serialize within that
-frontend. This boundary must cover other writes to the same Variable too.
-Cross-instance transactions, failure rollback, crash consistency, side-effect
-atomicity and dependency-cycle handling remain separate design questions.
+JavaScript execution uses normal event-loop interleaving: reads, getters and setters
+can await, and the same instance remains available to other operations during I/O.
+Only short synchronous state updates are atomic; no whole-operation lock spans an
+await. Server updates coordinate all clients at the authoritative engine, while
+frontend-local updates belong to that frontend. Results computed across awaits
+need guarded publication against changed state or configuration.
+
+Computed values choose shared in-flight refresh or independent getter executions.
+Shared refresh does not block setters or other operations. Dependency cycles fail
+immediately. Cancelled work is skipped before starting or prevented from making
+subsequent commits/effect dispatch; effects already dispatched are not undone.
+Conflict resolution, shared-reader cancellation, durable commit semantics and the
+exact APIs remain open. See the [engine model](engine.md#async-execution-and-atomic-updates).
 
 ## Persistent and live state
 

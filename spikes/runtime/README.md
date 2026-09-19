@@ -1,7 +1,10 @@
 # P0 runtime experiment
 
 An executable feasibility experiment, not the Talìa engine or a production
-sandbox. The same `shared/bridge.js` and `shared/suite.js` execute in:
+sandbox. **Its execution fixtures still implement the superseded whole-operation
+serialization model.** The agreed contract now allows same-instance interleaving
+across `await`, short atomic updates and configurable read sharing. The fixtures
+and recorded results need revision; passing them does not qualify the new contract. The same `shared/bridge.js` and `shared/suite.js` execute in:
 
 - Linux Rust/rquickjs (QuickJS-NG).
 - Android Rust/rquickjs via a JNI entry point, on a background thread in a minimal
@@ -120,7 +123,7 @@ The shared suite also reports 13 `execution` checks using the candidate
 recovery, guarded commits and preserved dispatched effects. See the
 [execution-policy proposal](../../docs/execution-policy-prototype.md) for the tested
 semantics and limits. These results are separate from the original 14 checks and
-do not finalize the product's scheduling/cancellation contract.
+describe the superseded policy, not acceptance of the current async contract.
 
 ## Limits of the evidence
 

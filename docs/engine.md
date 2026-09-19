@@ -63,18 +63,13 @@ A getter may calculate every time or reuse a cached result according to its logi
 Persisting internal state does not require every computed result to have a separate
 backing field. Result history, when enabled, is distinct from an internal cache.
 
-Illustrative JavaScript; these API names are not finalized:
-
-```js
-async function get({ state, clock, engine }) {
-  if (!state.initialized || clock.now() >= state.expiresAt) {
-    state.value = await fetchValue(engine);
-    state.expiresAt = clock.now() + 60_000;
-    state.initialized = true;
-  }
-  return state.value;
-}
-```
+For example, a cache getter can check expiry and capture a state/configuration
+revision, then await a source read. Other operations may change that instance
+while the read is pending. Before publishing the new cache value and expiry, a
+short synchronous guarded update must check that the captured revision is still
+current and the operation has not been cancelled. Helper APIs and stale-result
+handling are still to be specified; an unconditional assignment after `await`
+would not provide this guarantee.
 
 The optional setter can update internal state or request an authorized engine
 operation. Reads/evaluations support asynchronous work and explicit errors.
@@ -91,33 +86,69 @@ by external sources also support explicit refresh or invalidation.
 Invalidation marks a cached result as outdated; refresh requests evaluation.
 The mechanism connecting these operations to a getter's arbitrary internal cache
 still needs definition. Declaring dependencies does not automatically discover
-hidden source changes or specify polling intervals. Dependency cycles, propagation
-ordering, event coalescing, result equality, error notifications and evaluation
-when there are no subscribers remain open.
+hidden source changes or specify polling intervals. Cycles must fail immediately;
+detection coverage, propagation ordering, event coalescing, result equality, error
+notifications and evaluation when there are no subscribers remain open.
 
-### Serialization and atomicity boundary
+### Async execution and atomic updates
 
-Getter and setter execution is **serialized per instance**, including asynchronous
-execution: another operation on that instance cannot interleave while one awaits
-an external result. Different instances may execute concurrently. Thus two reads
-of an expired cache do not concurrently mutate it; the second getter observes the
-state left by the first, subject to still-open failure semantics.
+Normal JavaScript async interleaving is the agreed execution model. A single event
+loop per runtime is sufficient; synchronous execution runs until it yields. A
+getter, setter or `read` can itself await I/O or other computed reads. At `await`,
+other operations may run **on the same instance** as well as other instances.
+Talìa must not hold a per-instance execution lock or queue slot across that wait.
+This replaces the earlier whole-operation serialization decision.
 
-Server Variables have one authoritative instance shared by callers, so their
-operations are serialized across clients. Frontend-local values have the same
-per-instance serialization boundary within that frontend; other frontends have
-independent state. Remote engine access from any frontend still uses the server's
-serialization boundary.
+Only short synchronous state updates are atomic. A check of the current state or
+revision and its corresponding update belong in the same atomic section, which
+cannot contain `await`. An operation resuming after an await must account for
+state, parameters or definitions having changed. Provide helpers for versioned
+commits and conflict handling rather than requiring every author to implement
+them independently. Exact revision semantics and discard/retry policies remain
+open; an obsolete result must not silently overwrite newer state.
 
-This is operation atomicity with respect to interleaving, not a guarantee of
-multi-Variable transactions, rollback on failure, crash-atomic persistence or
-atomic external side effects. Pipeline writes and other mutations of a Variable
-must respect its serialization boundary; bypass writes would defeat that contract.
-Timeouts, cancellation, recursive getter calls, dependency deadlocks and ordering
-of invalidation relative to in-flight evaluations still need design. The
-[execution-policy experiment](execution-policy-prototype.md) tests one candidate
-for dependency-cycle rejection and cooperative cancellation; it does not sign off
-these open contracts.
+Server state updates are coordinated at the authoritative engine across all
+clients. Frontend-local state has its own atomic-update boundary within that
+frontend. A client-side `await read` followed by `await write` is not an atomic
+read-modify-write operation; the engine must provide the appropriate guarded
+update capability. These guarantees do not imply multi-Variable transactions,
+rollback, crash-atomic persistence or atomic external effects. The durable commit
+and API contracts still need definition.
+
+### Concurrent read policy
+
+Each computed value can configure one of two policies:
+
+- **Shared refresh:** concurrent readers await the same in-flight getter execution.
+  This is useful for cached metrics or expensive probes.
+- **Independent reads:** each read starts its own getter execution.
+
+Sharing deduplicates a getter execution; it does not lock the instance. Setters,
+invalidations and other operations can proceed while it awaits. Ordinary access
+to the getter's own local state is synchronous, even though fetching a computed
+value through `read` can await. Whether a read returns a cached value immediately
+or awaits refresh is a separate freshness policy, still to be specified.
+
+The default mode, join key/parameter compatibility, invalidation during a shared
+refresh and cancellation of one subscriber to shared work remain open. Sharing
+must not accidentally cancel work still required by another reader.
+
+### Cycles, cancellation and recovery
+
+Reject a dependency cycle immediately rather than waiting for deadlock or
+silently substituting an old value. The dependency discovery/error API remains
+to be specified.
+
+Skip cancelled work that has not started. Cancellation of running work does not
+block other operations on the instance while I/O is outstanding. Fence subsequent
+state publication/commits and new effect dispatch from the cancelled operation,
+including its late completion. Do not undo state changes or external effects
+already dispatched. Underlying I/O may still finish; remote cancellation,
+deadlines, shared-work cancellation ownership and recovery details remain open.
+
+The [execution-policy record](execution-policy-prototype.md) distinguishes these
+agreed decisions from the superseded serialized prototype. That prototype and its
+stored results require replacement tests before they qualify this contract.
 
 ## Pipeline execution
 
@@ -227,7 +258,8 @@ copying all Prometheus history into its own database.
 - Exact Variable schemas, producer ownership, history policies and writable inputs.
 - Computed getter/setter/state/time-provider APIs, dependency updates, refresh and
   invalidation, state persistence on failure, and recursive/concurrent execution
-  edge cases. Per-instance getter/setter serialization is decided.
+  edge cases. Async interleaving, short atomic updates and configurable shared versus
+  independent reads are decided; their public APIs and conflict policies are not.
 - DataSource adapter interface and credential management.
 - Pipeline programming API, output publication, dependency cycles and execution.
 - Watch input evaluation, state API, recovery/reset rules and action delivery.

@@ -31,7 +31,8 @@ are persisted; SQLite remains a storage candidate. Clients access this server
 engine through an API rather than hosting their own monitoring engine.
 Variables carry typed values and quality metadata with configurable history.
 Computed values support stateful getters/setters, dependency updates and caching;
-operations are serialized per instance.
+async operations may interleave on the same instance, with short atomic state
+updates and configurable shared-refresh or independent-read behavior.
 
 These documents record the **high-level product direction discussed with the
 user**, not a signed-off detailed specification or implementation architecture.

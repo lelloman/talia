@@ -131,11 +131,18 @@ query sources, derive values, cache results or maintain other computation state.
 Lazy behavior is covered by this model rather than a separate kind of Variable.
 
 Computed values declare dependencies for re-evaluation while subscribed, and
-support explicit refresh/invalidation for external sources. Getter/setter
-execution is serialized per instance: across all callers for a server instance,
-and locally within a frontend for frontend-owned values. This does not promise
-multi-Variable transactions, rollback or atomic external effects. See
-[Variable semantics](engine.md#variables-and-computed-values) for open details.
+support explicit refresh/invalidation for external sources. Getters, setters and
+reads may await without blocking other operations on the same instance. Only short
+synchronous state updates are atomic; whole async operations are not. Computed
+values configure shared in-flight refresh or independent reads, with setters and
+other operations still able to proceed during shared refresh.
+
+Dependency cycles fail immediately. Cancelled work is skipped before it starts;
+running cancellation prevents subsequent publication without holding the instance
+while I/O finishes. Effects already dispatched are not undone. These guarantees do
+not promise multi-Variable transactions, rollback or atomic external effects. See
+[Variable semantics](engine.md#variables-and-computed-values) for conflict handling,
+shared-reader cancellation and other open details.
 
 ## Responsibilities
 

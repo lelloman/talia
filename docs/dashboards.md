@@ -69,18 +69,24 @@ reactions are local and separate from persistent server Watches.
 
 ## Local computed state and server values
 
-Getter/setter execution for local frontend values is serialized per instance,
-including asynchronous operations. Separate frontends have independent local
-state. A remote server Variable instead has one authoritative serialization
-boundary shared by all clients; accessing it through a client API does not create
-a separate writable copy.
+Local frontend getters, setters and reads may await. Other operations, including
+those on the same local instance, can run during the wait. Only short synchronous
+state updates are atomic; they cannot contain `await`. Separate frontends retain
+independent local state. A remote server Variable has one authoritative state-update
+boundary at the server; accessing it through a client API does not create a separate
+writable copy or make a sequence of remote calls atomic.
+
+Computed values configure shared refresh or independent reads. Sharing an in-flight
+getter does not block setters or other operations. Resumed operations must handle
+changed state before publishing results, and cancelled operations must not publish
+late results. Exact freshness, conflict and shared-reader cancellation APIs remain open.
 
 The [computed-value model](engine.md#variables-and-computed-values) supports a
 getter, optional setter, internal state and a time provider. Persistence of
 server-side computed state does not imply persistence of temporary dashboard
 ViewModel changes: the local dirty/reload boundary remains unchanged.
 Multi-value transactions, rollback and atomic external effects are not implied
-by per-instance serialization.
+by atomic state updates.
 
 ## Reusable definitions
 

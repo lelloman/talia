@@ -1,11 +1,42 @@
-# Execution policy experiment
+# Execution policy decisions and historical experiment
 
-Status: tested candidate, 2026-09-19. **Not a signed-off engine contract.**
-The [engine specification](engine.md#serialization-and-atomicity-boundary) defines
-per-instance serialization; its cancellation, failure and dependency semantics
-remain open. This experiment provides a concrete option to review.
+Status: **async interleaving agreed; serialized prototype superseded.** The
+[engine model](engine.md#async-execution-and-atomic-updates) is authoritative for
+these decisions. The remaining API details and overall detailed specification are
+not signed off.
 
-## Candidate behavior
+## Current decisions
+
+- Use ordinary JavaScript event-loop behavior. Reads, getters and setters may
+  await; other operations on the same instance can run meanwhile. Do not retain
+  an exclusive per-instance queue slot while awaiting I/O.
+- Make only short synchronous state updates atomic, with no `await` inside the
+  update. Resumed operations must account for changed state/configuration before
+  committing. Guarded-update APIs and precise conflict policies remain to be designed.
+- Configure each computed value for shared refresh (readers join one in-flight
+  getter) or independent reads (each read executes a getter). Sharing is not a
+  lock: setters and other operations remain able to run. Default mode, freshness
+  policy, invalidation rules and shared-reader cancellation ownership remain open.
+- Fail dependency cycles immediately. Skip cancelled work that has not started.
+  Prevent running cancelled operations from making subsequent commits/publications
+  or new effect dispatch, including after I/O completes. Cancellation does not hold
+  the instance or undo effects already dispatched.
+
+The earlier agreement to retain a running operation's queue slot across await was
+explicitly revised. Cycle failure, skipping cancelled work and no rollback remain;
+the non-interleaving guarantee for an entire async operation does not.
+
+## Required follow-up
+
+The implementation and results below have **not** been changed by this documentation
+update. `ExecutionScheduler`, the original `serial` helper and their tests still
+exercise the old model. In particular, checks for holding a slot after cancellation
+and preventing same-instance interleaving are no longer desired product behavior.
+Replace those tests and rerun all hosts before recording evidence for the new model.
+The [implementation plan](implementation-plan.md#execution-contract-follow-up)
+tracks this work, including stale results, shared refresh and reader cancellation.
+
+## Superseded prototype behavior
 
 `ExecutionScheduler` in the runtime fixture maintains a FIFO queue per instance
 and a graph of operations waiting for other operations. Queue predecessors are
@@ -29,7 +60,7 @@ undo it: the test writes an engine value, cancels the caller and verifies that t
 write remains visible. Earlier state commits also have no rollback guarantee.
 After cancellation settles, the next queued operation can run normally.
 
-## Evidence
+## Historical evidence
 
 Thirteen shared checks run alongside the original fourteen behavior checks over
 20 fresh contexts on Linux, Chromium, the Android x86_64 emulator and the physical
@@ -43,7 +74,7 @@ cancellation; independent progress; rejected late commits; skipped queued work;
 cancellation propagation to dependencies; recovery after cancellation; preserved
 engine effects; and final graph/queue cleanup.
 
-## Limits and decisions still needed
+## Limits of the historical experiment
 
 This is a trusted JavaScript fixture helper, not server-owned scheduling across
 clients. Direct state mutation can bypass its commit guard. It observes only reads
@@ -58,5 +89,5 @@ replacement mechanism. Deadline policy, remote cancellation acknowledgement,
 action status after disconnect, retry/idempotency rules and durable recovery still
 need design and tests. Local queue recovery is not crash-atomic database recovery.
 
-Before implementation becomes authoritative, decide the public cancellation/error
-contract and enforce scheduling and mutation guards at the engine boundary.
+This helper must be revised before it can qualify the current execution contract.
+The old passing checks must not be presented as current concurrency acceptance.

@@ -7,8 +7,9 @@ required in the first milestone.** The product decisions in the
 below are evaluation inputs, not additional signed-off requirements.
 
 The P0 experiments now include browser/native bridge abuse tests, Linux child-process containment and Android service death/rebind on x86_64 emulator and physical ARM64 hardware; see [runtime findings](runtime-prototype.md).
-The [execution-policy candidate](execution-policy-prototype.md) also has shared
-cycle/cancellation/recovery evidence. P0 is not fully qualified and later phases
+The [execution-policy record](execution-policy-prototype.md) contains historical
+cycle/cancellation/recovery evidence for a superseded serialized model. The agreed
+async-interleaving contract needs revised fixtures and a new qualification run. P0 is not fully qualified and later phases
 have not started.
 
 ## Outcome
@@ -66,7 +67,7 @@ and tested on both platforms in the same step; Android is not a final port.
 |---|---|---|
 | P0: Runtime feasibility | Server, Android and browser runtime harnesses; shared JS fixtures; decision record | Same supported semantics and bounded failure behavior on all three hosts |
 | P1: Contracts and UI feasibility | Versioned value/operation envelopes, restricted UI grammar and typed tree, both minimal renderers | One UI/VM fixture works unchanged on web and Android; malformed definitions fail clearly |
-| P2: Durable engine | Rust/Axum service, storage adapter, definitions, Variables/computed state, per-instance execution queues, subscriptions | Concurrent callers serialize correctly; restart and invalidation tests pass |
+| P2: Durable engine | Rust/Axum service, storage adapter, definitions, Variables/computed state, atomic update guards, configurable shared refresh, subscriptions | Same-instance I/O overlaps safely; stale commits are rejected; restart and invalidation tests pass |
 | P3: Collection and Watches | Prometheus and HTTP adapters, automatic/explicit Pipelines, persisted Watch instances and actions | Staged and skipped-threshold scenarios have documented outcomes; both clients show results |
 | P4: MCP and live instances | Persistent authoring tools, validation, client registration/targeting, temporary VM execution and reload | Authoring and live capabilities stay separate; effects and client identities are traceable |
 | P5: Complete demonstration | Full scenario, repeatable startup, web build, Android debug APK, recovery instructions | Acceptance matrix passes with evidence from both clients and server |
@@ -84,7 +85,7 @@ portable source/definitions initially, not cross-runtime bytecode.
 
 | Host | First candidate | Qualification work |
 |---|---|---|
-| Rust server | rquickjs | Async Rust/JS calls, instance queues, deadline interruption, heap limits, lifecycle and worker isolation |
+| Rust server | rquickjs | Async Rust/JS calls, same-instance interleaving, atomic updates, deadline interruption, heap limits, lifecycle and worker isolation |
 | Android | QuickJS binding; evaluate Zipline's low-level suitability or a thin native bridge | Arbitrary authored JS without requiring Kotlin/JS compilation, Promise bridging, interruption, supported ABIs and lifecycle cleanup |
 | Web | QuickJS compiled to WebAssembly inside a dedicated Worker | Async bridge, script globals/capabilities, memory behavior, worker termination and reload; compare native Worker JS if needed |
 
@@ -115,8 +116,11 @@ Run one shared fixture suite against each candidate:
 
 - Promises, async handlers, scalar/structured values, explicit errors and clock
   injection. Fix a portable value representation; reject unsupported values.
-- A suspended getter with concurrent reads/setters: no interleaving on that
-  instance, while another instance still progresses.
+- A suspended getter with concurrent reads/setters: operations on the same
+  instance continue, as do other instances. Short atomic updates cannot await.
+- Shared-refresh readers join one getter; independent reads execute separately.
+  Setters/invalidation proceed during either mode and stale results cannot overwrite
+  newer state. Cancelled completion cannot publish a late result.
 - Host read/write/subscribe calls, cancellation, unsubscription, duplicate and
   late replies, and reconnect/reload generation changes.
 - Infinite loops, allocation pressure, rejected Promises and stalled host calls:
@@ -156,7 +160,7 @@ Check narrow/wide layouts, long text, semantic labels, focus/touch interaction a
 observable errors. Reuse the existing [brand assets](branding.md) without changing
 the selected identity.
 
-## Prototype P2: Persistence, serialization and activation
+## Prototype P2: Persistence, atomic updates and activation
 
 Evaluate SQLite as the initial storage candidate using the real execution path.
 Persist versioned definitions, instance parameters, values/quality, configured
@@ -164,10 +168,12 @@ history, computed/Watch state and action records. Show consistent restart recove
 and a backup/restore procedure; do not serialize live JS heaps or credentials into
 script state. Define the supported state value format explicitly.
 
-Use per-instance execution queues covering asynchronous evaluation. Do not keep
-a global DB write transaction open while a getter awaits network IO. Probe cycles,
-recursive reads, concurrent invalidation, timeout, server termination and late
-completion before fixing the locking and commit design.
+Allow asynchronous evaluations to overlap on the same instance. Restrict atomic
+state updates to short synchronous sections; hold no per-instance execution lock
+or database write transaction across network I/O. Provide guarded publication and
+configurable shared-refresh/independent-read policies. Probe cycles, recursive reads,
+concurrent invalidation, cancellation, timeout, server termination and late completion
+before fixing the commit and conflict-resolution APIs.
 
 Record decisions on these questions as part of the prototype, using concrete
 failure traces rather than leaving implementation to guess:
@@ -181,8 +187,30 @@ failure traces rather than leaving implementation to guess:
 - How dependency-cycle rejection, reconnect snapshots and subscription event order
   prevent stale or recursive work from becoming invisible failures.
 
-Successful serialization tests do not establish rollback, multi-variable
+Successful atomic-update tests do not establish rollback, multi-variable
 transactions or exactly-once external effects. Keep those claims separate.
+
+## Execution contract follow-up
+
+The agreed async-interleaving model replaces the serialized runtime experiment.
+The following work is pending; historical reports do not satisfy these checks:
+
+- [ ] Replace the `serial`/`ExecutionScheduler` whole-operation queue assumptions in
+  shared fixtures and update result validation without rewriting historical evidence.
+- [ ] Demonstrate same-instance getter, setter and read progress while another
+  operation awaits I/O; verify that atomic update blocks cannot await.
+- [ ] Define revision/commit helpers and test concurrent writes, invalidation and
+  definition changes so obsolete computations cannot overwrite newer state.
+- [ ] Implement and test configurable shared refresh versus independent reads;
+  setters and other operations must remain available in both modes.
+- [ ] Specify and test cancellation ownership for shared refresh: one reader
+  leaving, all readers leaving and invalidation during a refresh. Choose freshness
+  and default read policies explicitly rather than inheriting the old queue behavior.
+- [ ] Preserve immediate cycle failure, skipped not-yet-started cancelled work,
+  rejection of late cancelled commits and no rollback of dispatched effects.
+- [ ] Rerun Linux, capped browser Workers, Android emulator and physical ARM64
+  behavior/recovery tests and record evidence for the revised contract.
+
 
 ## Acceptance matrix
 
@@ -193,7 +221,7 @@ transactions or exactly-once external effects. Keep those claims separate.
 | Runtime edits | Create/change definitions while service stays up; invalid change leaves active version usable |
 | Reuse | Shared definition change reaches references; instance parameters and mutable state stay independent |
 | Computed values | Cache/clock/state, setter, dependencies, refresh and invalidation with concurrent readers |
-| Atomicity | One instance does not interleave across awaits; independent instances continue |
+| Atomicity | Same-instance operations progress across awaits; short updates are atomic; obsolete/cancelled results cannot overwrite state |
 | Collection | Automatic, Watch-triggered and explicit Pipeline runs; failed sources produce quality/errors |
 | Watches | Durable flags, re-arming policy, skipped thresholds, and action recovery tested |
 | MCP | Persistent edits, direct engine operations and targeted live VM actions follow distinct permissions |
