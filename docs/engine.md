@@ -71,8 +71,7 @@ For example, a cache getter can check expiry and capture a state/configuration
 revision, then await a source read. Other operations may change that instance
 while the read is pending. Before publishing the new cache value and expiry, a
 short synchronous guarded update must check that the captured revision is still
-current and the operation has not been cancelled. Helper APIs and stale-result
-handling are still to be specified; an unconditional assignment after `await`
+current and the operation has not been cancelled. Stale evaluations fail explicitly without automatic retry; helper APIs remain to be specified; an unconditional assignment after `await`
 would not provide this guarantee.
 
 The optional setter can update internal state or request an authorized engine
@@ -108,8 +107,7 @@ revision and its corresponding update belong in the same atomic section, which
 cannot contain `await`. An operation resuming after an await must account for
 state, parameters or definitions having changed. Provide helpers for versioned
 commits and conflict handling rather than requiring every author to implement
-them independently. Exact revision semantics and discard/retry policies remain
-open; an obsolete result must not silently overwrite newer state.
+them independently. Stale evaluations fail explicitly without automatic retry; an obsolete result must not silently overwrite newer state.
 
 Server state updates are coordinated at the authoritative engine across all
 clients. Frontend-local state has its own atomic-update boundary within that
@@ -121,7 +119,7 @@ and API contracts still need definition.
 
 ### Concurrent read policy
 
-Each computed value can configure one of two policies:
+Each computed value must explicitly configure one of two policies, with no default:
 
 - **Shared refresh:** concurrent readers await the same in-flight getter execution.
   This is useful for cached metrics or expensive probes.
@@ -133,9 +131,7 @@ to the getter's own local state is synchronous, even though fetching a computed
 value through `read` can await. Whether a read returns a cached value immediately
 or awaits refresh is a separate freshness policy, still to be specified.
 
-The default mode, join key/parameter compatibility, invalidation during a shared
-refresh and cancellation of one subscriber to shared work remain open. Sharing
-must not accidentally cancel work still required by another reader.
+Join key/parameter compatibility and cache invalidation APIs remain open. Cancelling one reader stops only its wait; cancelling the last reader cancels the shared producer. Setters are never locked by sharing.
 
 ### Cycles, cancellation and recovery
 
@@ -148,7 +144,7 @@ block other operations on the instance while I/O is outstanding. Fence subsequen
 state publication/commits and new effect dispatch from the cancelled operation,
 including its late completion. Do not undo state changes or external effects
 already dispatched. Underlying I/O may still finish; remote cancellation,
-deadlines, shared-work cancellation ownership and recovery details remain open.
+deadlines and durable recovery details remain open. See the [runtime contract](runtime-contract.md) for approved lifecycle and failure policies.
 
 The [execution-policy record](execution-policy-prototype.md) distinguishes these
 agreed decisions from candidate API policies. Revised async-interleaving fixtures

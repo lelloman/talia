@@ -298,7 +298,7 @@ No general memory-leak claim follows from 20 context cycles.
 
 Continue evaluating rquickjs/QuickJS-NG for the Rust server and a native Android
 bridge. The shared-source and Promise bridge approach is viable in these tests.
-Do not yet finalize the browser runtime or claim hardened script isolation.
+The subsequent [runtime contract](runtime-contract.md) selects the capped browser baseline for P0 implementation; hardened script isolation remains unqualified.
 
 Use a separate capped WASM module and disposable Worker per browser dashboard as
 the candidate hosting strategy. Its full fixture suite and failure recovery now
@@ -318,4 +318,4 @@ cancellation of external operations, dependency invalidation/propagation and
 Android background lifecycle. The [experiment limits](../spikes/runtime/README.md#limits-of-the-evidence)
 distinguish what is demonstrated from what still needs implementation.
 
-The current conclusion is **behavioral feasibility with tested browser, Linux process and Android service containment**, not a final runtime selection or completion of the first milestone.
+The current conclusion is **behavioral feasibility with tested browser, Linux process and Android service containment**, not completion of qualification for the selected P0 baseline or of the first milestone.

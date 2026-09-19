@@ -15,8 +15,7 @@ not signed off.
   committing. Guarded-update APIs and precise conflict policies remain to be designed.
 - Configure each computed value for shared refresh (readers join one in-flight
   getter) or independent reads (each read executes a getter). Sharing is not a
-  lock: setters and other operations remain able to run. Default mode, freshness
-  policy, invalidation rules and shared-reader cancellation ownership remain open.
+  lock: setters and other operations remain able to run. Read mode must be explicit. One reader cancellation stops only that wait; the last cancels the producer. Cache freshness and invalidation APIs remain open.
 - Fail dependency cycles immediately. Skip cancelled work that has not started.
   Prevent running cancelled operations from making subsequent commits/publications
   or new effect dispatch, including after I/O completes. Cancellation does not hold
@@ -33,7 +32,7 @@ and `read(key)` schedule ordinary Promise jobs; suspended operations do not bloc
 same-instance getters, setters or invalidation. `define` explicitly selects
 `shared` or `independent` reads. There is no implicit default mode or cache policy.
 These helper signatures and the policies below are **prototype choices**, not
-additional signed-off requirements.
+public API commitments. The subsequently approved [runtime contract](runtime-contract.md) now requires explicit read mode, stale failure without retry and per-reader cancellation ownership.
 
 Each instance owns JSON state and a revision. `snapshot()` returns a detached copy
 with an internal revision stamp. `commit(snapshot, nextValue)` validates and copies
@@ -78,8 +77,7 @@ The physical test app was stopped and uninstalled after collection.
 
 ## Remaining work and limits
 
-Choose the production API, default read mode, freshness/retry policy and definition
-state migration explicitly. The conservative policies above are evaluated options.
+Choose the production API, cache freshness and definition state migration explicitly. Read mode has no default; stale evaluations fail without automatic retry, as recorded in the runtime contract.
 The trusted helper is not authoritative server scheduling or a security boundary:
 arbitrary guest JS can bypass it by mutating its own objects or calling the raw
 fixture engine bridge. It sees context-mediated reads, not arbitrary Promise or

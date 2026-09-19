@@ -83,7 +83,9 @@ writable copy or make a sequence of remote calls atomic.
 Computed values configure shared refresh or independent reads. Sharing an in-flight
 getter does not block setters or other operations. Resumed operations must handle
 changed state before publishing results, and cancelled operations must not publish
-late results. Exact freshness, conflict and shared-reader cancellation APIs remain open.
+late results. Stale evaluations fail explicitly without automatic retry. Every definition selects a read mode; cancelling the last shared reader cancels its producer. Exact API names and cache freshness remain open.
+
+The [runtime contract](runtime-contract.md) defines background pausing, outcome reconciliation, visible internal failures and manual Restart. External operation failures remain recoverable data/errors.
 
 The [computed-value model](engine.md#variables-and-computed-values) supports a
 getter, optional setter, internal state and a time provider. Persistence of

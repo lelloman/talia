@@ -46,7 +46,7 @@ source hashes. Runtime behavior and Android process-recovery regressions also pa
 
 ## Limits and next step
 
-These policies are prototype choices, not new signed-off requirements. The test
+Wire/API details remain prototype choices. The subsequent [runtime contract](runtime-contract.md) requires resume reconciliation without resubmission and preserves already-dispatched effects. The test
 uses a logical client generation change; actual runtime replacement is covered by
 the separate [runtime experiment](runtime-prototype.md). There is no production
 renderer yet. Android uses a native test Activity/JNI, not a finished Kotlin client.
