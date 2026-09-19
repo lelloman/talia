@@ -1,6 +1,6 @@
 # P0 runtime findings
 
-Status: Android service-process death and rebind tests executed, 2026-09-18. **P0 qualification is incomplete.**
+Status: physical ARM64 Android validation executed, 2026-09-19. **P0 qualification is incomplete.**
 Runnable code and commands are in the [runtime experiment](../spikes/runtime/README.md).
 The implementation plan's full runtime gate is not passed by these smoke tests.
 
@@ -9,7 +9,7 @@ The implementation plan's full runtime gate is not passed by these smoke tests.
 | Host | Implementation | Environment |
 |---|---|---|
 | Linux | rquickjs 0.13.0 / QuickJS-NG, Rust CLI | x86_64 Linux |
-| Android | Same Rust host cross-compiled, JNI-backed native Activity | x86_64 Android emulator; see recorded result |
+| Android | Same Rust host cross-compiled, JNI-backed native Activity and service processes | x86_64 emulator and physical ARM64 OnePlus CPH2493, Android 16/API 36 |
 | Browser | QuickJS-NG 0.32.0 WASM inside Worker; Bellard 0.31.0/0.32.0 memory comparisons | Chromium 145.0.7632.6 |
 
 Cargo/npm lockfiles pin the resolved dependencies. The Android test uses NDK
@@ -29,7 +29,9 @@ function and state modifications are made by the harness between reloads.
 
 - [Linux result](../spikes/runtime/results/linux.json)
 - [Browser result](../spikes/runtime/results/browser.json)
-- [Android APK result](../spikes/runtime/results/android.json)
+- [Android emulator APK result](../spikes/runtime/results/android.json)
+- [Physical ARM64 APK result](../spikes/runtime/results/android-arm64.json)
+- [Physical ARM64 service recovery](../spikes/runtime/results/android-process-arm64.json)
 
 Linux and Android native Activity/JNI runs passed the behavior suite, infinite-loop
 interruption near the configured 50 ms deadline, and the 16 MiB guest allocation
@@ -230,12 +232,33 @@ The Activity still runs the original in-process JNI smoke suite separately; its
 `catch_unwind` cannot contain aborts or segmentation faults. The service prototype
 is the crash-containment candidate. Production Binder validation, byte/queue budgets,
 engine integration, external-effect cancellation, background lifecycle policy and
-physical-device/ARM64 testing remain open.
+broader device/OS coverage remain open.
 
 Android testing uses an Android 16/API 36 x86_64 native Activity/JNI app, with a
 main-thread heartbeat outside the runtime thread. Exact ticks/timing are recorded
 in its report. The harness runs before device unlock and uses only non-secret
 device-protected test reports. The renderer itself is not implemented.
+
+### Physical ARM64 validation
+
+On 2026-09-19, the same native fixtures and service-process tests passed on a
+physical OnePlus CPH2493 reporting `arm64-v8a`, Android 16/API 36. The Rust report
+identifies `aarch64`; APK inspection confirms that only the ARM64 native library
+was packaged. [ARM64 input hashes](../spikes/runtime/results/inputs-arm64.json)
+record the sources, APK and packaged library used for this run.
+
+All 14 behavior checks passed over 20 cycles, as did the 16 native abuse tests,
+resource boundaries, heap pressure and interruption checks. Both native abort and
+hang scenarios observed Binder death, cleaned up parent resources, rejected stale
+replies with colliding IDs and rebound fresh processes that passed the full native
+suite. The UI and survivor runtime remained responsive. The final process listing
+contained only the Activity process; both runtime services had stopped.
+
+The original in-process run took 207 ms with a 50 ms interruption observation and
+14 UI ticks. Service-process tests took 4,829 ms with 289 UI ticks. These are single
+run observations, not performance guarantees. This verifies the previously missing
+ARM64/physical-device case on one device; it does not establish coverage across
+OEMs, Android versions or background lifecycle conditions.
 
 The candidate rquickjs and quickjs-emscripten packages declare MIT licenses;
 full release dependency/license review remains separate.
@@ -253,14 +276,14 @@ Use a separate capped WASM module and disposable Worker per browser dashboard as
 the candidate hosting strategy. Its full fixture suite and failure recovery now
 pass in Chromium, including malformed-request validation and bridge budgets.
 Linux child-process and Android service-process fault containment now have fixture
-evidence, including Binder death, cleanup and explicit rebind. Next, exercise
-native ARM64 and qualify the production host/transport contracts. Preserve the uncapped
+evidence, including Binder death, cleanup and explicit rebind on emulator and physical
+ARM64 hardware. Next, qualify dependency-cycle handling, cancellation/recovery
+and the production host/transport contracts. Preserve the uncapped
 regression probes so upgrades cannot silently reintroduce reliance on the broken
 aggregate runtime limit.
 
 Before P0 closes, also qualify production-style host validation, external-effect
-cancellation, dependency-cycle handling, Android background lifecycle and ARM64
-Android. The [experiment limits](../spikes/runtime/README.md#limits-of-the-evidence)
+cancellation, dependency-cycle handling and Android background lifecycle. The [experiment limits](../spikes/runtime/README.md#limits-of-the-evidence)
 distinguish what is demonstrated from what still needs implementation.
 
 The current conclusion is **behavioral feasibility with tested browser, Linux process and Android service containment**, not a final runtime selection or completion of the first milestone.

@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 root = Path(__file__).parent / 'results'
 reports = {name: json.loads((root / f'{name}.json').read_text())
-           for name in ('linux', 'android', 'browser')}
+           for name in ('linux', 'android', 'android-arm64', 'browser')}
 expected = reports['linux']['checks']
 assert len(expected) == 14 and len(set(expected)) == 14
 for name, report in reports.items():
@@ -48,6 +48,9 @@ assert policy['limits'] == dict(wireBytes=32768, commandBytes=65536, depth=16,
     nodes=2048, inFlight=32, commands=64, subscriptions=16, timers=16, stalled=16, workers=8)
 native = reports['linux']['policy']
 assert reports['android']['policy'] == native
+assert reports['android-arm64']['policy'] == native
+assert reports['android-arm64']['arch'] == 'aarch64'
+assert reports['android-arm64']['heap_limit'] and reports['android-arm64']['ui_ticks'] > 0
 assert native['passed'] and native['parent_validation'] and native['exact_boundaries']
 assert native['resources_empty'] and len(native['cases']) == 16
 assert native['wire_bytes'] == 32768 and native['queued_requests'] == 32
@@ -59,25 +62,26 @@ for fault in process['faults']:
     for key in ('replacement_full_suite', 'replacement_works', 'resources_retired',
                 'supervisor_survived', 'survivor_progress'):
         assert fault[key], (fault['fault'], key)
-android_process = json.loads((root / 'android-process.json').read_text())
-assert android_process['passed'] and android_process['resources_empty']
-assert android_process['ui_ticks'] > 0
-assert android_process['ui_pid'] != android_process['survivor_pid']
-assert {f['fault'] for f in android_process['faults']} == {'native_abort', 'native_hang'}
-for fault in android_process['faults']:
-    assert fault['watchdog'] == (fault['fault'] == 'native_hang')
-    assert len({android_process['ui_pid'], android_process['survivor_pid'],
-                fault['old_pid'], fault['replacement_pid']}) == 4
-    for key in ('binder_death', 'pending_command_rejected', 'resources_retired',
-                'survivor_progress', 'fresh_process', 'baseline_restored',
-                'stale_generation_rejected', 'colliding_request_ids', 'replacement_full_suite'):
-        assert fault[key], (fault['fault'], key)
+for process_report in ('android-process.json', 'android-process-arm64.json'):
+    android_process = json.loads((root / process_report).read_text())
+    assert android_process['passed'] and android_process['resources_empty']
+    assert android_process['ui_ticks'] > 0
+    assert android_process['ui_pid'] != android_process['survivor_pid']
+    assert {f['fault'] for f in android_process['faults']} == {'native_abort', 'native_hang'}
+    for fault in android_process['faults']:
+        assert fault['watchdog'] == (fault['fault'] == 'native_hang')
+        assert len({android_process['ui_pid'], android_process['survivor_pid'],
+                    fault['old_pid'], fault['replacement_pid']}) == 4
+        for key in ('binder_death', 'pending_command_rejected', 'resources_retired',
+                    'survivor_progress', 'fresh_process', 'baseline_restored',
+                    'stale_generation_rejected', 'colliding_request_ids', 'replacement_full_suite'):
+            assert fault[key], (fault['fault'], key)
 print('Android service processes: native abort/hang, Binder death and fresh rebind checks pass.')
 print('Native: 16 abuse cases pass on Linux and Android; Linux child abort/hang recovery passes.')
 print('Browser bridge: 23 abuse cases plus exact resource boundaries pass.')
 print('Capped disposable Workers pass the full suite, OOM isolation and watchdog recovery.')
-print('Lifecycle cleanup and stale-generation checks pass on all 3 hosts.')
+print('Lifecycle cleanup and stale-generation checks pass on all 4 recorded hosts.')
 print('Capped WASM pressure probes pass in Node and Chromium.')
-print('14 shared behavioral checks match across all 3 hosts (20 cycles each).')
+print('14 shared behavioral checks match across all 4 recorded hosts (20 cycles each).')
 print('Uncapped browser runtime qualified:', reports['browser']['qualified'])
 print('Full P0 remains open; see docs/runtime-prototype.md.')

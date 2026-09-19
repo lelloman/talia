@@ -35,12 +35,14 @@ that suite does not report success, and fails on behavioral/harness errors. Full
 qualification remains separate. `check-results.py` validates saved evidence; it
 does not rerun the runtimes.
 
-Android requires an x86_64 emulator, Rust's `x86_64-linux-android` target, NDK
+Android requires an x86_64 emulator or ARM64 device, the corresponding Rust
+`x86_64-linux-android` or `aarch64-linux-android` target, NDK
 27.0.12077973, libclang for bindgen, SDK 36, JDK 17+ and Gradle 8.13:
 
 ```sh
 export TALIA_GRADLE=/path/to/gradle-8.13/bin/gradle
-spikes/runtime/build-android.sh
+# Defaults to x86_64; use arm64-v8a for an ARM64 device.
+TALIA_ANDROID_ABI=arm64-v8a spikes/runtime/build-android.sh
 adb -s <emulator> install -r spikes/runtime/android/app/build/outputs/apk/debug/app-debug.apk
 adb -s <emulator> shell am start -W -n com.lelloman.talia.spike/.MainActivity
 adb -s <emulator> logcat -d -v raw -s TaliaRuntimeSpike:I '*:S'
@@ -62,7 +64,12 @@ to device-protected storage, allowing it to run on a locked test emulator. This
 is a harness choice, not a production storage or lock-screen policy.
 The APK and native library are build products, excluded from Git. Configure the
 SDK with `ANDROID_SDK_ROOT`/`ANDROID_HOME` and override the NDK with `TALIA_NDK`.
-The minimal APK requires API 26+, but only the recorded emulator was tested.
+The minimal APK requires API 26+. Android 16/API 36 has been tested on the
+recorded x86_64 emulator and a physical ARM64 OnePlus CPH2493. The build script
+selects and packages only the requested ABI, even when other local JNI builds exist.
+Physical-device results use `android-arm64.json` and `android-process-arm64.json`;
+`inputs-arm64.json` records source and APK/library hashes separately from the
+earlier emulator evidence.
 
 The Rust harness can also be run directly via ADB from `/data/local/tmp`; this
 checks Android execution but does not replace the JNI/Activity run.
@@ -139,8 +146,9 @@ commands are trusted harness controls and are not exposed to guest scripts.
   watchdog termination, parent-owned resource cleanup and fresh Worker recovery.
   Browser message/queue budgets and malformed-request validation now have abuse
   and exact-boundary tests. See the findings for limits and remaining constraints.
-- Only Linux x86_64, Android emulator x86_64, and Chromium were exercised; ARM64,
-  physical Android devices and other browsers remain unverified.
+- Linux x86_64, Android emulator x86_64, one physical ARM64 Android 16 device,
+  and Chromium were exercised. Other devices, OS versions and browsers remain
+  unverified.
 
 See [recorded findings](../../docs/runtime-prototype.md) and JSON results in
 `results/`. These are observations for runtime selection, not performance SLAs.

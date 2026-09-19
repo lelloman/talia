@@ -9,6 +9,7 @@ android {
         targetSdk 36
         versionCode 1
         versionName '0.1'
+        ndk { abiFilters(project.findProperty('taliaAbi') ?: 'x86_64') }
     }
     sourceSets.main.jniLibs.srcDirs = ['../../jniLibs']
 }
