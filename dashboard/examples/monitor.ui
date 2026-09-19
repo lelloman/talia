@@ -29,8 +29,18 @@
   </Screen>
   <Surface id="surface">
     <Column id="shell" gap="8dp">
-      <ScreenRef id="destination" screen={state.screen} />
-      <ScreenRef id="persistentNavigation" screen="navigation" />
+      <If id="sideComposition" when={params.sidebar}>
+        <Row id="sideLayout" gap="16dp">
+          <ScreenRef id="sideNavigation" screen="navigation" />
+          <ScreenRef id="sideDestination" screen={state.screen} />
+        </Row>
+      </If>
+      <If id="bottomComposition" when={!params.sidebar}>
+        <Column id="bottomLayout" gap="8dp">
+          <ScreenRef id="destination" screen={state.screen} />
+          <ScreenRef id="persistentNavigation" screen="navigation" />
+        </Column>
+      </If>
     </Column>
   </Surface>
 </Dashboard>

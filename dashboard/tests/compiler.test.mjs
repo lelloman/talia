@@ -6,7 +6,7 @@ const {compile,resolve}=globalThis.TaliaUI;
 const wrap=body=>`<Dashboard id="d"><Surface id="s"><Column id="c">${body}</Column></Surface></Dashboard>`;
 test('complete example compiles and binds without evaluating source',()=>{
  const tree=compile(readFileSync(new URL('../examples/monitor.ui',import.meta.url),'utf8'));
- const result=resolve(tree,{screen:'overviewScreen',status:'Ready',history:[1,2],services:[]});
+ const result=resolve(tree,{screen:'overviewScreen',status:'Ready',history:[1,2],services:[]},{params:{sidebar:false}});
  assert.equal(tree.version,1);assert.equal(result.children[0].children.length,2);
 });
 test('compiler diagnoses unsafe expressions and invalid structures',()=>{

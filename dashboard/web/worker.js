@@ -6,7 +6,7 @@ function evaluate(source){
  const r=ctx.evalCode(source);if(r.error){let e;try{e=ctx.dump(r.error)}finally{r.error.dispose()}throw Error(JSON.stringify(e));}
  try{return ctx.dump(r.value)}finally{r.value.dispose()}
 }
-self.onmessage=async({data:{id,source,init}})=>{
+async function handle({data:{id,source,init}}){
  if(poisoned)return;
  try{
   until=performance.now()+500;
@@ -27,3 +27,6 @@ self.onmessage=async({data:{id,source,init}})=>{
   const result={id,value,out:out.splice(0)};if(JSON.stringify(result).length>262144)throw Error('response size limit');self.postMessage(result);
  }catch(e){poisoned=true;self.postMessage({id,error:String(e)});}
 };
+
+let commands=Promise.resolve();
+self.onmessage=event=>{commands=commands.then(()=>handle(event));};

@@ -28,6 +28,8 @@ try:
  wait(lambda r:len(r.get('state',{}).get('history',[]))>0)
  tap('Controls');wait(lambda r:r.get('state',{}).get('screen')=='controlsScreen')
  tap('Show details');wait(lambda r:r.get('state',{}).get('details') is False)
+ tap('Side navigation');wait(lambda r:r.get('sidebar') is True);assert report()['state']['details'] is False
+ tap('Side navigation');wait(lambda r:r.get('sidebar') is False)
  tap('Apply value');wait(lambda r:any(a.get('status')=='completed' for a in r.get('actions',[])))
  tap('Overview');r=wait(lambda r:r.get('state',{}).get('screen')=='overviewScreen' and 25 in r.get('state',{}).get('history',[]))
  xml=hierarchy();assert all('WebView' not in n.get('class','') for n in xml.iter('node'))

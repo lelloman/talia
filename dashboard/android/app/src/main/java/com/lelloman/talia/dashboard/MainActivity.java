@@ -19,12 +19,13 @@ public final class MainActivity extends Activity {
  final ExecutorService io=Executors.newFixedThreadPool(4);
  final Map<String,Long> subscriptions=new LinkedHashMap<>();final Map<String,JSONObject> actions=new LinkedHashMap<>();
  NativeRenderer renderer;LinearLayout root,body;TextView status;Button restart;
- volatile boolean visible,destroyed;boolean started,failed,polling;long epoch=1,next=0,lastRequest=0;int port;volatile int width=1000;String externalError=null;
+ volatile boolean visible,destroyed,sidebar;boolean started,failed,polling;long epoch=1,next=0,lastRequest=0;int port;volatile int width=1000;String externalError=null;
  final Runnable tick=new Runnable(){public void run(){if(destroyed)return;if(started&&visible&&!failed){try{refresh();poll();}catch(Exception e){fail(e);}}worker.postDelayed(this,150);}};
  @Override public void onCreate(Bundle state){super.onCreate(state);port=getIntent().getIntExtra("port",18744);
   root=new LinearLayout(this);root.setOrientation(1);root.setPadding(16,16,16,16);root.setBackgroundColor(0xfff5f8ff);
   if(Build.VERSION.SDK_INT>=30)root.setOnApplyWindowInsetsListener((v,insets)->{android.graphics.Insets i=insets.getInsets(WindowInsets.Type.systemBars());v.setPadding(i.left+16,i.top+16,i.right+16,i.bottom+16);return insets;});
   ImageView brand=new ImageView(this);brand.setImageResource(com.lelloman.talia.dashboard.R.drawable.ic_brand);brand.setContentDescription("Talìa");root.addView(brand,new LinearLayout.LayoutParams(80,80));
+  sidebar=getPreferences(0).getBoolean("sidebar",false);CheckBox composition=new CheckBox(this);composition.setText("Side navigation");composition.setChecked(sidebar);root.addView(composition);composition.setOnCheckedChangeListener((button,checked)->{sidebar=checked;getPreferences(0).edit().putBoolean("sidebar",checked).apply();});
   status=new TextView(this);status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_ASSERTIVE);status.setVisibility(View.GONE);root.addView(status);
   restart=new Button(this);restart.setText("Restart dashboard");restart.setVisibility(View.GONE);root.addView(restart);
   body=new LinearLayout(this);body.setOrientation(1);root.addView(body,new LinearLayout.LayoutParams(-1,0,1));setContentView(root);
@@ -45,8 +46,8 @@ public final class MainActivity extends Activity {
  }catch(Exception e){fail(e);}}
  void refresh()throws Exception{
   JSONObject report=new JSONObject(eval("JSON.stringify(TaliaVM.snapshot())",false,false));if(!report.isNull("failure")){fail(new IllegalStateException(report.getString("failure")));return;}
-  String resolved=eval("JSON.stringify(TaliaUI.resolve(tree,"+report.getJSONObject("state")+",{width:"+Math.max(0,width)+",scale:"+getResources().getDisplayMetrics().density+"}))",true,false);
-  JSONObject node=new JSONObject(resolved);report.put("subscriptions",subscriptions.size());report.put("actions",new JSONArray(actions.values()));report.put("externalError",externalError==null?JSONObject.NULL:externalError);
+  String resolved=eval("JSON.stringify(TaliaUI.resolve(tree,"+report.getJSONObject("state")+",{width:"+Math.max(0,width)+",scale:"+getResources().getDisplayMetrics().density+",params:{sidebar:"+sidebar+"}}))",true,false);
+  JSONObject node=new JSONObject(resolved);report.put("width",width);report.put("scale",getResources().getDisplayMetrics().density);report.put("sidebar",sidebar);report.put("subscriptions",subscriptions.size());report.put("actions",new JSONArray(actions.values()));report.put("externalError",externalError==null?JSONObject.NULL:externalError);
   Files.write(new File(getFilesDir(),"report.json").toPath(),report.toString().getBytes(StandardCharsets.UTF_8));
   main.post(()->{if(destroyed||failed)return;try{renderer.render(node);}catch(Exception e){worker.post(()->fail(e));}});
  }
