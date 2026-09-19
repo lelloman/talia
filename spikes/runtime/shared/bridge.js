@@ -61,3 +61,53 @@
     report.checks.push(name);
   };
 })();
+
+// Candidate execution semantics for trusted fixtures, not a production sandbox API.
+globalThis.ExecutionScheduler = class {
+  constructor() { this.tasks = new Set(); this.tails = new Map(); }
+  start(key, action, parent = null) {
+    const previous = this.tails.get(key);
+    const task = {key, cancelled:false, edges:new Set(), children:new Set(), promise:null};
+    if (previous) task.edges.add(previous);
+    this.tasks.add(task);
+    const reaches = (from, target, seen = new Set()) => {
+      if (from === target) return true;
+      if (seen.has(from)) return false;
+      seen.add(from);
+      return [...from.edges].some(next => reaches(next, target, seen));
+    };
+    if (parent && reaches(task, parent)) {
+      this.tasks.delete(task);
+      return {promise:Promise.reject(Error('dependency cycle')), cancel() {}};
+    }
+    if (parent) { parent.edges.add(task); parent.children.add(task); }
+    const check = () => { if (task.cancelled) throw Error('cancelled'); };
+    const context = Object.freeze({
+      check,
+      read: (other, getter) => {
+        check();
+        return this.start(other, getter, task).promise;
+      },
+      commit: update => { check(); return update(); },
+      effect: action => { check(); return action(); },
+    });
+    const predecessor = previous ? previous.promise.catch(() => {}) : Promise.resolve();
+    task.promise = predecessor.then(async () => {
+      check();
+      const value = await action(context);
+      check();
+      return value;
+    }).finally(() => {
+      this.tasks.delete(task);
+      if (parent) parent.children.delete(task);
+      for (const current of this.tasks) current.edges.delete(task);
+      if (this.tails.get(key) === task) this.tails.delete(key);
+    });
+    this.tails.set(key, task);
+    const cancel = current => {
+      current.cancelled = true;
+      for (const child of current.children) cancel(child);
+    };
+    return {promise:task.promise, cancel:() => cancel(task)};
+  }
+};

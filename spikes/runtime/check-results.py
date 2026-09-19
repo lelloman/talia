@@ -6,8 +6,11 @@ root = Path(__file__).parent / 'results'
 reports = {name: json.loads((root / f'{name}.json').read_text())
            for name in ('linux', 'android', 'android-arm64', 'browser')}
 expected = reports['linux']['checks']
+execution = reports['linux']['execution']
+assert len(execution) == 13 and len(set(execution)) == 13
 assert len(expected) == 14 and len(set(expected)) == 14
 for name, report in reports.items():
+    assert report['execution'] == execution, (name, 'execution fixture mismatch')
     assert report['checks'] == expected, (name, 'fixture mismatch')
     assert report['cycles'] == 20, name
     assert report['lifecycle'] == {key: True for key in (
@@ -28,6 +31,7 @@ for result in (reports['browser']['capped_memory'],
 bounded = reports['browser']['disposable']
 assert bounded['passed'] and bounded['cycles'] == 20
 assert bounded['checks'] == expected
+assert bounded['execution'] == execution
 assert bounded['lifecycle'] == reports['linux']['lifecycle']
 assert bounded['module_limit_bytes'] == 16 * 1024 * 1024
 assert 0 < bounded['interruption_ms'] < 1000
@@ -76,6 +80,7 @@ for process_report in ('android-process.json', 'android-process-arm64.json'):
                     'survivor_progress', 'fresh_process', 'baseline_restored',
                     'stale_generation_rejected', 'colliding_request_ids', 'replacement_full_suite'):
             assert fault[key], (fault['fault'], key)
+print('13 cycle/cancellation/recovery checks match on all 4 recorded hosts and capped browser Workers.')
 print('Android service processes: native abort/hang, Binder death and fresh rebind checks pass.')
 print('Native: 16 abuse cases pass on Linux and Android; Linux child abort/hang recovery passes.')
 print('Browser bridge: 23 abuse cases plus exact resource boundaries pass.')

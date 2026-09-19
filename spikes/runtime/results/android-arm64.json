@@ -17,8 +17,23 @@
     "engine side effect"
   ],
   "cycles": 20,
-  "elapsed_ms": 207,
+  "elapsed_ms": 306,
   "engine_effect_survives": true,
+  "execution": [
+    "direct dependency cycle rejected",
+    "indirect dependency cycle rejected",
+    "concurrent root cycle rejected without deadlock",
+    "acyclic shared dependency accepted",
+    "queue recovers after cycle rejection",
+    "cancelled running work retains serialization slot",
+    "independent instance progresses during cancellation",
+    "cancelled running commit rejected",
+    "cancelled queued callback skipped",
+    "queue recovers after cancellation",
+    "cancellation propagates to dependency work",
+    "cancellation preserves dispatched engine effect",
+    "execution graph and queues released"
+  ],
   "fresh_context": true,
   "heap_limit": true,
   "host": "android",
@@ -58,7 +73,7 @@
     "subscriptions": 16,
     "wire_bytes": 32768
   },
-  "ui_ticks": 14,
+  "ui_ticks": 19,
   "android_release": "16",
   "android_sdk": 36,
   "manufacturer": "OnePlus",

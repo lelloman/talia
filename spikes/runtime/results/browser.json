@@ -18,6 +18,21 @@
     "late and duplicate replies ignored",
     "engine side effect"
   ],
+  "execution": [
+    "direct dependency cycle rejected",
+    "indirect dependency cycle rejected",
+    "concurrent root cycle rejected without deadlock",
+    "acyclic shared dependency accepted",
+    "queue recovers after cycle rejection",
+    "cancelled running work retains serialization slot",
+    "independent instance progresses during cancellation",
+    "cancelled running commit rejected",
+    "cancelled queued callback skipped",
+    "queue recovers after cancellation",
+    "cancellation propagates to dependency work",
+    "cancellation preserves dispatched engine effect",
+    "execution graph and queues released"
+  ],
   "lifecycle": {
     "forced_reload_cleanup": true,
     "stale_response_rejected": true,
@@ -27,7 +42,7 @@
   },
   "fresh_context": true,
   "engine_effect_survives": true,
-  "interruption_ms": 50.30000000074506,
+  "interruption_ms": 53.700000000186265,
   "heap_limit": false,
   "memory_comparison": {
     "bellard_0_31_0": [
@@ -199,7 +214,7 @@
     "fresh_module_works": true
   },
   "qualified": false,
-  "elapsed_ms": 1816.300000000745,
+  "elapsed_ms": 3902.600000000093,
   "disposable": {
     "passed": true,
     "policy": {
@@ -262,6 +277,21 @@
       "late and duplicate replies ignored",
       "engine side effect"
     ],
+    "execution": [
+      "direct dependency cycle rejected",
+      "indirect dependency cycle rejected",
+      "concurrent root cycle rejected without deadlock",
+      "acyclic shared dependency accepted",
+      "queue recovers after cycle rejection",
+      "cancelled running work retains serialization slot",
+      "independent instance progresses during cancellation",
+      "cancelled running commit rejected",
+      "cancelled queued callback skipped",
+      "queue recovers after cancellation",
+      "cancellation propagates to dependency work",
+      "cancellation preserves dispatched engine effect",
+      "execution graph and queues released"
+    ],
     "module_limit_bytes": 16777216,
     "lifecycle": {
       "forced_reload_cleanup": true,
@@ -308,13 +338,13 @@
         "replacement_works": true
       }
     ],
-    "interruption_ms": 50.399999998509884,
+    "interruption_ms": 50.60000000009313,
     "watchdog_cleanup": true,
     "progress_during_hang": true,
     "full_suite_after_recovery": true,
     "host_resources_empty": true,
-    "elapsed_ms": 1827.5999999977648
+    "elapsed_ms": 6023
   },
-  "renderer_ticks": 367,
+  "renderer_ticks": 1000,
   "browser": "145.0.7632.6"
 }

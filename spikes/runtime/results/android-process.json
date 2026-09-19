@@ -1,13 +1,13 @@
 {
   "passed": true,
   "host": "android-service-process",
-  "ui_pid": 2045,
-  "survivor_pid": 2074,
+  "ui_pid": 1761,
+  "survivor_pid": 1788,
   "faults": [
     {
       "fault": "native_abort",
-      "old_pid": 2088,
-      "replacement_pid": 2113,
+      "old_pid": 1801,
+      "replacement_pid": 1825,
       "binder_death": true,
       "pending_command_rejected": true,
       "resources_retired": true,
@@ -21,8 +21,8 @@
     },
     {
       "fault": "native_hang",
-      "old_pid": 2127,
-      "replacement_pid": 2142,
+      "old_pid": 1841,
+      "replacement_pid": 1859,
       "binder_death": true,
       "pending_command_rejected": true,
       "resources_retired": true,
@@ -35,9 +35,9 @@
       "watchdog": true
     }
   ],
-  "ui_ticks": 235,
+  "ui_ticks": 653,
   "resources_empty": true,
-  "elapsed_ms": 2414,
+  "elapsed_ms": 6705,
   "android_release": "16",
   "android_sdk": 36,
   "arch": "x86_64"

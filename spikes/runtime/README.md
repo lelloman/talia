@@ -115,6 +115,13 @@ The Linux `--process-check` command uses separate runtime children, bounded IPC,
 parent-owned subscription/call records and injected abort/hang recovery. Its fault
 commands are trusted harness controls and are not exposed to guest scripts.
 
+The shared suite also reports 13 `execution` checks using the candidate
+`ExecutionScheduler`: wait-cycle rejection, cancellation propagation, queue
+recovery, guarded commits and preserved dispatched effects. See the
+[execution-policy proposal](../../docs/execution-policy-prototype.md) for the tested
+semantics and limits. These results are separate from the original 14 checks and
+do not finalize the product's scheduling/cancellation contract.
+
 ## Limits of the evidence
 
 - No server persistence, real monitoring, renderer compiler, MCP routing,

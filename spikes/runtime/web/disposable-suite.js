@@ -35,10 +35,10 @@ export async function runDisposableSuite() {
     return guest;
   }
   try {
-    let checks;
+    let checks, execution;
     for (let i = 0; i < 20; i++) {
       const guest = await host.create(bridge);
-      await guest.eval(suite + ';void 0;'); checks = (await done(guest)).checks;
+      await guest.eval(suite + ';void 0;'); const report = await done(guest); checks = report.checks; execution = report.execution;
       await guest.eval('vm.state.value=9;vm.action=()=>10;void 0;');
       check(await guest.eval('JSON.stringify([vm.state.value,vm.action()])') === '[9,10]', 'live patch failed');
       check(guest.memory_bytes === 16777216, 'module cap changed');
@@ -104,7 +104,7 @@ export async function runDisposableSuite() {
     host.retire(recovered); host.retire(survivor);
     check(host.guests.size === 0 && host.subscriptions.size === 0 && host.stalled.length === 0 && host.timers.size === 0, 'final resource leak');
     const policy = await runPolicySuite(bridge, lifecycle);
-    return {passed:true, policy, cycles:20, checks, module_limit_bytes:16777216,
+    return {passed:true, policy, cycles:20, checks, execution, module_limit_bytes:16777216,
       lifecycle:{forced_reload_cleanup:true, stale_response_rejected:true, stale_event_rejected:true,
         colliding_request_ids:true, other_instance_survives:true},
       failures, interruption_ms, watchdog_cleanup:true, progress_during_hang:true,

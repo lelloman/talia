@@ -135,11 +135,11 @@ self.onmessage = async () => {
     }
 
     const lifecycle = await checkLifecycle();
-    let checks;
+    let checks, execution;
     for (let i = 0; i < 20; i++) {
       const g = guest();
       try {
-        g.evaluate(suite + ';void 0;'); checks = (await drive(g)).checks;
+        g.evaluate(suite + ';void 0;'); const report = await drive(g); checks = report.checks; execution = report.execution;
         g.evaluate('vm.state.value=9; vm.action=()=>10;');
         check(g.evaluate('JSON.stringify([vm.state.value,vm.action()])') === '[9,10]', 'live patch failed');
         check(host.subscriptions.size === 0, 'subscription leak');
@@ -163,7 +163,7 @@ self.onmessage = async () => {
     const capped_memory = await probeCappedMemory('/web/dist/ng.wasm');
     const heapLimit = memoryComparison.quickjs_ng_0_32_0.every(p => p.rejected && /memory/i.test(p.error?.message || ''));
     const after = guest(); try { check(after.evaluate('1+1') === 2, 'unrelated context failed'); } finally { after.dispose(); }
-    self.postMessage({ host:'browser-wasm', variant:'quickjs-ng 0.32.0', cycles:20, checks, lifecycle,
+    self.postMessage({ host:'browser-wasm', variant:'quickjs-ng 0.32.0', cycles:20, checks, execution, lifecycle,
       fresh_context:true, engine_effect_survives:true, interruption_ms, heap_limit:heapLimit,
       memory_comparison:memoryComparison, capped_memory, qualified:heapLimit, elapsed_ms:performance.now()-start });
   } catch (error) { self.postMessage({error:String(error.stack || error)}); }

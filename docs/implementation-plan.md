@@ -7,7 +7,9 @@ required in the first milestone.** The product decisions in the
 below are evaluation inputs, not additional signed-off requirements.
 
 The P0 experiments now include browser/native bridge abuse tests, Linux child-process containment and Android service death/rebind on x86_64 emulator and physical ARM64 hardware; see [runtime findings](runtime-prototype.md).
-P0 is not fully qualified and later phases have not started.
+The [execution-policy candidate](execution-policy-prototype.md) also has shared
+cycle/cancellation/recovery evidence. P0 is not fully qualified and later phases
+have not started.
 
 ## Outcome
 

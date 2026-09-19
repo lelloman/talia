@@ -433,7 +433,7 @@ pub fn run() -> Value {
     assert!(allocation.eval("globalThis.buffers=[]; for(let i=0;i<1000;i++) buffers.push(new ArrayBuffer(1024*1024));").is_err());
     let after = Guest::new();
     assert_eq!(after.read("1+1"), json!(2));
-    json!({"host":std::env::consts::OS,"arch":std::env::consts::ARCH,"cycles":runs.len(),"lifecycle":lifecycle,"policy":policy,"checks":runs[0]["checks"],"fresh_context":true,"engine_effect_survives":true,"interruption_ms":interruption_ms,"heap_limit":true,"elapsed_ms":start.elapsed().as_millis()})
+    json!({"host":std::env::consts::OS,"arch":std::env::consts::ARCH,"cycles":runs.len(),"lifecycle":lifecycle,"policy":policy,"checks":runs[0]["checks"],"execution":runs[0]["execution"],"fresh_context":true,"engine_effect_survives":true,"interruption_ms":interruption_ms,"heap_limit":true,"elapsed_ms":start.elapsed().as_millis()})
 }
 
 // Minimal JNI entry: P0 host embedding only, no Java object crosses the boundary.

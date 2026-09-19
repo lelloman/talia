@@ -1,6 +1,6 @@
 # P0 runtime findings
 
-Status: physical ARM64 Android validation executed, 2026-09-19. **P0 qualification is incomplete.**
+Status: dependency-cycle and cancellation/recovery candidate tested, 2026-09-19. **P0 qualification is incomplete.**
 Runnable code and commands are in the [runtime experiment](../spikes/runtime/README.md).
 The implementation plan's full runtime gate is not passed by these smoke tests.
 
@@ -254,11 +254,27 @@ replies with colliding IDs and rebound fresh processes that passed the full nati
 suite. The UI and survivor runtime remained responsive. The final process listing
 contained only the Activity process; both runtime services had stopped.
 
-The original in-process run took 207 ms with a 50 ms interruption observation and
-14 UI ticks. Service-process tests took 4,829 ms with 289 UI ticks. These are single
-run observations, not performance guarantees. This verifies the previously missing
+Current timings and heartbeat counts are stored in the reports, including the
+execution-policy follow-up. These are single-run observations, not performance
+guarantees. This verifies the previously missing
 ARM64/physical-device case on one device; it does not establish coverage across
 OEMs, Android versions or background lifecycle conditions.
+
+### Dependency cycles and cancellation/recovery
+
+The [execution-policy experiment](execution-policy-prototype.md) adds 13 shared
+checks without changing the original 14-check report. Linux, Chromium, capped
+browser Workers, Android x86_64 and physical ARM64 all pass. The candidate tracks
+queue and dependency wait edges, rejects cycles before deadlock, and recovers the
+queues after rejection. Cancellation skips queued work, propagates to child reads,
+fences late guarded commits and retains a running operation's queue slot until it
+settles. Previously dispatched engine effects remain visible. All tracked tasks
+and queue tails are released after the tested operations settle.
+
+The implementation lives in trusted fixture JS. This establishes supported runtime
+semantics, not authoritative server scheduling, remote cancellation, durable
+recovery or a final product error/cancellation contract. The linked proposal makes
+those boundaries and remaining decisions explicit.
 
 The candidate rquickjs and quickjs-emscripten packages declare MIT licenses;
 full release dependency/license review remains separate.
@@ -277,13 +293,15 @@ the candidate hosting strategy. Its full fixture suite and failure recovery now
 pass in Chromium, including malformed-request validation and bridge budgets.
 Linux child-process and Android service-process fault containment now have fixture
 evidence, including Binder death, cleanup and explicit rebind on emulator and physical
-ARM64 hardware. Next, qualify dependency-cycle handling, cancellation/recovery
-and the production host/transport contracts. Preserve the uncapped
+ARM64 hardware. Dependency-cycle rejection and cooperative cancellation now have
+shared fixture evidence. Next, review the candidate execution contract and qualify
+host-enforced scheduling, remote action outcomes and production transport recovery. Preserve the uncapped
 regression probes so upgrades cannot silently reintroduce reliance on the broken
 aggregate runtime limit.
 
 Before P0 closes, also qualify production-style host validation, external-effect
-cancellation, dependency-cycle handling and Android background lifecycle. The [experiment limits](../spikes/runtime/README.md#limits-of-the-evidence)
+cancellation of external operations, dependency invalidation/propagation and
+Android background lifecycle. The [experiment limits](../spikes/runtime/README.md#limits-of-the-evidence)
 distinguish what is demonstrated from what still needs implementation.
 
 The current conclusion is **behavioral feasibility with tested browser, Linux process and Android service containment**, not a final runtime selection or completion of the first milestone.

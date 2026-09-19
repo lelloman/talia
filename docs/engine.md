@@ -114,7 +114,10 @@ multi-Variable transactions, rollback on failure, crash-atomic persistence or
 atomic external side effects. Pipeline writes and other mutations of a Variable
 must respect its serialization boundary; bypass writes would defeat that contract.
 Timeouts, cancellation, recursive getter calls, dependency deadlocks and ordering
-of invalidation relative to in-flight evaluations still need design.
+of invalidation relative to in-flight evaluations still need design. The
+[execution-policy experiment](execution-policy-prototype.md) tests one candidate
+for dependency-cycle rejection and cooperative cancellation; it does not sign off
+these open contracts.
 
 ## Pipeline execution
 
