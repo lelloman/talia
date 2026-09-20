@@ -146,6 +146,8 @@ pub struct MonitorState {
     pub last_due: Option<i64>,
     pub missed: u64,
     #[serde(default)]
+    pub last_gap: Option<(i64, i64)>,
+    #[serde(default)]
     pub observed: BTreeMap<String, u64>,
 }
 impl MonitoringConfig {
@@ -394,6 +396,7 @@ impl Store {
                     next_due: None,
                     last_due: None,
                     missed: 0,
+                    last_gap: None,
                     observed: BTreeMap::new(),
                 }
             };

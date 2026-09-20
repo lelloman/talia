@@ -414,7 +414,7 @@ impl Pipelines {
         if !value::matches_schema(&new_state, &d.state_schema) {
             return Err("Pipeline state schema".into());
         }
-        let mut next = state.clone();
+        let mut next = s.monitor_state(&state.id)?;
         next.state = new_state;
         next.revision += 1;
         next.error = None;

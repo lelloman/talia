@@ -124,3 +124,13 @@ running records to unknown; pending records may still start. Stable caller reque
 IDs deduplicate admission even after restart. Admission identities have no automatic
 expiry; status listing returns the latest 1,000 runs, and individual IDs remain
 queryable. Active/pending work is capped at 128, with at most 64 executing runs.
+
+## Scheduler details
+
+Interval schedules start with an immediate collection and retain their due-time
+cadence across slow runs. Daily schedules start at the next matching local time.
+The scheduler atomically advances its durable checkpoint and records admission;
+repeated ticks cannot admit the same occurrence twice. Gap metadata includes missed
+count and the last affected interval. Freshness marks existing observations stale
+without replacing their value or timestamp; the next successful observation restores
+good quality, including when its numeric value has not changed.
