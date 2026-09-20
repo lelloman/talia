@@ -4,6 +4,7 @@ use std::time::{Duration, Instant};
 pub struct Script {
     pub ctx: Context,
     pub rt: Runtime,
+    pub deadline: Option<Instant>,
 }
 impl Script {
     pub fn new() -> Result<Self, String> {
@@ -11,12 +12,19 @@ impl Script {
         rt.set_memory_limit(16 * 1024 * 1024);
         rt.set_max_stack_size(512 * 1024);
         let ctx = Context::full(&rt).map_err(|e| e.to_string())?;
-        let s = Self { ctx, rt };
+        let s = Self {
+            ctx,
+            rt,
+            deadline: None,
+        };
         s.eval(include_str!("../shared/value.js"))?;
         Ok(s)
     }
     pub fn budget(&self) {
-        let end = Instant::now() + Duration::from_millis(100);
+        let end = (Instant::now() + Duration::from_millis(100)).min(
+            self.deadline
+                .unwrap_or_else(|| Instant::now() + Duration::from_secs(5)),
+        );
         self.rt
             .set_interrupt_handler(Some(Box::new(move || Instant::now() > end)));
     }

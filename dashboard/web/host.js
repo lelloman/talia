@@ -34,6 +34,7 @@ export class EngineBridge {
    switch(r.op){
     case 'read':if(r.value!=='value')throw Error('unknown resource');value=await this.rpc('read',{tag:'ui-read'});break;
     case 'write':{
+     if(r.value?.wire)r.value=TaliaValue.decode(r.value.wire);
      if(!Number.isInteger(r.value)||Math.abs(r.value)>1000000)throw Error('write value');
      if(this.actions.size>=128)throw Error('action tracking limit');
      const actionId=this.nextActionId;this.nextActionId='a-'+crypto.randomUUID();this.actions.set(actionId,{status:'unknown'});value=await this.rpc('action',{actionId,value:r.value});this.actions.set(actionId,value);break;

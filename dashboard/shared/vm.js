@@ -1,6 +1,7 @@
 /* Runs inside the bounded guest, shared by native QuickJS and browser QuickJS. */
 (() => {
   const copy=value=>{
+    if(globalThis.TaliaValue)return TaliaValue.copy(value);
     const seen=new Set();let nodes=0;
     function check(v,depth=0){
       if(++nodes>20000||depth>64)throw Error('JSON complexity limit');
@@ -37,7 +38,7 @@
       params:copy(cell.params),
       state(){check(task);const s={revision:cell.revision,value:copy(cell.value)};snapshots.set(s,cell.revision);return s;},
       commit(s,next){check(task);if(snapshots.get(s)!==cell.revision)throw Error('stale snapshot');const value=copy(next);check(task);if(snapshots.get(s)!==cell.revision)throw Error('stale snapshot');cell.value=value;cell.revision++;},
-      read:key=>call(task,'read',key),write:value=>call(task,'write',value),
+      read:key=>call(task,'read',key),write:value=>call(task,'write',globalThis.TaliaValue?{wire:TaliaValue.encode(value)}:value),
       async subscribe(key,handler){
         if(typeof cell.def.actions[handler]!=='function')throw Error('unknown subscription handler');
         const id=await call(task,'subscribe',key);check(task);
@@ -47,7 +48,7 @@
       instance(name,reference,params={}){
         check(task);if(typeof name!=='string'||!name||name.length>80)throw Error('instance name');
         if(!definitions.has(reference))throw Error('unknown VM reference');
-        const signature=JSON.stringify([reference,copy(params)]);
+        const signature=globalThis.TaliaValue?TaliaValue.stringify([reference,copy(params)]):JSON.stringify([reference,copy(params)]);
         let child=cell.children.get(name);
         if(child&&child.signature!==signature)throw Error('instance parameters changed; reload required');
         if(!child){if(cell.children.size>=64||cell.path.length>1024)throw Error('instance limit');child=make(definitions.get(reference),params,cell.path+'/'+name);child.signature=signature;cell.children.set(name,child);if(child.def.start)invoke(child,'@start',{target:child.path,value:null}).catch(()=>{});}
@@ -67,6 +68,7 @@
   function start(params={}){if(root)throw Error('already started');root=make(definition,params,'root');if(root.def.start)dispatch('@start',{target:'root',value:null});}
   function receive(raw){
     const msg=JSON.parse(raw);
+    if(msg.valueWire)msg.value=TaliaValue.decode(msg.valueWire);
     if(msg.event){const sub=subscriptions.get(msg.event);if(sub&&!paused&&!failure)invoke(sub.cell,sub.handler,{target:msg.event,value:msg.value}).catch(()=>{});return;}
     const p=pending.get(msg.id);if(!p)return;pending.delete(msg.id);
     try{check(p.task);msg.error?p.reject(Error(String(msg.error))):p.resolve(copy(msg.value));}catch(e){p.reject(e);}

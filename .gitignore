@@ -31,3 +31,4 @@ dashboard/tests/__pycache__/
 
 engine/target/
 engine/tests/__pycache__/
+engine/__pycache__/

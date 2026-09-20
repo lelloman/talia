@@ -53,7 +53,7 @@ final class NativeRenderer {
    case "Slider":{
     LinearLayout box=(LinearLayout)v;((TextView)box.getChildAt(0)).setText(p.getString("label"));SeekBar s=(SeekBar)box.getChildAt(1);s.setContentDescription(p.getString("label"));s.setEnabled(p.optBoolean("enabled",true));double step=p.optDouble("step",1);s.setMax((int)Math.ceil((p.getDouble("max")-p.getDouble("min"))/step));s.setProgress((int)Math.round((p.getDouble("value")-p.getDouble("min"))/step));break;
    }
-   case "Chart":((Chart)v).set(p.getJSONArray("values"),p.getString("label"));break;
+   case "Chart":((Chart)v).set(p.getJSONArray("values"),p.getString("label"),p.optJSONArray("sampleLabels"));break;
    default:{
     ViewGroup group=(ViewGroup)v;JSONArray children=n.getJSONArray("children");int gap=pixels(p.optString("gap","0dp"));
     if(group instanceof GridLayout)((GridLayout)group).setColumnCount(p.optInt("columns",1));
@@ -74,7 +74,7 @@ final class NativeRenderer {
  static final class Chart extends View{
   final Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG);double[] values=new double[0];String label="";
   Chart(Context c){super(c);setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);setMinimumHeight(100);}
-  void set(JSONArray data,String label)throws JSONException{this.label=label;values=new double[data.length()];StringBuilder text=new StringBuilder(label+": ");for(int i=0;i<values.length;i++){values[i]=data.getDouble(i);if(i>0)text.append(", ");text.append(values[i]);}if(values.length==0)text.append("No samples");setContentDescription(text.toString());invalidate();}
-  protected void onDraw(Canvas canvas){super.onDraw(canvas);double min=0,max=1;for(double v:values){min=Math.min(min,v);max=Math.max(max,v);}paint.setColor(Color.rgb(37,99,235));paint.setStrokeWidth(3);for(int i=1;i<values.length;i++)canvas.drawLine((i-1)*getWidth()/(float)Math.max(1,values.length-1),(float)((getHeight()-24)*(1-(values[i-1]-min)/(max-min))),i*getWidth()/(float)Math.max(1,values.length-1),(float)((getHeight()-24)*(1-(values[i]-min)/(max-min))),paint);paint.setTextSize(24);canvas.drawText(label,0,getHeight()-2,paint);}
+  void set(JSONArray data,String label,JSONArray labels)throws JSONException{this.label=label;values=new double[data.length()];StringBuilder text=new StringBuilder(label+": ");for(int i=0;i<values.length;i++){values[i]=data.isNull(i)?Double.NaN:data.getDouble(i);if(i>0)text.append(", ");text.append(labels==null?String.valueOf(values[i]):labels.getString(i));}if(values.length==0)text.append("No samples");setContentDescription(text.toString());invalidate();}
+  protected void onDraw(Canvas canvas){super.onDraw(canvas);double min=0,max=1;for(double v:values){if(Double.isFinite(v)){min=Math.min(min,v);max=Math.max(max,v);}}paint.setColor(Color.rgb(37,99,235));paint.setStrokeWidth(3);for(int i=1;i<values.length;i++)if(Double.isFinite(values[i-1])&&Double.isFinite(values[i]))canvas.drawLine((i-1)*getWidth()/(float)Math.max(1,values.length-1),(float)((getHeight()-24)*(1-(values[i-1]-min)/(max-min))),i*getWidth()/(float)Math.max(1,values.length-1),(float)((getHeight()-24)*(1-(values[i]-min)/(max-min))),paint);paint.setTextSize(24);canvas.drawText(getContentDescription().toString(),0,getHeight()-2,paint);}
  }
 }

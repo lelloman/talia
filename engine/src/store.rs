@@ -28,6 +28,7 @@ pub struct Definition {
     pub value_schema: String,
     pub state_schema: String,
     pub dependencies: Vec<String>,
+    #[serde(default = "shared_reads")]
     pub read_policy: String,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -36,6 +37,9 @@ pub struct Sample {
     pub timestamp: i64,
     pub quality: String,
     pub revision: u64,
+}
+fn shared_reads() -> String {
+    "shared".into()
 }
 pub struct Store {
     pub(crate) conn: Connection,

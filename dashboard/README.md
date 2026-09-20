@@ -81,3 +81,5 @@ historical P0 evidence stays untouched.
 [Qualification status](../docs/p1-qualification.md) records the current evidence
 and limits. Test ports, debug live-script intents and host inspection objects are
 development facilities. They are not the authenticated production MCP interface.
+
+For persistent server state and connection recovery, run the [P2 durable engine](../engine/README.md). Set `TALIA_ENGINE_DB` for the web development host and pass `--ez durable true` to Android. Without those switches these P1 commands retain the in-memory fixture.

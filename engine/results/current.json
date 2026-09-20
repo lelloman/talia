@@ -1,0 +1,1684 @@
+{
+  "date": "2026-09-20T09:22:01.756746+00:00",
+  "source_sha256": {
+    "dashboard/README.md": "5272b60025f7215f40946d678f52328ba1dd0a09cf249a7f8ee7695f7fc1f570",
+    "dashboard/android/app/build.gradle": "af7b17f84d849214a36e5430a7ca8dd5f3ab271e3bff6d3ca871d6c3dc6aa92c",
+    "dashboard/android/app/src/debug/assets/renderer.ui": "39ad8ee1f94cc344ecdec24a9bdf52d5561375902bd0d01e94cc28f205ba540a",
+    "dashboard/android/app/src/main/AndroidManifest.xml": "350971d849f7054037d8b8e9c0aa05ccdfa118cace3f53319f56f0d619e92356",
+    "dashboard/android/app/src/main/java/com/lelloman/talia/dashboard/DurableConnection.java": "d4569a9d43bd665dde65ceeaa0fd76edbb9faf1c7cb17b8b44a7715de8ab1a25",
+    "dashboard/android/app/src/main/java/com/lelloman/talia/dashboard/MainActivity.java": "719748e30135b983719991e6de162e859b2c09a7e29ee6f295ab8915ef4ebb9e",
+    "dashboard/android/app/src/main/java/com/lelloman/talia/dashboard/NativeRenderer.java": "97405092584ad8792be5ac705d872257355100263f87052e606bf629feff7456",
+    "dashboard/android/app/src/main/java/com/lelloman/talia/dashboard/RendererChecks.java": "73f702029dc421332e7360054da65e1d10d162b6cba6d864b11589c4e7d03c50",
+    "dashboard/android/app/src/main/res/drawable/ic_brand.xml": "215b96dfe45d0a83e93bea6197bc1b5239ef28be8dc9fd0885d7f33bd32952e2",
+    "dashboard/android/build.gradle": "96a33edb21d173da2c36f5312f50cdfb9f71d9f5078c081c81f2d029547f6cb9",
+    "dashboard/android/settings.gradle": "27c54bc908cad68e6cbce875a53ff5629a516de6d63fe1712953edb2d861949e",
+    "dashboard/build-android.sh": "e1d7a9b6dd905d403d18246e81bd1f87f7999c9fcbf1495dc0448e3d63a72719",
+    "dashboard/build-web.sh": "32e5dea59a58ac14d6f4fda2fa5ff3437e161149d4d9cd0c88f566625a3f531b",
+    "dashboard/compile.mjs": "7c8339bbc48aa5343373e92e59c2deabe737cd329241cfa2c0735ad75131ff6e",
+    "dashboard/contracts/v1/README.md": "92cf9576c92bd99b88b3956cefed7796b8a1a6445a40d4de535477f98312cf5b",
+    "dashboard/examples/monitor.package.json": "820fc4a0f54afd9c8c12a87a3907d129c37545918537de5b6880f945f02bd316",
+    "dashboard/examples/monitor.ui": "9978deb91db5fd476cf68422eeb89b9715bb1c523145d1cdd1c7ecf350b5bb06",
+    "dashboard/examples/monitor.vm.js": "1f025c895d809383a741ece0122e253967736bc396cd96266ec3d8074cd1d61b",
+    "dashboard/examples/notice.ui": "80366c53b23ae8bf5718a67aa46df47ecd2c1644b27bfc32fe590d3d2eaad75e",
+    "dashboard/native/Cargo.lock": "7ab5ea4a6fc51d34f2f7ef20151b62f0a9a7a4b583c947fef1e05299e5b25573",
+    "dashboard/native/Cargo.toml": "82dbed8691a39f315709da211d39372cdf67006baaea6e32d18b8f9381552e11",
+    "dashboard/native/src/lib.rs": "981dca1744b8d1f207585d15053c61e991df64a63dc617d3c5574506b19ed3cd",
+    "dashboard/qualify.py": "c55470ae970c082fd939613762cf056c0d6c52c87107702d0c66d5b238f1f626",
+    "dashboard/serve.py": "89423d82bbed5a81b99b0d95a68364419b85a6891ef13068ad6586272d797970",
+    "dashboard/shared/ui.js": "a12fecae6d988004e5d1827d2db593ce11c5f76a7724b01e94dcd217eab9d3d7",
+    "dashboard/shared/vm.js": "ff882c0e76370bbb87b38cda1c96e785ef110e49741d8624144d063da7f69bda",
+    "dashboard/tests/android.py": "8df7a0a78f1b7787db15a032bbb7b334533d2821693b973838999884eb0a76a3",
+    "dashboard/tests/compiler.test.mjs": "911af03a86f36b52b4e6f83a6eacdbbe24b7c42c3994ac71cd45b9a249509647",
+    "dashboard/tests/emulator.py": "f602a213e6ef3cb373eb1a3796770efd9013dde79f86b5781efd473f2a47fdc8",
+    "dashboard/tests/lifecycle.mjs": "7b015199f1faccab1f37f1cfa4ae84c467284e6964b8a62724345434fc7b2335",
+    "dashboard/tests/responsive.mjs": "1eaf1b3a9d4ada69c5df5c5aa56e4f9f1bb173b68ab10525d06f44d5c49914a7",
+    "dashboard/tests/updates.mjs": "deeea65b5d3821dc6b1252de4657d8e6da96f2db839216f9cac922418d28ab99",
+    "dashboard/tests/vm.test.mjs": "8acec5e94b80fc248686bf6f555db6701ad5606e5ae982155f9419f748ec7c45",
+    "dashboard/tests/web.mjs": "01a0b1d4a8473c3332d3c46ba0ed3df9ff1deeb644f7ff8df2dc77b54e867924",
+    "dashboard/web/app.js": "fd1a30a828768ebb9224ed34acb3f53b6b5b7d9b7ef40fd330afbabbd324e8a6",
+    "dashboard/web/durable.js": "23b287ea3ae284e6437dc9910b5af6c82dc8f8ab0a029492fcf18efdcd42f0bd",
+    "dashboard/web/host.js": "15c161af8f711b53850a0237b26aeb6b8920814bcbbdb8da86964361402c6f45",
+    "dashboard/web/index.html": "d6f3bbfbe34e626d76bf1a56b03b981d46d16f12a6574d6e2fdb7bbfdf971eab",
+    "dashboard/web/renderer.js": "a26547dbb0a431d481b4cc76913433f3ba8f179ce67e8b74ae31823e267bad5e",
+    "dashboard/web/style.css": "9b177ddb68663a9df467c7c0dfae36081e62fb6a9ae13c65debe490ab0efbad3",
+    "dashboard/web/worker.js": "84df1099ca72ffe2690e962ed7a22933791b333ce4a05eb058733208a45b3c82",
+    "engine/Cargo.lock": "196a9f92307bad8ab0952a28a71ab582fe6b0dbf3401fb1b98aa07d52e6bd07f",
+    "engine/Cargo.toml": "3b80c275043d3848a67d5c639342b3fba383f995f25ac928d15f91cc980bd5b9",
+    "engine/README.md": "66749c11a41ce37678a21e55af0edf8856ad0f59ebcd9d2e7e40bae87b527aaa",
+    "engine/qualify.py": "b3962642a5a44a91ee348958b81790def978f632daafa0d71bb6da5306178dd8",
+    "engine/shared/client.js": "a2b6185ac767449bff25c4fba01eafc92cf5aac3a7c4e7f80c8917a5d4aac163",
+    "engine/shared/computed.js": "b4ab85621125575841ee69000e7175ea8aadc39addc6f7ec39d6292163d01770",
+    "engine/shared/value.js": "746beb01164abc0cd3ad83a8700ca90fa1482d801b38f2fd1a08ef4c4f8b289a",
+    "engine/src/definitions.rs": "09010b84647856988ed92c5345e95e60a61b82b5fbebb3c580ce54d4d9aea1e7",
+    "engine/src/lib.rs": "e99c7780800e4cb5c6a9dc6e86bb924cf118311387421738bc0df284f759a5fa",
+    "engine/src/main.rs": "b578f4503be7d4cd07527f2894086b87205909df1e9203d80b4f66199f5202ff",
+    "engine/src/runtime.rs": "25458c59651a849244b1dba5331a5d3c69a23c6751f48cb46b53b6c6e0220714",
+    "engine/src/script.rs": "67b91b81fa4d5007b570d8fa2bc2c7a8f3f6e1b6aff4935f947d5ceffc4efe98",
+    "engine/src/store.rs": "c6de6995961da529cec8d066792f6e63b2e69c90fef19cbe945d5d045b1d31cb",
+    "engine/src/value.rs": "2ead8b320a40f23e7f785027c14ce6acdd3803dbee3b16a4d85eaa591336562a",
+    "engine/tests/android.py": "28dcbd5c9bdfa2cf22a2e6f768ddd2bcf94691b9ae66ea377a026e9a766fb725",
+    "engine/tests/client.test.mjs": "f0b7d2faf6646f2efd07d988554df2e3fa7fd241d57c9626a0db8009c967261c",
+    "engine/tests/emulator.py": "700e4c902e13b8c60f6666b5f662935812f72f83b0b73dd124c9527d2ca75446",
+    "engine/tests/transport.py": "b7e5ba966379c2bb385b15205b201548c67f9ac2c2e2906a8e5dc11c14e0cf27",
+    "engine/tests/value.test.mjs": "5ef937ff167131e4946c2029c52b824b486f93a2747ff1d261654167eb3a3a55",
+    "engine/tests/web.mjs": "0bdca8fd10dba7d82ed50b96c9704cac23cca78b04c1024fae830a1c1099a47c"
+  },
+  "checks": {
+    "rust": {
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "engine/Cargo.toml",
+        "--offline",
+        "--target-dir",
+        "/tmp/talia-p2-recovery-target"
+      ],
+      "exit_code": 0,
+      "stdout": "\nrunning 17 tests\ntest store::crash_tests::crash_child ... ok\ntest value::tests::boundaries ... ok\ntest value::tests::embedded_round_trip ... ok\ntest store::tests::action_recovery ... ok\ntest store::tests::commits_history_and_conflicts ... ok\ntest definitions::tests::shared_activation_is_all_or_nothing ... ok\ntest runtime::tests::failed_setter_preserves_only_committed_state_and_effects ... ok\ntest runtime::invalidation_tests::independent_policy_starts_separate_evaluations ... ok\ntest runtime::more_tests::stale_setter_is_not_replayed ... ok\ntest runtime::tests::definition_update_cancels_old_work ... ok\ntest runtime::tests::shared_reads_survive_waiter_cancellation ... ok\ntest runtime::more_tests::last_reader_timeout_does_not_cancel_producer ... ok\ntest runtime::tests::setter_interleaves_and_stale_getter_retries ... ok\ntest runtime::invalidation_tests::explicit_invalidation_fences_old_cache_result ... ok\ntest runtime::more_tests::dependency_changes_retry_and_expose_changed_inputs ... ok\ntest definitions::tests::invalid_code_cycle_and_budget ... ok\ntest store::crash_tests::process_crash_and_backup ... ok\n\ntest result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s\n\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+      "stderr": "   Compiling talia-engine v0.1.0 (/home/lelloman/lelloprojects/talia/engine)\n    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.49s\n     Running unittests src/lib.rs (/tmp/talia-p2-recovery-target/debug/deps/talia_engine-38696ad0db334cb7)\n     Running unittests src/main.rs (/tmp/talia-p2-recovery-target/debug/deps/talia_engine-8ec7048953744568)\n   Doc-tests talia_engine\n"
+    },
+    "build-engine": {
+      "command": [
+        "cargo",
+        "build",
+        "--manifest-path",
+        "engine/Cargo.toml",
+        "--offline",
+        "--target-dir",
+        "/tmp/talia-p2-recovery-target"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": "   Compiling talia-engine v0.1.0 (/home/lelloman/lelloprojects/talia/engine)\n    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.43s\n"
+    },
+    "value": {
+      "command": [
+        "node",
+        "engine/tests/value.test.mjs"
+      ],
+      "exit_code": 0,
+      "stdout": "\u2714 lossless values, keys, tag-shaped objects and equality (1.590894ms)\n\u2714 reject malformed, unsupported and unbounded values before coercion (1.836408ms)\n\u2139 tests 2\n\u2139 suites 0\n\u2139 pass 2\n\u2139 fail 0\n\u2139 cancelled 0\n\u2139 skipped 0\n\u2139 todo 0\n\u2139 duration_ms 11.075423\n",
+      "stderr": ""
+    },
+    "client": {
+      "command": [
+        "node",
+        "engine/tests/client.test.mjs"
+      ],
+      "exit_code": 0,
+      "stdout": "\u2714 connection recovery reconciles before online; no mutation replay (1.698267ms)\n\u2714 late old-generation response cannot overwrite reconnect state (0.191221ms)\n\u2139 tests 2\n\u2139 suites 0\n\u2139 pass 2\n\u2139 fail 0\n\u2139 cancelled 0\n\u2139 skipped 0\n\u2139 todo 0\n\u2139 duration_ms 6.341314\n",
+      "stderr": ""
+    },
+    "compiler": {
+      "command": [
+        "node",
+        "dashboard/tests/compiler.test.mjs"
+      ],
+      "exit_code": 0,
+      "stdout": "\u2714 complete example compiles and binds without evaluating source (4.108228ms)\n\u2714 compiler diagnoses unsafe expressions and invalid structures (0.827773ms)\n\u2714 dynamic types, missing paths, repeat keys and responsive units are checked (0.630851ms)\n\u2714 unknown references and malformed precompiled versions are rejected (0.199778ms)\n\u2714 reusable definitions are validated, scoped and parameterized (0.453376ms)\n\u2139 tests 5\n\u2139 suites 0\n\u2139 pass 5\n\u2139 fail 0\n\u2139 cancelled 0\n\u2139 skipped 0\n\u2139 todo 0\n\u2139 duration_ms 14.285495\n",
+      "stderr": ""
+    },
+    "vm": {
+      "command": [
+        "node",
+        "dashboard/tests/vm.test.mjs"
+      ],
+      "exit_code": 0,
+      "stdout": "\u2714 async actions interleave; stale commit fails without undoing earlier effects (5.659918ms)\n\u2714 pause cancels pending work, forbids late effects and keeps retained state (2.866312ms)\n\u2714 VM references have independent state; functions resolve by name (3.464832ms)\n\u2714 shared example handles engine subscriptions and control actions (4.506188ms)\n\u2714 referenced ViewModels receive start and resume lifecycle independently (4.422481ms)\n\u2139 tests 5\n\u2139 suites 0\n\u2139 pass 5\n\u2139 fail 0\n\u2139 cancelled 0\n\u2139 skipped 0\n\u2139 todo 0\n\u2139 duration_ms 28.71459\n",
+      "stderr": ""
+    },
+    "transport": {
+      "command": [
+        "python3",
+        "engine/tests/transport.py",
+        "/tmp/talia-p2-recovery-target/debug/talia-engine"
+      ],
+      "exit_code": 0,
+      "stdout": "{\"passed\": true, \"checks\": [\"single owner\", \"durable writes\", \"duplicate identity\", \"argument conflict\", \"server incarnation\", \"restart snapshot\", \"original age/quality\", \"response loss reconciliation\", \"unknown stays unknown\", \"stale client epoch\", \"subscription lifecycle\", \"crash after effect remains unknown without replay\"]}\n",
+      "stderr": "",
+      "result": {
+        "passed": true,
+        "checks": [
+          "single owner",
+          "durable writes",
+          "duplicate identity",
+          "argument conflict",
+          "server incarnation",
+          "restart snapshot",
+          "original age/quality",
+          "response loss reconciliation",
+          "unknown stays unknown",
+          "stale client epoch",
+          "subscription lifecycle",
+          "crash after effect remains unknown without replay"
+        ]
+      }
+    },
+    "build-web": {
+      "command": [
+        "bash",
+        "dashboard/build-web.sh"
+      ],
+      "exit_code": 0,
+      "stdout": "6abeb78784d5930ba4343f835016b42a19263f62d83ba15dbca60e05f724c8b9\n",
+      "stderr": "\n  dashboard/web/dist/worker.js  110.1kb\n\n\u26a1 Done in 15ms\n"
+    },
+    "web": {
+      "command": [
+        "node",
+        "engine/tests/web.mjs",
+        "/tmp/talia-p2-recovery-target/debug/talia-engine"
+      ],
+      "exit_code": 0,
+      "stdout": "{\"passed\":true,\"checks\":[\"live durable server\",\"exceptional values through guest and SQLite\",\"unavailable slider\",\"chart exceptional annotation\",\"visible undefined\",\"server restart retains dirty VM and screen\",\"connection states\",\"saved baseline reload\",\"connection survives dashboard failure\"],\"state\":{\"dirty\":false,\"failure\":null,\"paused\":false,\"revision\":\"6abeb78784d5930ba4343f835016b42a19263f62d83ba15dbca60e05f724c8b9\",\"state\":{\"busy\":false,\"details\":true,\"explanation\":{\"text\":\"Writes change server state and survive dashboard reload.\"},\"history\":[null],\"screen\":\"overviewScreen\",\"services\":[{\"id\":\"engine\",\"label\":\"Engine connection\"}],\"status\":\"Server revision 2\",\"title\":{\"text\":\"Tal\u00eca \u00b7 monitoring\"},\"value\":25},\"subscriptions\":1,\"stateWire\":{\"version\":1,\"value\":[\"object\",[[\"busy\",[\"boolean\",false]],[\"details\",[\"boolean\",true]],[\"explanation\",[\"object\",[[\"text\",[\"string\",\"Writes change server state and survive dashboard reload.\"]]]]],[\"history\",[\"array\",[[\"number\",\"Infinity\"]]]],[\"screen\",[\"string\",\"overviewScreen\"]],[\"services\",[\"array\",[[\"object\",[[\"id\",[\"string\",\"engine\"]],[\"label\",[\"string\",\"Engine connection\"]]]]]]],[\"status\",[\"string\",\"Server revision 2\"]],[\"title\",[\"object\",[[\"text\",[\"string\",\"Tal\u00eca \u00b7 monitoring\"]]]]],[\"value\",[\"number\",25]]]]},\"connection\":\"back online\",\"client\":{\"scale\":1,\"dashboardId\":\"monitor\",\"params\":{\"sidebar\":false}},\"width\":842,\"actions\":[{\"actionId\":\"a-5e25a2fd-d4fb-4e37-9e7d-91d3ab9c8f05\",\"outcome\":{\"definition\":\"stored\",\"generation\":1,\"has_value\":true,\"history_age_ms\":86400000,\"history_count\":100,\"id\":\"value\",\"params\":{\"value\":[\"undefined\"],\"version\":1},\"quality\":\"good\",\"revision\":2,\"state\":{\"value\":[\"undefined\"],\"version\":1},\"timestamp\":1789896124683,\"value\":{\"value\":[\"number\",\"Infinity\"],\"version\":1}},\"status\":\"complete\"}],\"actionIds\":[\"a-5e25a2fd-d4fb-4e37-9e7d-91d3ab9c8f05\"],\"nextActionId\":\"a-91e02309-bc10-44f3-b8b2-2b15ecc7b049\",\"externalError\":null}}\n",
+      "stderr": "",
+      "result": {
+        "passed": true,
+        "checks": [
+          "live durable server",
+          "exceptional values through guest and SQLite",
+          "unavailable slider",
+          "chart exceptional annotation",
+          "visible undefined",
+          "server restart retains dirty VM and screen",
+          "connection states",
+          "saved baseline reload",
+          "connection survives dashboard failure"
+        ],
+        "state": {
+          "dirty": false,
+          "failure": null,
+          "paused": false,
+          "revision": "6abeb78784d5930ba4343f835016b42a19263f62d83ba15dbca60e05f724c8b9",
+          "state": {
+            "busy": false,
+            "details": true,
+            "explanation": {
+              "text": "Writes change server state and survive dashboard reload."
+            },
+            "history": [
+              null
+            ],
+            "screen": "overviewScreen",
+            "services": [
+              {
+                "id": "engine",
+                "label": "Engine connection"
+              }
+            ],
+            "status": "Server revision 2",
+            "title": {
+              "text": "Tal\u00eca \u00b7 monitoring"
+            },
+            "value": 25
+          },
+          "subscriptions": 1,
+          "stateWire": {
+            "version": 1,
+            "value": [
+              "object",
+              [
+                [
+                  "busy",
+                  [
+                    "boolean",
+                    false
+                  ]
+                ],
+                [
+                  "details",
+                  [
+                    "boolean",
+                    true
+                  ]
+                ],
+                [
+                  "explanation",
+                  [
+                    "object",
+                    [
+                      [
+                        "text",
+                        [
+                          "string",
+                          "Writes change server state and survive dashboard reload."
+                        ]
+                      ]
+                    ]
+                  ]
+                ],
+                [
+                  "history",
+                  [
+                    "array",
+                    [
+                      [
+                        "number",
+                        "Infinity"
+                      ]
+                    ]
+                  ]
+                ],
+                [
+                  "screen",
+                  [
+                    "string",
+                    "overviewScreen"
+                  ]
+                ],
+                [
+                  "services",
+                  [
+                    "array",
+                    [
+                      [
+                        "object",
+                        [
+                          [
+                            "id",
+                            [
+                              "string",
+                              "engine"
+                            ]
+                          ],
+                          [
+                            "label",
+                            [
+                              "string",
+                              "Engine connection"
+                            ]
+                          ]
+                        ]
+                      ]
+                    ]
+                  ]
+                ],
+                [
+                  "status",
+                  [
+                    "string",
+                    "Server revision 2"
+                  ]
+                ],
+                [
+                  "title",
+                  [
+                    "object",
+                    [
+                      [
+                        "text",
+                        [
+                          "string",
+                          "Tal\u00eca \u00b7 monitoring"
+                        ]
+                      ]
+                    ]
+                  ]
+                ],
+                [
+                  "value",
+                  [
+                    "number",
+                    25
+                  ]
+                ]
+              ]
+            ]
+          },
+          "connection": "back online",
+          "client": {
+            "scale": 1,
+            "dashboardId": "monitor",
+            "params": {
+              "sidebar": false
+            }
+          },
+          "width": 842,
+          "actions": [
+            {
+              "actionId": "a-5e25a2fd-d4fb-4e37-9e7d-91d3ab9c8f05",
+              "outcome": {
+                "definition": "stored",
+                "generation": 1,
+                "has_value": true,
+                "history_age_ms": 86400000,
+                "history_count": 100,
+                "id": "value",
+                "params": {
+                  "value": [
+                    "undefined"
+                  ],
+                  "version": 1
+                },
+                "quality": "good",
+                "revision": 2,
+                "state": {
+                  "value": [
+                    "undefined"
+                  ],
+                  "version": 1
+                },
+                "timestamp": 1789896124683,
+                "value": {
+                  "value": [
+                    "number",
+                    "Infinity"
+                  ],
+                  "version": 1
+                }
+              },
+              "status": "complete"
+            }
+          ],
+          "actionIds": [
+            "a-5e25a2fd-d4fb-4e37-9e7d-91d3ab9c8f05"
+          ],
+          "nextActionId": "a-91e02309-bc10-44f3-b8b2-2b15ecc7b049",
+          "externalError": null
+        }
+      }
+    },
+    "p1-web": {
+      "command": [
+        "node",
+        "dashboard/tests/web.mjs"
+      ],
+      "exit_code": 0,
+      "stdout": "{\"passed\":true,\"checks\":[\"shared VM in bounded QuickJS Worker\",\"live server subscription\",\"keyboard slider and live pointer drag\",\"switch/conditional\",\"write outcome\",\"navigation preserves state and subscription\",\"accessible chart\"],\"state\":{\"dirty\":false,\"failure\":null,\"paused\":false,\"revision\":\"6abeb78784d5930ba4343f835016b42a19263f62d83ba15dbca60e05f724c8b9\",\"state\":{\"busy\":false,\"details\":false,\"explanation\":{\"text\":\"Writes change server state and survive dashboard reload.\"},\"history\":[0],\"screen\":\"overviewScreen\",\"services\":[{\"id\":\"engine\",\"label\":\"Engine connection\"}],\"status\":\"Server revision 0\",\"title\":{\"text\":\"Tal\u00eca \u00b7 monitoring\"},\"value\":26},\"subscriptions\":1,\"stateWire\":{\"version\":1,\"value\":[\"object\",[[\"busy\",[\"boolean\",false]],[\"details\",[\"boolean\",false]],[\"explanation\",[\"object\",[[\"text\",[\"string\",\"Writes change server state and survive dashboard reload.\"]]]]],[\"history\",[\"array\",[[\"number\",0]]]],[\"screen\",[\"string\",\"overviewScreen\"]],[\"services\",[\"array\",[[\"object\",[[\"id\",[\"string\",\"engine\"]],[\"label\",[\"string\",\"Engine connection\"]]]]]]],[\"status\",[\"string\",\"Server revision 0\"]],[\"title\",[\"object\",[[\"text\",[\"string\",\"Tal\u00eca \u00b7 monitoring\"]]]]],[\"value\",[\"number\",26]]]]},\"connection\":null,\"client\":{\"scale\":1,\"dashboardId\":\"monitor\",\"params\":{\"sidebar\":false}},\"width\":842,\"actions\":[{\"result\":{\"revision\":1,\"value\":26},\"status\":\"completed\"}],\"actionIds\":[\"a-1ebe8813-8064-4879-8b18-04a702f31723\"],\"nextActionId\":\"a-a5364eef-869b-4d73-bdd2-6350d835bcca\",\"externalError\":null}}\n",
+      "stderr": "",
+      "result": {
+        "passed": true,
+        "checks": [
+          "shared VM in bounded QuickJS Worker",
+          "live server subscription",
+          "keyboard slider and live pointer drag",
+          "switch/conditional",
+          "write outcome",
+          "navigation preserves state and subscription",
+          "accessible chart"
+        ],
+        "state": {
+          "dirty": false,
+          "failure": null,
+          "paused": false,
+          "revision": "6abeb78784d5930ba4343f835016b42a19263f62d83ba15dbca60e05f724c8b9",
+          "state": {
+            "busy": false,
+            "details": false,
+            "explanation": {
+              "text": "Writes change server state and survive dashboard reload."
+            },
+            "history": [
+              0
+            ],
+            "screen": "overviewScreen",
+            "services": [
+              {
+                "id": "engine",
+                "label": "Engine connection"
+              }
+            ],
+            "status": "Server revision 0",
+            "title": {
+              "text": "Tal\u00eca \u00b7 monitoring"
+            },
+            "value": 26
+          },
+          "subscriptions": 1,
+          "stateWire": {
+            "version": 1,
+            "value": [
+              "object",
+              [
+                [
+                  "busy",
+                  [
+                    "boolean",
+                    false
+                  ]
+                ],
+                [
+                  "details",
+                  [
+                    "boolean",
+                    false
+                  ]
+                ],
+                [
+                  "explanation",
+                  [
+                    "object",
+                    [
+                      [
+                        "text",
+                        [
+                          "string",
+                          "Writes change server state and survive dashboard reload."
+                        ]
+                      ]
+                    ]
+                  ]
+                ],
+                [
+                  "history",
+                  [
+                    "array",
+                    [
+                      [
+                        "number",
+                        0
+                      ]
+                    ]
+                  ]
+                ],
+                [
+                  "screen",
+                  [
+                    "string",
+                    "overviewScreen"
+                  ]
+                ],
+                [
+                  "services",
+                  [
+                    "array",
+                    [
+                      [
+                        "object",
+                        [
+                          [
+                            "id",
+                            [
+                              "string",
+                              "engine"
+                            ]
+                          ],
+                          [
+                            "label",
+                            [
+                              "string",
+                              "Engine connection"
+                            ]
+                          ]
+                        ]
+                      ]
+                    ]
+                  ]
+                ],
+                [
+                  "status",
+                  [
+                    "string",
+                    "Server revision 0"
+                  ]
+                ],
+                [
+                  "title",
+                  [
+                    "object",
+                    [
+                      [
+                        "text",
+                        [
+                          "string",
+                          "Tal\u00eca \u00b7 monitoring"
+                        ]
+                      ]
+                    ]
+                  ]
+                ],
+                [
+                  "value",
+                  [
+                    "number",
+                    26
+                  ]
+                ]
+              ]
+            ]
+          },
+          "connection": null,
+          "client": {
+            "scale": 1,
+            "dashboardId": "monitor",
+            "params": {
+              "sidebar": false
+            }
+          },
+          "width": 842,
+          "actions": [
+            {
+              "result": {
+                "revision": 1,
+                "value": 26
+              },
+              "status": "completed"
+            }
+          ],
+          "actionIds": [
+            "a-1ebe8813-8064-4879-8b18-04a702f31723"
+          ],
+          "nextActionId": "a-a5364eef-869b-4d73-bdd2-6350d835bcca",
+          "externalError": null
+        }
+      }
+    },
+    "p1-responsive": {
+      "command": [
+        "node",
+        "dashboard/tests/responsive.mjs"
+      ],
+      "exit_code": 0,
+      "stdout": "{\"passed\":true,\"checks\":[\"width breakpoints\",\"manual dp scale persisted per client\",\"composition preserves state/navigation\",\"keyed DOM identity and focus\",\"hidden versus collapsed\"],\"result\":{\"same\":true,\"focused\":true,\"hidden\":22,\"collapsed\":0}}\n",
+      "stderr": "",
+      "result": {
+        "passed": true,
+        "checks": [
+          "width breakpoints",
+          "manual dp scale persisted per client",
+          "composition preserves state/navigation",
+          "keyed DOM identity and focus",
+          "hidden versus collapsed"
+        ],
+        "result": {
+          "same": true,
+          "focused": true,
+          "hidden": 22,
+          "collapsed": 0
+        }
+      }
+    },
+    "p1-updates": {
+      "command": [
+        "node",
+        "dashboard/tests/updates.mjs"
+      ],
+      "exit_code": 0,
+      "stdout": "{\"passed\":true,\"checks\":[\"independent persisted client dashboard selection\",\"shared definition used by separate instances\",\"update available without hot adoption\",\"explicit reload adopts saved revision\",\"dirty VM discarded\",\"server effect retained\",\"visible internal failure and manual restart\"],\"revision\":\"client-selection\"}\n",
+      "stderr": "",
+      "result": {
+        "passed": true,
+        "checks": [
+          "independent persisted client dashboard selection",
+          "shared definition used by separate instances",
+          "update available without hot adoption",
+          "explicit reload adopts saved revision",
+          "dirty VM discarded",
+          "server effect retained",
+          "visible internal failure and manual restart"
+        ],
+        "revision": "client-selection"
+      }
+    },
+    "p1-lifecycle": {
+      "command": [
+        "node",
+        "dashboard/tests/lifecycle.mjs"
+      ],
+      "exit_code": 0,
+      "stdout": "{\"passed\":true,\"checks\":[\"actual hidden tab pauses local state/subscriptions while server effect completes\",\"resume retains dirty VM, reconciles outcome and refreshes without resubmission\",\"repeated visibility transitions do not leak subscriptions\",\"exception, CPU and memory faults stop only affected dashboard; manual saved-baseline restart preserves server effects\"],\"final\":{\"dirty\":false,\"failure\":null,\"paused\":false,\"revision\":\"6abeb78784d5930ba4343f835016b42a19263f62d83ba15dbca60e05f724c8b9\",\"state\":{\"busy\":false,\"details\":true,\"explanation\":{\"text\":\"Writes change server state and survive dashboard reload.\"},\"history\":[62],\"screen\":\"overviewScreen\",\"services\":[{\"id\":\"engine\",\"label\":\"Engine connection\"}],\"status\":\"Server revision 5\",\"title\":{\"text\":\"Tal\u00eca \u00b7 monitoring\"},\"value\":25},\"subscriptions\":1,\"stateWire\":{\"version\":1,\"value\":[\"object\",[[\"busy\",[\"boolean\",false]],[\"details\",[\"boolean\",true]],[\"explanation\",[\"object\",[[\"text\",[\"string\",\"Writes change server state and survive dashboard reload.\"]]]]],[\"history\",[\"array\",[[\"number\",62]]]],[\"screen\",[\"string\",\"overviewScreen\"]],[\"services\",[\"array\",[[\"object\",[[\"id\",[\"string\",\"engine\"]],[\"label\",[\"string\",\"Engine connection\"]]]]]]],[\"status\",[\"string\",\"Server revision 5\"]],[\"title\",[\"object\",[[\"text\",[\"string\",\"Tal\u00eca \u00b7 monitoring\"]]]]],[\"value\",[\"number\",25]]]]},\"connection\":null,\"client\":{\"scale\":1,\"dashboardId\":\"monitor\",\"params\":{\"sidebar\":false}},\"width\":992,\"actions\":[],\"actionIds\":[],\"nextActionId\":\"a-433f947d-1e70-4ff0-8b2c-1087b497c291\",\"externalError\":null}}\n",
+      "stderr": "",
+      "result": {
+        "passed": true,
+        "checks": [
+          "actual hidden tab pauses local state/subscriptions while server effect completes",
+          "resume retains dirty VM, reconciles outcome and refreshes without resubmission",
+          "repeated visibility transitions do not leak subscriptions",
+          "exception, CPU and memory faults stop only affected dashboard; manual saved-baseline restart preserves server effects"
+        ],
+        "final": {
+          "dirty": false,
+          "failure": null,
+          "paused": false,
+          "revision": "6abeb78784d5930ba4343f835016b42a19263f62d83ba15dbca60e05f724c8b9",
+          "state": {
+            "busy": false,
+            "details": true,
+            "explanation": {
+              "text": "Writes change server state and survive dashboard reload."
+            },
+            "history": [
+              62
+            ],
+            "screen": "overviewScreen",
+            "services": [
+              {
+                "id": "engine",
+                "label": "Engine connection"
+              }
+            ],
+            "status": "Server revision 5",
+            "title": {
+              "text": "Tal\u00eca \u00b7 monitoring"
+            },
+            "value": 25
+          },
+          "subscriptions": 1,
+          "stateWire": {
+            "version": 1,
+            "value": [
+              "object",
+              [
+                [
+                  "busy",
+                  [
+                    "boolean",
+                    false
+                  ]
+                ],
+                [
+                  "details",
+                  [
+                    "boolean",
+                    true
+                  ]
+                ],
+                [
+                  "explanation",
+                  [
+                    "object",
+                    [
+                      [
+                        "text",
+                        [
+                          "string",
+                          "Writes change server state and survive dashboard reload."
+                        ]
+                      ]
+                    ]
+                  ]
+                ],
+                [
+                  "history",
+                  [
+                    "array",
+                    [
+                      [
+                        "number",
+                        62
+                      ]
+                    ]
+                  ]
+                ],
+                [
+                  "screen",
+                  [
+                    "string",
+                    "overviewScreen"
+                  ]
+                ],
+                [
+                  "services",
+                  [
+                    "array",
+                    [
+                      [
+                        "object",
+                        [
+                          [
+                            "id",
+                            [
+                              "string",
+                              "engine"
+                            ]
+                          ],
+                          [
+                            "label",
+                            [
+                              "string",
+                              "Engine connection"
+                            ]
+                          ]
+                        ]
+                      ]
+                    ]
+                  ]
+                ],
+                [
+                  "status",
+                  [
+                    "string",
+                    "Server revision 5"
+                  ]
+                ],
+                [
+                  "title",
+                  [
+                    "object",
+                    [
+                      [
+                        "text",
+                        [
+                          "string",
+                          "Tal\u00eca \u00b7 monitoring"
+                        ]
+                      ]
+                    ]
+                  ]
+                ],
+                [
+                  "value",
+                  [
+                    "number",
+                    25
+                  ]
+                ]
+              ]
+            ]
+          },
+          "connection": null,
+          "client": {
+            "scale": 1,
+            "dashboardId": "monitor",
+            "params": {
+              "sidebar": false
+            }
+          },
+          "width": 992,
+          "actions": [],
+          "actionIds": [],
+          "nextActionId": "a-433f947d-1e70-4ff0-8b2c-1087b497c291",
+          "externalError": null
+        }
+      }
+    },
+    "build-android": {
+      "command": [
+        "bash",
+        "dashboard/build-android.sh"
+      ],
+      "exit_code": 0,
+      "stdout": "6abeb78784d5930ba4343f835016b42a19263f62d83ba15dbca60e05f724c8b9\nTo honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.13/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.\nDaemon will be stopped at the end of the build \n> Task :app:preBuild UP-TO-DATE\n> Task :app:preDebugBuild UP-TO-DATE\n> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE\n> Task :app:generateDebugBuildConfig UP-TO-DATE\n> Task :app:javaPreCompileDebug UP-TO-DATE\n> Task :app:checkDebugAarMetadata UP-TO-DATE\n> Task :app:processDebugNavigationResources UP-TO-DATE\n> Task :app:compileDebugNavigationResources UP-TO-DATE\n> Task :app:generateDebugResValues UP-TO-DATE\n> Task :app:mapDebugSourceSetPaths UP-TO-DATE\n> Task :app:generateDebugResources UP-TO-DATE\n> Task :app:mergeDebugResources UP-TO-DATE\n> Task :app:packageDebugResources UP-TO-DATE\n> Task :app:parseDebugLocalResources UP-TO-DATE\n> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE\n> Task :app:extractDeepLinksDebug UP-TO-DATE\n> Task :app:processDebugMainManifest UP-TO-DATE\n> Task :app:processDebugManifest UP-TO-DATE\n> Task :app:processDebugManifestForPackage UP-TO-DATE\n> Task :app:processDebugResources UP-TO-DATE\n> Task :app:compileDebugJavaWithJavac UP-TO-DATE\n> Task :app:mergeDebugShaders UP-TO-DATE\n> Task :app:compileDebugShaders NO-SOURCE\n> Task :app:generateDebugAssets UP-TO-DATE\n> Task :app:mergeDebugAssets\n> Task :app:desugarDebugFileDependencies UP-TO-DATE\n> Task :app:dexBuilderDebug UP-TO-DATE\n> Task :app:compressDebugAssets\n> Task :app:mergeDebugGlobalSynthetics UP-TO-DATE\n> Task :app:processDebugJavaRes NO-SOURCE\n> Task :app:mergeDebugJavaResource UP-TO-DATE\n> Task :app:checkDebugDuplicateClasses UP-TO-DATE\n> Task :app:mergeExtDexDebug UP-TO-DATE\n> Task :app:mergeLibDexDebug UP-TO-DATE\n> Task :app:mergeProjectDexDebug UP-TO-DATE\n> Task :app:mergeDebugJniLibFolders UP-TO-DATE\n> Task :app:mergeDebugNativeLibs UP-TO-DATE\n> Task :app:stripDebugDebugSymbols UP-TO-DATE\n> Task :app:validateSigningDebug UP-TO-DATE\n> Task :app:writeDebugAppMetadata UP-TO-DATE\n> Task :app:writeDebugSigningConfigVersions UP-TO-DATE\n> Task :app:packageDebug\n> Task :app:createDebugApkListingFileRedirect UP-TO-DATE\n> Task :app:assembleDebug\n\n[Incubating] Problems report is available at: file:///home/lelloman/lelloprojects/talia/dashboard/android/build/reports/problems/problems-report.html\n\nDeprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.\n\nYou can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.\n\nFor more on this, please refer to https://docs.gradle.org/8.13/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.\n\nBUILD SUCCESSFUL in 5s\n37 actionable tasks: 3 executed, 34 up-to-date\n",
+      "stderr": "    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.03s\n"
+    },
+    "android": {
+      "command": [
+        "python3",
+        "engine/tests/android.py",
+        "emulator-5570",
+        "/tmp/talia-p2-recovery-target/debug/talia-engine"
+      ],
+      "exit_code": 0,
+      "stdout": "{\"passed\": true, \"serial\": \"emulator-5570\", \"checks\": [\"native widgets\", \"exceptional values through native QuickJS and SQLite\", \"unavailable slider\", \"visible undefined/chart annotation\", \"restart retains dirty VM and selected screen\", \"connection states\", \"pause/resume\", \"connection survives dashboard failure\", \"manual restart restores baseline\"], \"state\": {\"dirty\": false, \"failure\": null, \"paused\": false, \"revision\": 1, \"state\": {\"busy\": false, \"details\": true, \"explanation\": {\"text\": \"Writes change server state and survive dashboard reload.\"}, \"history\": [null], \"screen\": \"overviewScreen\", \"services\": [{\"id\": \"engine\", \"label\": \"Engine connection\"}], \"status\": \"Server revision 2\", \"title\": {\"text\": \"Tal\\u00eca \\u00b7 monitoring\"}, \"value\": 25}, \"subscriptions\": 1, \"stateWire\": {\"version\": 1, \"value\": [\"object\", [[\"busy\", [\"boolean\", false]], [\"details\", [\"boolean\", true]], [\"explanation\", [\"object\", [[\"text\", [\"string\", \"Writes change server state and survive dashboard reload.\"]]]]], [\"history\", [\"array\", [[\"number\", \"Infinity\"]]]], [\"screen\", [\"string\", \"overviewScreen\"]], [\"services\", [\"array\", [[\"object\", [[\"id\", [\"string\", \"engine\"]], [\"label\", [\"string\", \"Engine connection\"]]]]]]], [\"status\", [\"string\", \"Server revision 2\"]], [\"title\", [\"object\", [[\"text\", [\"string\", \"Tal\\u00eca \\u00b7 monitoring\"]]]]], [\"value\", [\"number\", 25]]]]}, \"connection\": \"\", \"dashboardId\": \"monitor\", \"definitionRevision\": \"6abeb78784d5930ba4343f835016b42a19263f62d83ba15dbca60e05f724c8b9\", \"updateAvailable\": false, \"width\": 1048, \"scale\": 2.625, \"sidebar\": false, \"signals\": [], \"actions\": [{\"actionId\": \"a-686b822e-5fd4-4327-be87-f2aa308bd5e6\", \"outcome\": {\"definition\": \"stored\", \"generation\": 1, \"has_value\": true, \"history_age_ms\": 86400000, \"history_count\": 100, \"id\": \"value\", \"params\": {\"value\": [\"undefined\"], \"version\": 1}, \"quality\": \"good\", \"revision\": 2, \"state\": {\"value\": [\"undefined\"], \"version\": 1}, \"timestamp\": 1789896148380, \"value\": {\"value\": [\"number\", \"Infinity\"], \"version\": 1}}, \"status\": \"complete\"}], \"actionIds\": [\"a-686b822e-5fd4-4327-be87-f2aa308bd5e6\"], \"nextActionId\": \"a-35fe7d7a-0544-42eb-b012-265bc5c804fa\", \"externalError\": null}, \"cleanup_verified\": true}\n",
+      "stderr": "",
+      "result": {
+        "passed": true,
+        "serial": "emulator-5570",
+        "checks": [
+          "native widgets",
+          "exceptional values through native QuickJS and SQLite",
+          "unavailable slider",
+          "visible undefined/chart annotation",
+          "restart retains dirty VM and selected screen",
+          "connection states",
+          "pause/resume",
+          "connection survives dashboard failure",
+          "manual restart restores baseline"
+        ],
+        "state": {
+          "dirty": false,
+          "failure": null,
+          "paused": false,
+          "revision": 1,
+          "state": {
+            "busy": false,
+            "details": true,
+            "explanation": {
+              "text": "Writes change server state and survive dashboard reload."
+            },
+            "history": [
+              null
+            ],
+            "screen": "overviewScreen",
+            "services": [
+              {
+                "id": "engine",
+                "label": "Engine connection"
+              }
+            ],
+            "status": "Server revision 2",
+            "title": {
+              "text": "Tal\u00eca \u00b7 monitoring"
+            },
+            "value": 25
+          },
+          "subscriptions": 1,
+          "stateWire": {
+            "version": 1,
+            "value": [
+              "object",
+              [
+                [
+                  "busy",
+                  [
+                    "boolean",
+                    false
+                  ]
+                ],
+                [
+                  "details",
+                  [
+                    "boolean",
+                    true
+                  ]
+                ],
+                [
+                  "explanation",
+                  [
+                    "object",
+                    [
+                      [
+                        "text",
+                        [
+                          "string",
+                          "Writes change server state and survive dashboard reload."
+                        ]
+                      ]
+                    ]
+                  ]
+                ],
+                [
+                  "history",
+                  [
+                    "array",
+                    [
+                      [
+                        "number",
+                        "Infinity"
+                      ]
+                    ]
+                  ]
+                ],
+                [
+                  "screen",
+                  [
+                    "string",
+                    "overviewScreen"
+                  ]
+                ],
+                [
+                  "services",
+                  [
+                    "array",
+                    [
+                      [
+                        "object",
+                        [
+                          [
+                            "id",
+                            [
+                              "string",
+                              "engine"
+                            ]
+                          ],
+                          [
+                            "label",
+                            [
+                              "string",
+                              "Engine connection"
+                            ]
+                          ]
+                        ]
+                      ]
+                    ]
+                  ]
+                ],
+                [
+                  "status",
+                  [
+                    "string",
+                    "Server revision 2"
+                  ]
+                ],
+                [
+                  "title",
+                  [
+                    "object",
+                    [
+                      [
+                        "text",
+                        [
+                          "string",
+                          "Tal\u00eca \u00b7 monitoring"
+                        ]
+                      ]
+                    ]
+                  ]
+                ],
+                [
+                  "value",
+                  [
+                    "number",
+                    25
+                  ]
+                ]
+              ]
+            ]
+          },
+          "connection": "",
+          "dashboardId": "monitor",
+          "definitionRevision": "6abeb78784d5930ba4343f835016b42a19263f62d83ba15dbca60e05f724c8b9",
+          "updateAvailable": false,
+          "width": 1048,
+          "scale": 2.625,
+          "sidebar": false,
+          "signals": [],
+          "actions": [
+            {
+              "actionId": "a-686b822e-5fd4-4327-be87-f2aa308bd5e6",
+              "outcome": {
+                "definition": "stored",
+                "generation": 1,
+                "has_value": true,
+                "history_age_ms": 86400000,
+                "history_count": 100,
+                "id": "value",
+                "params": {
+                  "value": [
+                    "undefined"
+                  ],
+                  "version": 1
+                },
+                "quality": "good",
+                "revision": 2,
+                "state": {
+                  "value": [
+                    "undefined"
+                  ],
+                  "version": 1
+                },
+                "timestamp": 1789896148380,
+                "value": {
+                  "value": [
+                    "number",
+                    "Infinity"
+                  ],
+                  "version": 1
+                }
+              },
+              "status": "complete"
+            }
+          ],
+          "actionIds": [
+            "a-686b822e-5fd4-4327-be87-f2aa308bd5e6"
+          ],
+          "nextActionId": "a-35fe7d7a-0544-42eb-b012-265bc5c804fa",
+          "externalError": null
+        },
+        "cleanup_verified": true
+      }
+    },
+    "p1-android": {
+      "command": [
+        "python3",
+        "dashboard/tests/android.py",
+        "emulator-5570"
+      ],
+      "exit_code": 0,
+      "stdout": "{\"passed\": true, \"serial\": \"emulator-5570\", \"checks\": [\"independent persisted client dashboard selection\", \"native controls, no WebView\", \"switch and condition\", \"server write\", \"accessible chart\", \"navigation retains VM/subscription\", \"per-client composition\", \"update available without adoption\", \"reload adopts reference revision and discards dirty VM\", \"exception, CPU and memory failures require manual restart and preserve server effects\", \"actual background pauses local state and subscriptions\", \"in-flight action completes in background\", \"resume reconciles without resubmission\", \"repeated background transitions retain dirty state\"], \"renderer\": {\"passed\": true, \"checks\": [\"native keyed identity\", \"focus survives reorder\", \"hidden retains space\", \"collapsed removes space\", \"long text wraps\", \"native switch accessibility\", \"equal grid columns\"]}, \"report\": {\"dirty\": false, \"failure\": null, \"paused\": false, \"revision\": 1, \"state\": {\"busy\": false, \"details\": true, \"explanation\": {\"text\": \"Writes change server state and survive dashboard reload.\"}, \"history\": [62], \"screen\": \"overviewScreen\", \"services\": [{\"id\": \"engine\", \"label\": \"Engine connection\"}], \"status\": \"Server revision 5\", \"title\": {\"text\": \"Tal\\u00eca \\u00b7 monitoring\"}, \"value\": 25}, \"subscriptions\": 1, \"stateWire\": {\"version\": 1, \"value\": [\"object\", [[\"busy\", [\"boolean\", false]], [\"details\", [\"boolean\", true]], [\"explanation\", [\"object\", [[\"text\", [\"string\", \"Writes change server state and survive dashboard reload.\"]]]]], [\"history\", [\"array\", [[\"number\", 62]]]], [\"screen\", [\"string\", \"overviewScreen\"]], [\"services\", [\"array\", [[\"object\", [[\"id\", [\"string\", \"engine\"]], [\"label\", [\"string\", \"Engine connection\"]]]]]]], [\"status\", [\"string\", \"Server revision 5\"]], [\"title\", [\"object\", [[\"text\", [\"string\", \"Tal\\u00eca \\u00b7 monitoring\"]]]]], [\"value\", [\"number\", 25]]]]}, \"connection\": null, \"dashboardId\": \"secondary\", \"definitionRevision\": \"client-selection\", \"updateAvailable\": false, \"width\": 1048, \"scale\": 2.625, \"sidebar\": false, \"signals\": [], \"actions\": [], \"actionIds\": [], \"nextActionId\": \"a-5498c3aa-6a27-44d8-a534-99c1a77e6a04\", \"externalError\": null}, \"cleanup_verified\": true}\n",
+      "stderr": "",
+      "result": {
+        "passed": true,
+        "serial": "emulator-5570",
+        "checks": [
+          "independent persisted client dashboard selection",
+          "native controls, no WebView",
+          "switch and condition",
+          "server write",
+          "accessible chart",
+          "navigation retains VM/subscription",
+          "per-client composition",
+          "update available without adoption",
+          "reload adopts reference revision and discards dirty VM",
+          "exception, CPU and memory failures require manual restart and preserve server effects",
+          "actual background pauses local state and subscriptions",
+          "in-flight action completes in background",
+          "resume reconciles without resubmission",
+          "repeated background transitions retain dirty state"
+        ],
+        "renderer": {
+          "passed": true,
+          "checks": [
+            "native keyed identity",
+            "focus survives reorder",
+            "hidden retains space",
+            "collapsed removes space",
+            "long text wraps",
+            "native switch accessibility",
+            "equal grid columns"
+          ]
+        },
+        "report": {
+          "dirty": false,
+          "failure": null,
+          "paused": false,
+          "revision": 1,
+          "state": {
+            "busy": false,
+            "details": true,
+            "explanation": {
+              "text": "Writes change server state and survive dashboard reload."
+            },
+            "history": [
+              62
+            ],
+            "screen": "overviewScreen",
+            "services": [
+              {
+                "id": "engine",
+                "label": "Engine connection"
+              }
+            ],
+            "status": "Server revision 5",
+            "title": {
+              "text": "Tal\u00eca \u00b7 monitoring"
+            },
+            "value": 25
+          },
+          "subscriptions": 1,
+          "stateWire": {
+            "version": 1,
+            "value": [
+              "object",
+              [
+                [
+                  "busy",
+                  [
+                    "boolean",
+                    false
+                  ]
+                ],
+                [
+                  "details",
+                  [
+                    "boolean",
+                    true
+                  ]
+                ],
+                [
+                  "explanation",
+                  [
+                    "object",
+                    [
+                      [
+                        "text",
+                        [
+                          "string",
+                          "Writes change server state and survive dashboard reload."
+                        ]
+                      ]
+                    ]
+                  ]
+                ],
+                [
+                  "history",
+                  [
+                    "array",
+                    [
+                      [
+                        "number",
+                        62
+                      ]
+                    ]
+                  ]
+                ],
+                [
+                  "screen",
+                  [
+                    "string",
+                    "overviewScreen"
+                  ]
+                ],
+                [
+                  "services",
+                  [
+                    "array",
+                    [
+                      [
+                        "object",
+                        [
+                          [
+                            "id",
+                            [
+                              "string",
+                              "engine"
+                            ]
+                          ],
+                          [
+                            "label",
+                            [
+                              "string",
+                              "Engine connection"
+                            ]
+                          ]
+                        ]
+                      ]
+                    ]
+                  ]
+                ],
+                [
+                  "status",
+                  [
+                    "string",
+                    "Server revision 5"
+                  ]
+                ],
+                [
+                  "title",
+                  [
+                    "object",
+                    [
+                      [
+                        "text",
+                        [
+                          "string",
+                          "Tal\u00eca \u00b7 monitoring"
+                        ]
+                      ]
+                    ]
+                  ]
+                ],
+                [
+                  "value",
+                  [
+                    "number",
+                    25
+                  ]
+                ]
+              ]
+            ]
+          },
+          "connection": null,
+          "dashboardId": "secondary",
+          "definitionRevision": "client-selection",
+          "updateAvailable": false,
+          "width": 1048,
+          "scale": 2.625,
+          "sidebar": false,
+          "signals": [],
+          "actions": [],
+          "actionIds": [],
+          "nextActionId": "a-5498c3aa-6a27-44d8-a534-99c1a77e6a04",
+          "externalError": null
+        },
+        "cleanup_verified": true
+      }
+    },
+    "build-android-arm64": {
+      "command": [
+        "bash",
+        "dashboard/build-android.sh"
+      ],
+      "exit_code": 0,
+      "stdout": "6abeb78784d5930ba4343f835016b42a19263f62d83ba15dbca60e05f724c8b9\nTo honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.13/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.\nDaemon will be stopped at the end of the build \n> Task :app:preBuild UP-TO-DATE\n> Task :app:preDebugBuild UP-TO-DATE\n> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE\n> Task :app:generateDebugBuildConfig UP-TO-DATE\n> Task :app:javaPreCompileDebug UP-TO-DATE\n> Task :app:checkDebugAarMetadata UP-TO-DATE\n> Task :app:processDebugNavigationResources UP-TO-DATE\n> Task :app:compileDebugNavigationResources UP-TO-DATE\n> Task :app:generateDebugResValues UP-TO-DATE\n> Task :app:mapDebugSourceSetPaths UP-TO-DATE\n> Task :app:generateDebugResources UP-TO-DATE\n> Task :app:mergeDebugResources UP-TO-DATE\n> Task :app:packageDebugResources UP-TO-DATE\n> Task :app:parseDebugLocalResources UP-TO-DATE\n> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE\n> Task :app:extractDeepLinksDebug UP-TO-DATE\n> Task :app:processDebugMainManifest UP-TO-DATE\n> Task :app:processDebugManifest UP-TO-DATE\n> Task :app:processDebugManifestForPackage UP-TO-DATE\n> Task :app:processDebugResources UP-TO-DATE\n> Task :app:compileDebugJavaWithJavac UP-TO-DATE\n> Task :app:mergeDebugShaders UP-TO-DATE\n> Task :app:compileDebugShaders NO-SOURCE\n> Task :app:generateDebugAssets UP-TO-DATE\n> Task :app:mergeDebugAssets UP-TO-DATE\n> Task :app:compressDebugAssets UP-TO-DATE\n> Task :app:desugarDebugFileDependencies UP-TO-DATE\n> Task :app:dexBuilderDebug UP-TO-DATE\n> Task :app:mergeDebugGlobalSynthetics UP-TO-DATE\n> Task :app:processDebugJavaRes NO-SOURCE\n> Task :app:mergeDebugJavaResource UP-TO-DATE\n> Task :app:checkDebugDuplicateClasses UP-TO-DATE\n> Task :app:mergeExtDexDebug UP-TO-DATE\n> Task :app:mergeLibDexDebug UP-TO-DATE\n> Task :app:mergeProjectDexDebug UP-TO-DATE\n> Task :app:mergeDebugJniLibFolders UP-TO-DATE\n> Task :app:mergeDebugNativeLibs UP-TO-DATE\n> Task :app:stripDebugDebugSymbols UP-TO-DATE\n> Task :app:validateSigningDebug UP-TO-DATE\n> Task :app:writeDebugAppMetadata UP-TO-DATE\n> Task :app:writeDebugSigningConfigVersions UP-TO-DATE\n> Task :app:packageDebug\n> Task :app:createDebugApkListingFileRedirect UP-TO-DATE\n> Task :app:assembleDebug\n\n[Incubating] Problems report is available at: file:///home/lelloman/lelloprojects/talia/dashboard/android/build/reports/problems/problems-report.html\n\nDeprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.\n\nYou can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.\n\nFor more on this, please refer to https://docs.gradle.org/8.13/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.\n\nBUILD SUCCESSFUL in 6s\n37 actionable tasks: 1 executed, 36 up-to-date\n",
+      "stderr": "   Compiling bindgen v0.72.1\n   Compiling rquickjs-sys v0.13.0\n   Compiling rquickjs-core v0.13.0\n   Compiling rquickjs v0.13.0\n   Compiling talia-dashboard-runtime v0.1.0 (/home/lelloman/lelloprojects/talia/dashboard/native)\n    Finished `dev` profile [unoptimized + debuginfo] target(s) in 11.25s\n"
+    },
+    "android-arm64": {
+      "command": [
+        "python3",
+        "engine/tests/android.py",
+        "OZQ49XDILZ4PTSHI",
+        "/tmp/talia-p2-recovery-target/debug/talia-engine"
+      ],
+      "exit_code": 0,
+      "stdout": "{\"passed\": true, \"serial\": \"OZQ49XDILZ4PTSHI\", \"checks\": [\"native widgets\", \"exceptional values through native QuickJS and SQLite\", \"unavailable slider\", \"visible undefined/chart annotation\", \"restart retains dirty VM and selected screen\", \"connection states\", \"pause/resume\", \"connection survives dashboard failure\", \"manual restart restores baseline\"], \"state\": {\"dirty\": false, \"failure\": null, \"paused\": false, \"revision\": 1, \"state\": {\"busy\": false, \"details\": true, \"explanation\": {\"text\": \"Writes change server state and survive dashboard reload.\"}, \"history\": [null], \"screen\": \"overviewScreen\", \"services\": [{\"id\": \"engine\", \"label\": \"Engine connection\"}], \"status\": \"Server revision 2\", \"title\": {\"text\": \"Tal\\u00eca \\u00b7 monitoring\"}, \"value\": 25}, \"subscriptions\": 1, \"stateWire\": {\"version\": 1, \"value\": [\"object\", [[\"busy\", [\"boolean\", false]], [\"details\", [\"boolean\", true]], [\"explanation\", [\"object\", [[\"text\", [\"string\", \"Writes change server state and survive dashboard reload.\"]]]]], [\"history\", [\"array\", [[\"number\", \"Infinity\"]]]], [\"screen\", [\"string\", \"overviewScreen\"]], [\"services\", [\"array\", [[\"object\", [[\"id\", [\"string\", \"engine\"]], [\"label\", [\"string\", \"Engine connection\"]]]]]]], [\"status\", [\"string\", \"Server revision 2\"]], [\"title\", [\"object\", [[\"text\", [\"string\", \"Tal\\u00eca \\u00b7 monitoring\"]]]]], [\"value\", [\"number\", 25]]]]}, \"connection\": \"\", \"dashboardId\": \"monitor\", \"definitionRevision\": \"6abeb78784d5930ba4343f835016b42a19263f62d83ba15dbca60e05f724c8b9\", \"updateAvailable\": false, \"width\": 1208, \"scale\": 3.5, \"sidebar\": false, \"signals\": [], \"actions\": [{\"actionId\": \"a-442f5f52-1e02-42fe-acc6-1afcaacab907\", \"outcome\": {\"definition\": \"stored\", \"generation\": 1, \"has_value\": true, \"history_age_ms\": 86400000, \"history_count\": 100, \"id\": \"value\", \"params\": {\"value\": [\"undefined\"], \"version\": 1}, \"quality\": \"good\", \"revision\": 2, \"state\": {\"value\": [\"undefined\"], \"version\": 1}, \"timestamp\": 1789896276999, \"value\": {\"value\": [\"number\", \"Infinity\"], \"version\": 1}}, \"status\": \"complete\"}], \"actionIds\": [\"a-442f5f52-1e02-42fe-acc6-1afcaacab907\"], \"nextActionId\": \"a-9f37e6c5-a377-4e75-a6fa-db57b5ac50fb\", \"externalError\": null}, \"cleanup_verified\": true}\n",
+      "stderr": "",
+      "result": {
+        "passed": true,
+        "serial": "OZQ49XDILZ4PTSHI",
+        "checks": [
+          "native widgets",
+          "exceptional values through native QuickJS and SQLite",
+          "unavailable slider",
+          "visible undefined/chart annotation",
+          "restart retains dirty VM and selected screen",
+          "connection states",
+          "pause/resume",
+          "connection survives dashboard failure",
+          "manual restart restores baseline"
+        ],
+        "state": {
+          "dirty": false,
+          "failure": null,
+          "paused": false,
+          "revision": 1,
+          "state": {
+            "busy": false,
+            "details": true,
+            "explanation": {
+              "text": "Writes change server state and survive dashboard reload."
+            },
+            "history": [
+              null
+            ],
+            "screen": "overviewScreen",
+            "services": [
+              {
+                "id": "engine",
+                "label": "Engine connection"
+              }
+            ],
+            "status": "Server revision 2",
+            "title": {
+              "text": "Tal\u00eca \u00b7 monitoring"
+            },
+            "value": 25
+          },
+          "subscriptions": 1,
+          "stateWire": {
+            "version": 1,
+            "value": [
+              "object",
+              [
+                [
+                  "busy",
+                  [
+                    "boolean",
+                    false
+                  ]
+                ],
+                [
+                  "details",
+                  [
+                    "boolean",
+                    true
+                  ]
+                ],
+                [
+                  "explanation",
+                  [
+                    "object",
+                    [
+                      [
+                        "text",
+                        [
+                          "string",
+                          "Writes change server state and survive dashboard reload."
+                        ]
+                      ]
+                    ]
+                  ]
+                ],
+                [
+                  "history",
+                  [
+                    "array",
+                    [
+                      [
+                        "number",
+                        "Infinity"
+                      ]
+                    ]
+                  ]
+                ],
+                [
+                  "screen",
+                  [
+                    "string",
+                    "overviewScreen"
+                  ]
+                ],
+                [
+                  "services",
+                  [
+                    "array",
+                    [
+                      [
+                        "object",
+                        [
+                          [
+                            "id",
+                            [
+                              "string",
+                              "engine"
+                            ]
+                          ],
+                          [
+                            "label",
+                            [
+                              "string",
+                              "Engine connection"
+                            ]
+                          ]
+                        ]
+                      ]
+                    ]
+                  ]
+                ],
+                [
+                  "status",
+                  [
+                    "string",
+                    "Server revision 2"
+                  ]
+                ],
+                [
+                  "title",
+                  [
+                    "object",
+                    [
+                      [
+                        "text",
+                        [
+                          "string",
+                          "Tal\u00eca \u00b7 monitoring"
+                        ]
+                      ]
+                    ]
+                  ]
+                ],
+                [
+                  "value",
+                  [
+                    "number",
+                    25
+                  ]
+                ]
+              ]
+            ]
+          },
+          "connection": "",
+          "dashboardId": "monitor",
+          "definitionRevision": "6abeb78784d5930ba4343f835016b42a19263f62d83ba15dbca60e05f724c8b9",
+          "updateAvailable": false,
+          "width": 1208,
+          "scale": 3.5,
+          "sidebar": false,
+          "signals": [],
+          "actions": [
+            {
+              "actionId": "a-442f5f52-1e02-42fe-acc6-1afcaacab907",
+              "outcome": {
+                "definition": "stored",
+                "generation": 1,
+                "has_value": true,
+                "history_age_ms": 86400000,
+                "history_count": 100,
+                "id": "value",
+                "params": {
+                  "value": [
+                    "undefined"
+                  ],
+                  "version": 1
+                },
+                "quality": "good",
+                "revision": 2,
+                "state": {
+                  "value": [
+                    "undefined"
+                  ],
+                  "version": 1
+                },
+                "timestamp": 1789896276999,
+                "value": {
+                  "value": [
+                    "number",
+                    "Infinity"
+                  ],
+                  "version": 1
+                }
+              },
+              "status": "complete"
+            }
+          ],
+          "actionIds": [
+            "a-442f5f52-1e02-42fe-acc6-1afcaacab907"
+          ],
+          "nextActionId": "a-9f37e6c5-a377-4e75-a6fa-db57b5ac50fb",
+          "externalError": null
+        },
+        "cleanup_verified": true
+      }
+    },
+    "p1-android-arm64": {
+      "command": [
+        "python3",
+        "dashboard/tests/android.py",
+        "OZQ49XDILZ4PTSHI"
+      ],
+      "exit_code": 0,
+      "stdout": "{\"passed\": true, \"serial\": \"OZQ49XDILZ4PTSHI\", \"checks\": [\"independent persisted client dashboard selection\", \"native controls, no WebView\", \"switch and condition\", \"server write\", \"accessible chart\", \"navigation retains VM/subscription\", \"per-client composition\", \"update available without adoption\", \"reload adopts reference revision and discards dirty VM\", \"exception, CPU and memory failures require manual restart and preserve server effects\", \"actual background pauses local state and subscriptions\", \"in-flight action completes in background\", \"resume reconciles without resubmission\", \"repeated background transitions retain dirty state\"], \"renderer\": {\"passed\": true, \"checks\": [\"native keyed identity\", \"focus survives reorder\", \"hidden retains space\", \"collapsed removes space\", \"long text wraps\", \"native switch accessibility\", \"equal grid columns\"]}, \"report\": {\"dirty\": false, \"failure\": null, \"paused\": false, \"revision\": 1, \"state\": {\"busy\": false, \"details\": true, \"explanation\": {\"text\": \"Writes change server state and survive dashboard reload.\"}, \"history\": [62], \"screen\": \"overviewScreen\", \"services\": [{\"id\": \"engine\", \"label\": \"Engine connection\"}], \"status\": \"Server revision 5\", \"title\": {\"text\": \"Tal\\u00eca \\u00b7 monitoring\"}, \"value\": 25}, \"subscriptions\": 1, \"stateWire\": {\"version\": 1, \"value\": [\"object\", [[\"busy\", [\"boolean\", false]], [\"details\", [\"boolean\", true]], [\"explanation\", [\"object\", [[\"text\", [\"string\", \"Writes change server state and survive dashboard reload.\"]]]]], [\"history\", [\"array\", [[\"number\", 62]]]], [\"screen\", [\"string\", \"overviewScreen\"]], [\"services\", [\"array\", [[\"object\", [[\"id\", [\"string\", \"engine\"]], [\"label\", [\"string\", \"Engine connection\"]]]]]]], [\"status\", [\"string\", \"Server revision 5\"]], [\"title\", [\"object\", [[\"text\", [\"string\", \"Tal\\u00eca \\u00b7 monitoring\"]]]]], [\"value\", [\"number\", 25]]]]}, \"connection\": null, \"dashboardId\": \"secondary\", \"definitionRevision\": \"client-selection\", \"updateAvailable\": false, \"width\": 1208, \"scale\": 3.5, \"sidebar\": false, \"signals\": [], \"actions\": [], \"actionIds\": [], \"nextActionId\": \"a-8ced6f1c-a1f2-484e-bb13-1e11129c8d96\", \"externalError\": null}, \"cleanup_verified\": true}\n",
+      "stderr": "",
+      "result": {
+        "passed": true,
+        "serial": "OZQ49XDILZ4PTSHI",
+        "checks": [
+          "independent persisted client dashboard selection",
+          "native controls, no WebView",
+          "switch and condition",
+          "server write",
+          "accessible chart",
+          "navigation retains VM/subscription",
+          "per-client composition",
+          "update available without adoption",
+          "reload adopts reference revision and discards dirty VM",
+          "exception, CPU and memory failures require manual restart and preserve server effects",
+          "actual background pauses local state and subscriptions",
+          "in-flight action completes in background",
+          "resume reconciles without resubmission",
+          "repeated background transitions retain dirty state"
+        ],
+        "renderer": {
+          "passed": true,
+          "checks": [
+            "native keyed identity",
+            "focus survives reorder",
+            "hidden retains space",
+            "collapsed removes space",
+            "long text wraps",
+            "native switch accessibility",
+            "equal grid columns"
+          ]
+        },
+        "report": {
+          "dirty": false,
+          "failure": null,
+          "paused": false,
+          "revision": 1,
+          "state": {
+            "busy": false,
+            "details": true,
+            "explanation": {
+              "text": "Writes change server state and survive dashboard reload."
+            },
+            "history": [
+              62
+            ],
+            "screen": "overviewScreen",
+            "services": [
+              {
+                "id": "engine",
+                "label": "Engine connection"
+              }
+            ],
+            "status": "Server revision 5",
+            "title": {
+              "text": "Tal\u00eca \u00b7 monitoring"
+            },
+            "value": 25
+          },
+          "subscriptions": 1,
+          "stateWire": {
+            "version": 1,
+            "value": [
+              "object",
+              [
+                [
+                  "busy",
+                  [
+                    "boolean",
+                    false
+                  ]
+                ],
+                [
+                  "details",
+                  [
+                    "boolean",
+                    true
+                  ]
+                ],
+                [
+                  "explanation",
+                  [
+                    "object",
+                    [
+                      [
+                        "text",
+                        [
+                          "string",
+                          "Writes change server state and survive dashboard reload."
+                        ]
+                      ]
+                    ]
+                  ]
+                ],
+                [
+                  "history",
+                  [
+                    "array",
+                    [
+                      [
+                        "number",
+                        62
+                      ]
+                    ]
+                  ]
+                ],
+                [
+                  "screen",
+                  [
+                    "string",
+                    "overviewScreen"
+                  ]
+                ],
+                [
+                  "services",
+                  [
+                    "array",
+                    [
+                      [
+                        "object",
+                        [
+                          [
+                            "id",
+                            [
+                              "string",
+                              "engine"
+                            ]
+                          ],
+                          [
+                            "label",
+                            [
+                              "string",
+                              "Engine connection"
+                            ]
+                          ]
+                        ]
+                      ]
+                    ]
+                  ]
+                ],
+                [
+                  "status",
+                  [
+                    "string",
+                    "Server revision 5"
+                  ]
+                ],
+                [
+                  "title",
+                  [
+                    "object",
+                    [
+                      [
+                        "text",
+                        [
+                          "string",
+                          "Tal\u00eca \u00b7 monitoring"
+                        ]
+                      ]
+                    ]
+                  ]
+                ],
+                [
+                  "value",
+                  [
+                    "number",
+                    25
+                  ]
+                ]
+              ]
+            ]
+          },
+          "connection": null,
+          "dashboardId": "secondary",
+          "definitionRevision": "client-selection",
+          "updateAvailable": false,
+          "width": 1208,
+          "scale": 3.5,
+          "sidebar": false,
+          "signals": [],
+          "actions": [],
+          "actionIds": [],
+          "nextActionId": "a-8ced6f1c-a1f2-484e-bb13-1e11129c8d96",
+          "externalError": null
+        },
+        "cleanup_verified": true
+      }
+    },
+    "p0-provenance": {
+      "command": [
+        "python3",
+        "spikes/qualification/check.py",
+        "spikes/qualification/results/full-2026-09-19.json"
+      ],
+      "exit_code": 0,
+      "stdout": "Recorded platform checks and source provenance pass. Missing: none\n",
+      "stderr": ""
+    }
+  },
+  "apks": {
+    "android": {
+      "abi": "x86_64",
+      "sha256": "594b74669fc432cb40625249e075e6e1686835a485fd942765cc4d503c4a0d43"
+    },
+    "android-arm64": {
+      "abi": "arm64-v8a",
+      "sha256": "72c86c00cf0175fea7de9a3e1b2f5d194b6ec7a570741cb95d780ba71fd0edd3"
+    }
+  },
+  "qualified": true,
+  "missing_platforms": [],
+  "previous_attempts": [
+    {
+      "name": "p1-android-arm64",
+      "command": [
+        "python3",
+        "dashboard/tests/android.py",
+        "OZQ49XDILZ4PTSHI"
+      ],
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": "Traceback (most recent call last):\n  File \"/home/lelloman/lelloprojects/talia/dashboard/tests/android.py\", line 57, in <module>\n    tap('Show details');wait(lambda r:r.get('state',{}).get('details') is False)\n                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/lelloman/lelloprojects/talia/dashboard/tests/android.py\", line 27, in wait\n    raise AssertionError(report())\nAssertionError: {'dirty': False, 'failure': None, 'paused': True, 'revision': 2, 'state': {'busy': False, 'details': True, 'explanation': {'text': 'Writes change server state and survive dashboard reload.'}, 'history': [0], 'screen': 'controlsScreen', 'services': [{'id': 'engine', 'label': 'Engine connection'}], 'status': 'Server revision 0', 'title': {'text': 'Tal\u00eca \u00b7 monitoring'}, 'value': 25}, 'subscriptions': 0, 'stateWire': {'version': 1, 'value': ['object', [['busy', ['boolean', False]], ['details', ['boolean', True]], ['explanation', ['object', [['text', ['string', 'Writes change server state and survive dashboard reload.']]]]], ['history', ['array', [['number', 0]]]], ['screen', ['string', 'controlsScreen']], ['services', ['array', [['object', [['id', ['string', 'engine']], ['label', ['string', 'Engine connection']]]]]]], ['status', ['string', 'Server revision 0']], ['title', ['object', [['text', ['string', 'Tal\u00eca \u00b7 monitoring']]]]], ['value', ['number', 25]]]]}, 'connection': None, 'dashboardId': 'monitor', 'definitionRevision': '6abeb78784d5930ba4343f835016b42a19263f62d83ba15dbca60e05f724c8b9', 'updateAvailable': False, 'width': 1208, 'scale': 3.5, 'sidebar': False, 'signals': [], 'actions': [], 'actionIds': [], 'nextActionId': 'a-e511f068-c6d5-457c-9021-a2e23fa45d5f', 'externalError': None}\n"
+    },
+    {
+      "name": "p0-provenance",
+      "command": [
+        "python3",
+        "spikes/qualification/check.py",
+        "spikes/qualification/results/full-2026-09-19.json"
+      ],
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": "Traceback (most recent call last):\n  File \"/home/lelloman/lelloprojects/talia/spikes/qualification/check.py\", line 44, in <module>\n    missing=validate(json.loads(args.report.read_text()))\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/lelloman/lelloprojects/talia/spikes/qualification/check.py\", line 8, in validate\n    assert hashlib.sha256((ROOT/source).read_bytes()).hexdigest()==digest,('changed input',source)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: ('changed input', 'docs/runtime-contract.md')\n"
+    }
+  ],
+  "resumed_at": "2026-09-20T09:34:47.093710+00:00",
+  "resume_reason": "Physical P1 run lost foreground to Simple Agents; reran only interrupted stage with identical source hashes.",
+  "baseline_note": "Restored docs/runtime-contract.md to the frozen P0 baseline; superseding P2 decisions remain in docs/engine.md and the P2 contract documents.",
+  "observable_parity": {
+    "passed": true,
+    "comparison": "Final state, last sample, dirty/failure/subscription status; reconnect sample duplication may coalesce."
+  }
+}

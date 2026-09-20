@@ -26,7 +26,7 @@
       boolean:()=>typeof v==='boolean',length:()=>typeof v==='string'&&dimension.test(v),
       size:()=>['fill','auto'].includes(v)||typeof v==='string'&&dimension.test(v),
       visibility:()=>['visible','hidden','collapsed'].includes(v),
-      array:()=>Array.isArray(v),numbers:()=>Array.isArray(v)&&v.every(x=>typeof x==='number'&&Number.isFinite(x)),
+      array:()=>Array.isArray(v),numbers:()=>Array.isArray(v)&&v.every(x=>x===null||typeof x==='number'&&Number.isFinite(x)),
       object:()=>v!==null&&typeof v==='object'&&!Array.isArray(v),
       action:()=>v&&typeof v.action==='string'&&/^[A-Za-z_$][\w$]*$/.test(v.action),
       key:()=>v&&typeof v.bind==='string'&&v.bind.startsWith('item.')&&!v.not
@@ -141,8 +141,15 @@
       for(const [key,v]of Object.entries(n.props)){
         if(n.type==='For'&&key==='key'){p[key]=v;continue;}
         if(v&&typeof v==='object'&&v.bind){const value=lookup(v.bind,scope,n);if(v.not&&typeof value!=='boolean')fail(n,'negation requires boolean');p[key]=v.not?!value:value;}else p[key]=v;
+        const exceptional=x=>x===undefined||x===null||typeof x==='number'&&!Number.isFinite(x);
+        const label=x=>x===Infinity?'∞':x===-Infinity?'−∞':String(x);
+        if(['Text','Status'].includes(n.type)&&key==='text'&&exceptional(p[key]))p[key]=label(p[key]);
+        if(['Slider','Switch'].includes(n.type)&&key==='value'&&exceptional(p[key])){p.unavailable=label(p[key]);continue;}
+        if(n.type==='Chart'&&key==='values'&&Array.isArray(p[key])){p.sampleLabels=p[key].map(label);p[key]=p[key].map(x=>exceptional(x)?null:x);}
         checkValue(schema[n.type][key],p[key],n);
       }
+      if(n.type==='Switch'&&p.unavailable!==undefined){p.value=false;p.enabled=false;p.label+=': '+p.unavailable+' (unavailable)';}
+      if(n.type==='Slider'&&p.unavailable!==undefined){p.value=p.min;p.enabled=false;p.label+=': '+p.unavailable+' (unavailable)';}
       if(n.type==='Slider'&&(p.max<=p.min||p.value<p.min||p.value>p.max))fail(n,'invalid slider range/value');
       if(n.type==='Grid'&&p.columns!==undefined&&!Number.isInteger(p.columns))fail(n,'columns must be integral');
       if(n.type==='ScreenRef'){

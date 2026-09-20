@@ -1,6 +1,6 @@
 // Trusted DOM renderer. Only validated resolved nodes enter this module.
 export class Renderer {
- constructor(root,dispatch){this.root=root;this.dispatch=dispatch;this.cache=new Map();this.nodes=new Map();}
+ constructor(root,dispatch){this.root=root;this.dispatch=dispatch;this.cache=new Map();this.nodes=new Map();this.pending=new Map();this.eventSequence=0;}
  render(tree,scale=1){
   const active=document.activeElement;this.nodes.clear();
   const length=v=>v==='fill'?'100%':v==='auto'?'auto':TaliaUI.px(v,scale)+'px';
@@ -31,14 +31,15 @@ export class Renderer {
     if(p.label)el.setAttribute('aria-label',p.label);else el.removeAttribute('aria-label');
    }else if(n.type==='Slider'||n.type==='Switch'){
     el.firstChild.textContent=p.label;const input=el.lastChild;input.setAttribute('aria-label',p.label);input.disabled=p.enabled===false;
-    if(n.type==='Slider'){input.min=p.min;input.max=p.max;input.step=p.step??1;input.value=p.value;}else{input.checked=p.value;input.setAttribute('role','switch');}
+    if(n.type==='Slider'){input.min=p.min;input.max=p.max;input.step=p.step??1;if(!this.pending.has(n.id))input.value=p.value;}else{if(!this.pending.has(n.id))input.checked=p.value;input.setAttribute('role','switch');}
    }else if(n.type==='Chart'){
-    const signature=JSON.stringify([p.values,p.label]);
+    const signature=JSON.stringify([p.values,p.label,p.sampleLabels]);
     if(el.dataset.chart!==signature){
      el.dataset.chart=signature;el.replaceChildren();const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 300 100');svg.setAttribute('preserveAspectRatio','none');svg.setAttribute('aria-hidden','true');
-     const line=document.createElementNS(svg.namespaceURI,'polyline'),min=Math.min(0,...p.values),max=Math.max(1,...p.values),span=max-min;
-     line.setAttribute('points',p.values.map((v,i)=>`${i*300/Math.max(1,p.values.length-1)},${95-(v-min)/span*90}`).join(' '));line.setAttribute('fill','none');line.setAttribute('stroke','#2563eb');line.setAttribute('stroke-width','2');svg.append(line);
-     const caption=document.createElement('figcaption');caption.textContent=p.label+': '+(p.values.length?p.values.join(', '):'No samples');el.append(svg,caption);el.setAttribute('role','img');el.setAttribute('aria-label',caption.textContent);
+     const finite=p.values.filter(Number.isFinite),min=Math.min(0,...finite),max=Math.max(1,...finite),span=max-min;
+     let segment=[];const flush=()=>{if(!segment.length)return;const line=document.createElementNS(svg.namespaceURI,'polyline');line.setAttribute('points',segment.join(' '));line.setAttribute('fill','none');line.setAttribute('stroke','#2563eb');line.setAttribute('stroke-width','2');svg.append(line);segment=[];};
+     p.values.forEach((v,i)=>{if(v===null){flush();return;}segment.push(`${i*300/Math.max(1,p.values.length-1)},${95-(v-min)/span*90}`);});flush();
+     const caption=document.createElement('figcaption');caption.textContent=p.label+': '+(p.values.length?(p.sampleLabels||p.values).join(', '):'No samples');el.append(svg,caption);el.setAttribute('role','img');el.setAttribute('aria-label',caption.textContent);
     }
    }
    return el;
@@ -52,6 +53,8 @@ export class Renderer {
   const event=n.type==='Button'?'onClick':'onChange';const handler=n.props[event];if(!handler)throw Error('unknown event');
   if(n.type==='Slider'&&(!Number.isFinite(value)||value<n.props.min||value>n.props.max))throw Error('slider range');
   if(n.type==='Switch'&&typeof value!=='boolean')throw Error('switch value');
-  this.dispatch(handler.action,{target:id,value});
+  const sequence=++this.eventSequence;this.pending.set(id,sequence);
+  const done=()=>{if(this.pending.get(id)===sequence)this.pending.delete(id);};
+  Promise.resolve(this.dispatch(handler.action,{target:id,value})).then(done,done);
  }
 }

@@ -29,3 +29,5 @@ Invalidation marks metadata and preserves private state; `changed` informs the
 next getter. Subscribers cause reevaluation; otherwise work waits for a read.
 Latest value/age/quality and evaluation running/error/invalidated metadata are
 separate, leaving presentation to widgets. Successful undefined/NaN are values.
+
+Explicit invalidation advances the instance revision without changing private cache fields or measurement age, fencing in-flight cache publication. Recovered computed instances begin invalidated until reevaluated. Definition migration batches have a combined 100ms script budget; v1 bounds configuration at 256 definitions and 1024 instances.

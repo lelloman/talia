@@ -45,9 +45,28 @@ impl Engine {
         )
     }
     pub fn with_clock(store: Store, clock: Rc<dyn Fn() -> i64>) -> Self {
+        let recovered = store
+            .instances()
+            .unwrap_or_default()
+            .into_iter()
+            .filter(|i| {
+                store
+                    .definition(&i.definition)
+                    .is_ok_and(|d| d.kind == "computed")
+            })
+            .map(|i| {
+                (
+                    i.id,
+                    Evaluation {
+                        invalidated: true,
+                        ..Default::default()
+                    },
+                )
+            })
+            .collect();
         Self {
             store: Rc::new(RefCell::new(store)),
-            evaluation: Default::default(),
+            evaluation: Rc::new(RefCell::new(recovered)),
             shared: Default::default(),
             subscribers: Default::default(),
             clock,
@@ -79,10 +98,16 @@ impl Engine {
         if self.store.borrow().definition(&i.definition)?.kind == "stored" {
             return Ok(());
         }
+        let mut next = i.clone();
+        next.revision += 1;
+        self.store
+            .borrow_mut()
+            .commit(i.revision, &next, false, self.now())?;
         let mut meta = self.evaluation.borrow_mut();
         meta.entry(id.into()).or_default().invalidated = true;
         drop(meta);
         self.refresh_subscribed(id);
+        self.changed(id);
         Ok(())
     }
     fn refresh_subscribed(&self, id: &str) {
@@ -511,6 +536,47 @@ mod more_tests {
                     e.store.borrow().instance("calc").unwrap().state,
                     value::number(0.0)
                 );
+            })
+            .await;
+    }
+}
+#[cfg(test)]
+mod invalidation_tests {
+    use super::*;
+    #[tokio::test(flavor = "current_thread")]
+    async fn explicit_invalidation_fences_old_cache_result() {
+        tokio::task::LocalSet::new()
+            .run_until(async {
+                let e = super::tests::fixture(
+                    "{async get(c){await c.sleep(30);c.state++;return c.state}}",
+                );
+                let a = e.clone();
+                let t = tokio::task::spawn_local(async move {
+                    a.read("calc", Duration::from_secs(1)).await
+                });
+                tokio::time::sleep(Duration::from_millis(5)).await;
+                e.invalidate("calc").unwrap();
+                let r = t.await.unwrap().unwrap();
+                assert_eq!(e.runs(), 2);
+                assert_eq!(r.state["value"][1].as_f64(), Some(1.0));
+            })
+            .await;
+    }
+    #[tokio::test(flavor = "current_thread")]
+    async fn independent_policy_starts_separate_evaluations() {
+        tokio::task::LocalSet::new()
+            .run_until(async {
+                let e = super::tests::fixture("{async get(c){await c.sleep(10);return c.state}}");
+                let mut d = e.store.borrow().definition("calc").unwrap();
+                d.version = 2;
+                d.read_policy = "independent".into();
+                e.store.borrow_mut().define(&d, 1, None).unwrap();
+                let (a, b) = tokio::join!(
+                    e.read("calc", Duration::from_secs(1)),
+                    e.read("calc", Duration::from_secs(1))
+                );
+                assert!(a.is_ok() && b.is_ok());
+                assert!(e.runs() >= 2);
             })
             .await;
     }

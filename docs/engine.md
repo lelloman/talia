@@ -20,8 +20,7 @@ its open questions are inputs to Story refinement.
 The engine lives on the server. DataSources, Pipelines, Variables and Watches
 are server definitions and state. Monitoring continues with no clients connected.
 The server is implemented in **Rust with Axum**, with an embedded **JavaScript
-runtime for configurable Pipeline and Watch logic**. The runtime and isolation
-mechanism remain to be selected. Scripts access explicit engine capabilities;
+runtime for configurable Pipeline and Watch logic**. P2 uses bounded QuickJS contexts; see [computed execution](engine-computed.md). Scripts access explicit engine capabilities;
 using JavaScript does not give them unrestricted server access.
 
 The client's “engine” is an API/SDK for this server, exposing read, write and
@@ -55,9 +54,8 @@ Prometheus DataSource → collection Pipeline → CPU / memory / disk Variables
 
 Every Variable has a declared type, a latest value (when available), a timestamp,
 and quality/status information. History retention is configurable per Variable;
-the storage policy and retention limits remain open. Values can be scalar or
-structured, including objects, lists, tables and time series. Exact schemas still
-need definition. An unevaluated value must be distinguishable from a legitimate
+latest values persist; history is opt-in with age and count limits. Values can be scalar or
+structured, including objects, lists, tables and time series. The [P2 value format](engine-values.md) defines the supported schemas. An unevaluated value must be distinguishable from a legitimate
 `null` result; unavailable or restored data must not appear freshly measured.
 
 A stored Variable holds a value published by a producer such as a Pipeline.
@@ -79,14 +77,12 @@ For example, a cache getter can check expiry and capture a state/configuration
 revision, then await a source read. Other operations may change that instance
 while the read is pending. Before publishing the new cache value and expiry, a
 short synchronous guarded update must check that the captured revision is still
-current and the operation has not been cancelled. Stale evaluations fail explicitly without automatic retry; helper APIs remain to be specified; an unconditional assignment after `await`
+current and the operation has not been cancelled. Stale getters discard pending state and reevaluate within existing deadlines; stale setters fail without replay; an unconditional assignment after `await`
 would not provide this guarantee.
 
 The optional setter can update internal state or request an authorized engine
 operation. Reads/evaluations support asynchronous work and explicit errors.
-Exact setter/result contracts, state serialization and failure handling remain
-open. Directly writable stored Variables and producer ownership rules have not
-yet been decided.
+P2 stages state until success or an explicit commit; failures discard only uncommitted changes. Stored Variables support revision-guarded writes. Producer-specific ownership is part of the collection layer.
 
 ### Dependencies and subscriptions
 
@@ -95,8 +91,7 @@ to re-evaluate subscribed computed values when dependencies change. Values backe
 by external sources also support explicit refresh or invalidation.
 
 Invalidation marks a cached result as outdated; refresh requests evaluation.
-The mechanism connecting these operations to a getter's arbitrary internal cache
-still needs definition. Declaring dependencies does not automatically discover
+Invalidation preserves private cache fields and supplies changed dependency IDs to the getter. Subscribed values reevaluate; otherwise the next read triggers work. Declaring dependencies does not automatically discover
 hidden source changes or specify polling intervals. Cycles must fail immediately;
 detection coverage, propagation ordering, event coalescing, result equality, error
 notifications and evaluation when there are no subscribers remain open.
@@ -115,19 +110,18 @@ revision and its corresponding update belong in the same atomic section, which
 cannot contain `await`. An operation resuming after an await must account for
 state, parameters or definitions having changed. Provide helpers for versioned
 commits and conflict handling rather than requiring every author to implement
-them independently. Stale evaluations fail explicitly without automatic retry; an obsolete result must not silently overwrite newer state.
+them independently. Stale getters reevaluate within existing reader/producer deadlines. Stale setters fail without retry; obsolete results cannot overwrite newer state.
 
 Server state updates are coordinated at the authoritative engine across all
 clients. Frontend-local state has its own atomic-update boundary within that
 frontend. A client-side `await read` followed by `await write` is not an atomic
 read-modify-write operation; the engine must provide the appropriate guarded
 update capability. These guarantees do not imply multi-Variable transactions,
-rollback, crash-atomic persistence or atomic external effects. The durable commit
-and API contracts still need definition.
+rollback, crash-atomic persistence or atomic external effects. Successful writes follow SQLite commit; external effects remain separate. See the [storage](engine-storage.md) and [transport](engine-transport.md) contracts.
 
 ### Concurrent read policy
 
-Each computed value must explicitly configure one of two policies, with no default:
+Computed reads share in-flight work by default; definitions may explicitly select independent reads:
 
 - **Shared refresh:** concurrent readers await the same in-flight getter execution.
   This is useful for cached metrics or expensive probes.
@@ -139,7 +133,7 @@ to the getter's own local state is synchronous, even though fetching a computed
 value through `read` can await. Whether a read returns a cached value immediately
 or awaits refresh is a separate freshness policy, still to be specified.
 
-Join key/parameter compatibility and cache invalidation APIs remain open. Cancelling one reader stops only its wait; cancelling the last reader cancels the shared producer. Setters are never locked by sharing.
+Join key/parameter compatibility and cache invalidation APIs remain open. Cancelling one reader stops only its wait; even the last reader leaving does not cancel the shared producer. Producer deadlines and definition replacement still cancel work. Setters are never locked by sharing.
 
 ### Cycles, cancellation and recovery
 
@@ -226,11 +220,9 @@ functions. Definition edits propagate to references; instance parameters and
 state remain separate. Function execution capabilities depend on its context;
 reuse does not imply identical server/client privileges or shared mutable globals.
 
-How updates are activated, how in-flight executions are treated, and how state
-is migrated when shared logic changes remain open. For clients, saved definition
+[Runtime activation](engine-definitions.md) validates and migrates every affected instance before atomically activating a shared update. Old generations cannot commit. For clients, saved definition
 updates remain persistent authoring operations; they do not bypass the prohibition
-on live MCP edits to View definitions. Timing of adoption by running clients is
-still undecided.
+on live MCP edits to View definitions. Clients expose update availability and explicitly reload to adopt saved changes.
 
 ## Runtime configuration without service restart
 
@@ -260,12 +252,12 @@ On restart, load definitions, restore retained state/data and resume processing.
 Recreate live subscriptions and execution machinery rather than treating them
 as serialized running processes. Retained values keep their original timestamps.
 
-A database is required. **SQLite is a candidate, not a finalized storage choice.**
-History retention, value storage strategy, transactions, recovery guarantees,
-backups and schema migration remain to be specified. Talìa is not committed to
+**P2 uses SQLite**, with WAL and synchronous FULL commits. [Storage documentation](engine-storage.md) describes bounded history, backup/restore and schema versioning. Talìa is not committed to
 copying all Prometheus history into its own database.
 
-## Open details
+## Later-stage details
+
+The P2 contracts linked above supersede the earlier open questions for values, computed execution, activation, durability and transport. Remaining work belongs to the later Crumbles stories.
 
 - Exact Variable schemas, producer ownership, history policies and writable inputs.
 - Computed getter/setter/state/time-provider APIs, dependency updates, refresh and

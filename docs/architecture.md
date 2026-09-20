@@ -42,17 +42,17 @@ ViewModel behavior through the same engine interface on both platforms.
 The client runtime provides the bridge between rendered Views, JavaScript and
 engine operations. An Android bridge can be implemented in Kotlin; a web bridge
 can use web facilities. Neither the engine nor Android renderer must be written
-in JavaScript. The embedded JS runtime and renderer frameworks remain undecided.
+in JavaScript. P1 uses bounded QuickJS hosts, DOM rendering on web, and native Android Views.
 
 The engine is server-owned and implemented in Rust/Axum, with an embedded
 JavaScript runtime for configurable Pipeline and Watch logic. Clients expose
 read, write and subscribe through an API/SDK for server state; their local
 runtime owns only dashboard behavior and UI state. Monitoring continues without
-connected clients. The specific JS runtime and isolation mechanism remain open.
+connected clients. P2 uses bounded QuickJS contexts on a local async executor for computed values; Pipeline/Watch collection remains the next stage.
 
 All four engine primitives—DataSource, Pipeline, Variable and Watch—are configured
 at runtime without restarting the service. Persist definitions, retained values,
-Watch state and recovery checkpoints. SQLite remains a candidate. See the
+Watch state and recovery checkpoints. P2 uses SQLite with WAL and synchronous FULL commits. See the
 [engine model](engine.md) for validation, recovery and open activation semantics.
 
 ## Variable execution boundary
@@ -184,3 +184,9 @@ The development adapter still uses the loopback, in-memory Rust engine fixture.
 This does not implement the durable production engine, authenticated MCP service,
 notification delivery or deployment. [Qualification](p1-qualification.md) records
 which concrete builds and platforms have been exercised.
+
+## P2 durable implementation
+
+The [engine implementation](../engine/README.md) separates persistent definitions, instance data and action records from disposable JS execution contexts. Configuration activation and state migrations commit atomically; I/O waits release the executor. Shared computed reads retain producer lifetime independently of callers. Tagged values preserve JavaScript exceptional numbers and undefined through SQLite and both renderers.
+
+Client-owned connection state survives dashboard failure. A new server incarnation triggers snapshot replacement, subscription restoration and action reconciliation before the brief back-online indicator. The loopback service and sample client grants are development scope; authentication, remote deployment, source adapters and full MCP integration remain later stories.

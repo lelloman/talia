@@ -91,9 +91,13 @@ impl Store {
         defs.retain(|x| x.id != d.id);
         defs.push(d.clone());
         let mut instances = self.instances()?;
+        if defs.len() > 256 || instances.len() > 1024 {
+            return Err("configuration capacity".into());
+        }
         graph(&defs, &instances)?;
         let script = if let Some(source) = migration {
-            let s = Script::new()?;
+            let mut s = Script::new()?;
+            s.deadline = Some(std::time::Instant::now() + std::time::Duration::from_millis(100));
             s.eval(&format!("globalThis.migrate=({source});if(typeof migrate!=='function')throw Error('migration function required')"))?;
             Some(s)
         } else {
@@ -140,6 +144,9 @@ impl Store {
             return Err("initial revision/generation".into());
         }
         let mut all = self.instances()?;
+        if all.len() >= 1024 {
+            return Err("instance capacity".into());
+        }
         all.push(i.clone());
         graph(&self.definitions()?, &all)?;
         self.create_instance(i)

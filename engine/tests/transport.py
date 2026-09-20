@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Real process restart and response-loss checks against the durable Axum service."""
-import json,os,pathlib,socket,subprocess,tempfile,urllib.request,sys,time
+import json,os,pathlib,socket,subprocess,tempfile,urllib.request,sys,time,threading
 BIN=sys.argv[1] if len(sys.argv)>1 else 'engine/target/debug/talia-engine'
 def wire(x):return {'version':1,'value':['number',x]}
 with tempfile.TemporaryDirectory(prefix='talia-p2-transport-') as temp:
@@ -32,8 +32,26 @@ with tempfile.TemporaryDirectory(prefix='talia-p2-transport-') as temp:
   with socket.create_connection(('127.0.0.1',port)) as s:s.sendall(f'POST /engine HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nContent-Length: {len(body)}\r\nConnection: close\r\n\r\n'.encode()+body);s.recv(1) # discard the response before reading its outcome
   assert ok('status',{'actionId':'lost-response'})['status']=='complete'
   assert ok('snapshot')['values'][0]['revision']==3
+  definition=dict(id='setter',version=1,source="{get(){return 0},async set(c,v){await c.write('value',-Infinity);await c.sleep(3000);return v}}",kind='computed',value_schema='any',state_schema='any',dependencies=['value'],read_policy='shared')
+  ok('define',{'definition':definition,'expected':0})
+  undefined={'version':1,'value':['undefined']}
+  instance=dict(id='setter',definition='setter',params=undefined,state=undefined,value=undefined,has_value=False,timestamp=0,quality='unknown',revision=1,generation=1,history_count=0,history_age_ms=0)
+  ok('create',{'instance':instance})
+  def accepted_effect():
+   try:rpc('set',{'id':'setter','actionId':'interrupted-effect','value':wire(7)})
+   except Exception:pass
+  task=threading.Thread(target=accepted_effect);task.start()
+  deadline=time.monotonic()+5
+  while time.monotonic()<deadline:
+   if ok('read',{'id':'value'})['value']==wire('-Infinity'):break
+   time.sleep(.02)
+  else:raise AssertionError('effect did not run')
+  proc.kill();proc.wait();task.join();start()
+  assert ok('status',{'actionId':'interrupted-effect'})['status']=='unknown'
+  assert ok('set',{'id':'setter','actionId':'interrupted-effect','value':wire(7)})['status']=='unknown'
+  assert ok('read',{'id':'value'})['value']==wire('-Infinity')
   ok('hello',epoch=2);assert 'error' in rpc('snapshot',epoch=1)
   ok('unsubscribe',{'id':'value'},epoch=2)
-  print(json.dumps({'passed':True,'checks':['single owner','durable writes','duplicate identity','argument conflict','server incarnation','restart snapshot','original age/quality','response loss reconciliation','unknown stays unknown','stale client epoch','subscription lifecycle']}))
+  print(json.dumps({'passed':True,'checks':['single owner','durable writes','duplicate identity','argument conflict','server incarnation','restart snapshot','original age/quality','response loss reconciliation','unknown stays unknown','stale client epoch','subscription lifecycle','crash after effect remains unknown without replay']}))
  finally:
   if proc and proc.poll() is None:proc.terminate();proc.wait(timeout=5)

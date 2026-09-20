@@ -84,7 +84,10 @@ try:
   home();wait(lambda r:r.get('paused') is True)
   rpc('action',{'actionId':'external-'+str(n),'value':60+n})
   foreground();wait(lambda r:r.get('state',{}).get('history',[-1])[-1]==60+n and r.get('subscriptions')==1)
- tap('Overview');wait(lambda r:r.get('state',{}).get('screen')=='overviewScreen')
+ for attempt in range(3):
+  tap('Overview');time.sleep(.3)
+  if report().get('state',{}).get('screen')=='overviewScreen':break
+ wait(lambda r:r.get('state',{}).get('screen')=='overviewScreen')
  live("TaliaVM.replaceAction('controls',c=>{const s=c.state();c.commit(s,{...s.value,screen:'controlsScreen',details:false});});")
  wait(lambda r:r.get('dirty') is True)
  updated=json.loads(json.dumps(pkg));updated['revision']='revision-2';updated['definitions']['notice']['props']['text']='Updated shared notice';definition.write_text(json.dumps(updated))

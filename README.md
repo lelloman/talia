@@ -63,3 +63,5 @@ engine fixture; the production monitoring service has not been deployed.
   inventory and issues to address when planning the transition.
 
 - [Brand identity](docs/branding.md): selected Wide gaze icon, assets and exploration.
+
+The [P2 durable engine](engine/README.md) provides SQLite-backed state, runtime definition updates, computed evaluation and restart-aware client integration. Its qualification report distinguishes tested platforms from missing devices.

@@ -1,0 +1,22 @@
+{
+  "x86_64": {
+    "apk_sha256": "594b74669fc432cb40625249e075e6e1686835a485fd942765cc4d503c4a0d43",
+    "assets": {
+      "dashboard/shared/vm.js": "ff882c0e76370bbb87b38cda1c96e785ef110e49741d8624144d063da7f69bda",
+      "dashboard/shared/ui.js": "a12fecae6d988004e5d1827d2db593ce11c5f76a7724b01e94dcd217eab9d3d7",
+      "engine/shared/value.js": "746beb01164abc0cd3ad83a8700ca90fa1482d801b38f2fd1a08ef4c4f8b289a",
+      "dashboard/generated/monitor.json": "d26d1f144f3ed8ae6a9712e53fe152ee77573139c3d9fdeec47bc632fe74163d"
+    },
+    "matched": true
+  },
+  "arm64-v8a": {
+    "apk_sha256": "72c86c00cf0175fea7de9a3e1b2f5d194b6ec7a570741cb95d780ba71fd0edd3",
+    "assets": {
+      "dashboard/shared/vm.js": "ff882c0e76370bbb87b38cda1c96e785ef110e49741d8624144d063da7f69bda",
+      "dashboard/shared/ui.js": "a12fecae6d988004e5d1827d2db593ce11c5f76a7724b01e94dcd217eab9d3d7",
+      "engine/shared/value.js": "746beb01164abc0cd3ad83a8700ca90fa1482d801b38f2fd1a08ef4c4f8b289a",
+      "dashboard/generated/monitor.json": "d26d1f144f3ed8ae6a9712e53fe152ee77573139c3d9fdeec47bc632fe74163d"
+    },
+    "matched": true
+  }
+}

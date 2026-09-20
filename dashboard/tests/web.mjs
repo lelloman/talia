@@ -12,7 +12,7 @@ try{
  await slider.focus();await page.keyboard.press('Home');for(let i=0;i<26;i++)await page.keyboard.press('ArrowRight');await page.keyboard.press('Tab');await page.waitForFunction(()=>dashboardReport.state.value===26);
  await page.getByRole('switch',{name:'Show details'}).click();await page.waitForFunction(()=>window.dashboardReport.state.details===false);
  assert.equal(await page.getByText('Writes change server state').count(),0);
- await page.getByRole('button',{name:'Apply value',exact:true}).click();await page.waitForFunction(()=>window.dashboardReport.actions.some(a=>a.status==='completed'));
+ await page.getByRole('button',{name:'Apply value',exact:true}).click();await page.waitForFunction(()=>window.dashboardReport.actions.some(a=>a.status==='completed')).catch(async e=>{console.error(await page.evaluate(()=>window.dashboardReport));throw e;});
  await page.getByRole('button',{name:'Overview',exact:true}).click();await page.getByRole('img',{name:/Observed server values/}).waitFor();
  assert.equal(await page.evaluate(()=>dashboardReport.state.value),26);
  assert.equal(await page.evaluate(()=>dashboardReport.subscriptions),1);

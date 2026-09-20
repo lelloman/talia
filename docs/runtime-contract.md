@@ -1,13 +1,5 @@
 # Supported runtime contract
 
-> P2 refinement (TALIA-3, 2026-09-20) supersedes the older policies below:
-> extended values follow [engine values](engine-values.md); shared reads are the
-> default and continue after their last waiter leaves. Stale getters reevaluate
-> within reader deadlines; stale setters/actions fail without retry. SQLite
-> commits precede successful writes; definition/state migrations activate
-> atomically and fence old work. Historical P0 behavior remains regression evidence.
-
-
 This records the approved P0 behavior for [TALIA-10](https://crumbles.lelloman.com/w/LLPR/TALIA/10).
 It specifies the implementation target, not a claim that qualification is complete.
 The historical [runtime](runtime-prototype.md), [execution](execution-policy-prototype.md)
