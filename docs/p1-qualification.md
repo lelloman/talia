@@ -1,7 +1,8 @@
 # P1 shared dashboard qualification
 
 This records the P1 baseline at `f741b3b`. Current durable-engine/client checks are
-recorded separately in [P2 qualification](p2-qualification.md).
+recorded separately in [P2 qualification](p2-qualification.md) and
+[P3 monitoring qualification](p3-qualification.md).
 
 **Status: fully qualified on 2026-09-20.** P1 checks pass on Chromium,
 Android x86_64 emulator and the physical ARM64 OnePlus CPH2493. Both Android

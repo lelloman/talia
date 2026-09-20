@@ -28,9 +28,9 @@ adb shell am start -n com.lelloman.talia.dashboard/.MainActivity --ei port 18744
 ```
 
 The durable switch is explicit; P1 qualification continues exercising its frozen
-protocol through the legacy mode. Both current clients grant access to the example
-`value` variable; the server API supports named instances. Broader configurable
-client grants and authenticated remote endpoints belong to subsequent integration.
+protocol through the legacy mode. The default example grants access to `value`. The `monitoring` package declares
+its named read/run grants and displays collected metrics, Watch flags and probe
+results on both clients. Authenticated remote endpoints remain a later stage.
 
 Connection indication is client-owned and survives dashboard script failure:
 connecting..., disconnected while idle after failure, back online for three seconds

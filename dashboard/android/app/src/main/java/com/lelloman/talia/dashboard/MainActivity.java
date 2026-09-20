@@ -85,6 +85,7 @@ public final class MainActivity extends Activity {
  interface Completion{void done(JSONObject value,String error)throws Exception;}
  void rpc(String op,JSONObject args,Completion done)throws JSONException{
   if(connection!=null){long stamp=epoch;if(op.equals("action")){JSONObject wire=args.optJSONObject("wire");connection.write(args.optString("id","value"),wire,args.optString("actionId"),(v,e)->{if(stamp==epoch&&visible&&!failed)try{done.done(v,e);}catch(Exception x){fail(x);}});}else if(op.equals("run")){connection.run(args.getString("id"),args.getString("actionId"),(v,e)->{if(stamp==epoch&&visible&&!failed)try{done.done(v,e);}catch(Exception x){fail(x);}});}else{connection.request(op,args,(v,e)->{if(stamp==epoch&&visible&&!failed)try{done.done(v,e);}catch(Exception x){fail(x);}});}return;}
+  args.remove("id");
   long stamp=epoch;JSONObject payload=new JSONObject().put("session","p1-dashboard").put("channel","android").put("epoch",epoch).put("id",++next).put("op",op).put("args",args);
   io.execute(()->{if(stamp!=epoch||destroyed||!visible||failed)return;JSONObject value=null;String error=null;
    try{HttpURLConnection c=(HttpURLConnection)new URL("http://127.0.0.1:"+port+"/rpc").openConnection();try{c.setRequestMethod("POST");c.setDoOutput(true);c.setConnectTimeout(5000);c.setReadTimeout(5000);c.setRequestProperty("Content-Type","application/json");try(OutputStream out=c.getOutputStream()){out.write(payload.toString().getBytes(StandardCharsets.UTF_8));}try(InputStream in=c.getInputStream()){JSONObject reply=new JSONObject(new String(readLimited(in,32768),StandardCharsets.UTF_8));if(reply.has("error"))error=reply.getString("error");else value=reply.getJSONObject("value");}}finally{c.disconnect();}}
@@ -94,6 +95,7 @@ public final class MainActivity extends Activity {
  }
  void deliver(JSONObject message)throws Exception{if(visible&&!failed&&connection!=null&&message.optJSONObject("value")!=null&&message.getJSONObject("value").optJSONObject("value")!=null){eval("(()=>{let m="+message+";m.valueWire=TaliaValue.encode({...m.value,value:TaliaValue.decode(m.value.value)});TaliaVM.receive(JSON.stringify(m));})();'ok';",false,false);return;}if(visible&&!failed)eval("TaliaVM.receive("+JSONObject.quote(message.toString())+");'ok';",false,false);}
  void grant(String kind,String resource){
+  if(!durable&&(!resource.equals("value")||kind.equals("runs")))throw new IllegalStateException("durable engine required");
   JSONObject grants=loaded==null?null:loaded.optJSONObject("grants");
   if(grants==null){if((kind.equals("reads")||kind.equals("writes"))&&resource.equals("value"))return;}
   else{JSONArray ids=grants.optJSONArray(kind);if(ids!=null)for(int n=0;n<ids.length();n++)if(resource.equals(ids.optString(n)))return;}

@@ -17,7 +17,14 @@ def wait(fn,timeout=30):
   time.sleep(.2)
  raise AssertionError(report())
 def xml():
- adb('shell','uiautomator','dump','/sdcard/talia-p3.xml');return ET.fromstring(adb('shell','cat','/sdcard/talia-p3.xml'))
+ error=None
+ for attempt in range(3):
+  try:
+   adb('shell','rm','-f','/sdcard/talia-p3.xml')
+   dump=adb('shell','uiautomator','dump','/sdcard/talia-p3.xml')
+   return ET.fromstring(adb('shell','cat','/sdcard/talia-p3.xml'))
+  except (subprocess.CalledProcessError,subprocess.TimeoutExpired,ET.ParseError) as e:error=e;time.sleep(.3)
+ raise AssertionError('UI hierarchy unavailable after three attempts') from error
 def tap(label):
  for n in xml().iter('node'):
   if n.get('text')==label:
@@ -34,7 +41,10 @@ try:
  wait(lambda r:r.get('state',{}).get('samples',{}).get('cpu',{}).get('value')==42 and r.get('subscriptions')==9 and len(r.get('state',{}).get('samples',{}))==9);text('CPU: 42%')
  assert all('WebView' not in n.get('class','') for n in xml().iter('node'))
  h.fixture.disk=5;wait(lambda r:r.get('state',{}).get('watchX')=='Disk X: investigation triggered');assert h.fixture.probes==1
- tap('Investigation');text('db: 60%');tap('Run investigation');wait(lambda r:r.get('state',{}).get('message')=='Investigation requested');wait(lambda r:r.get('state',{}).get('runStatus')=='complete');assert h.fixture.probes==2
+ tap('Investigation');text('db: 60%')
+ first=wait(lambda r:r.get('state',{}).get('runStatus')=='complete')['state']['samples']['monitor.investigate']['value']['run']['id']
+ tap('Run investigation');wait(lambda r:r.get('state',{}).get('message')=='Investigation requested')
+ wait(lambda r:r.get('state',{}).get('runStatus')=='complete' and r['state']['samples']['monitor.investigate']['value']['run']['id']!=first);assert h.fixture.probes==2
  live("TaliaVM.replaceAction('mark',c=>{const s=c.state();c.commit(s,{...s.value,note:'temporary'})});TaliaVM.dispatch('mark',{target:'test',value:null})")
  wait(lambda r:r.get('dirty') and r.get('state',{}).get('note')=='temporary')
  before=h.fixture.calls;adb('shell','input','keyevent','KEYCODE_HOME');wait(lambda r:r.get('paused') and r.get('subscriptions')==0);time.sleep(.4);assert h.fixture.calls>before

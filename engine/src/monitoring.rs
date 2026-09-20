@@ -402,7 +402,7 @@ impl Store {
             } else {
                 MonitorState {
                     id: i.id.clone(),
-                    generation: 1,
+                    generation: next.version,
                     revision: 1,
                     state: d.initial_state.clone(),
                     error: None,
@@ -438,7 +438,7 @@ impl Store {
                         s.deadline = Some(deadline);
                         st.state=serde_json::from_str(&s.string(&format!("TaliaValue.stringify(({m})(TaliaValue.decode({}),TaliaValue.decode({}),TaliaValue.decode({})))",st.state,i.params,p.params))?).map_err(err)?;
                     }
-                    st.generation += 1;
+                    st.generation = next.version;
                     st.revision += 1;
                     st.error = None;
                     st.observed.clear();

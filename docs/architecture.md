@@ -51,7 +51,9 @@ The engine is server-owned and implemented in Rust/Axum, with an embedded
 JavaScript runtime for configurable Pipeline and Watch logic. Clients expose
 read, write and subscribe through an API/SDK for server state; their local
 runtime owns only dashboard behavior and UI state. Monitoring continues without
-connected clients. P2 uses bounded QuickJS contexts on a local async executor for computed values; Pipeline/Watch collection remains the next stage.
+connected clients. P2 uses bounded QuickJS contexts on a local async executor for computed values.
+P3 adds bounded asynchronous Pipeline capabilities, durable scheduling, ordered
+Watch evaluation and atomic investigation admission; see [monitoring](monitoring.md).
 
 All four engine primitives—DataSource, Pipeline, Variable and Watch—are configured
 at runtime without restarting the service. Persist definitions, retained values,

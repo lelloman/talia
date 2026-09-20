@@ -298,6 +298,7 @@ impl Pipelines {
         if !["pending", "queued", "running"].contains(&r.status.as_str()) {
             return Ok(());
         }
+        let was_running = r.status == "running";
         r.status = if r.effect_pending {
             "unknown"
         } else if error == "run cancelled" || error == "configuration replaced" {
@@ -313,7 +314,7 @@ impl Pipelines {
         let result = s.monitoring_atomic(|s| {
             s.save_run(&r)?;
             if let Ok(mut m) = s.monitor_state(&r.instance) {
-                if m.generation == r.generation {
+                if was_running && m.generation == r.generation {
                     m.error = r.error.clone();
                     m.revision += 1;
                     s.save_monitor(&m)?;
@@ -339,7 +340,7 @@ impl Pipelines {
             r.error = Some(format!("{error}; quality publication: {storage_error}"));
             s.save_run(&r)?;
             if let Ok(mut m) = s.monitor_state(&r.instance) {
-                if m.generation == r.generation {
+                if was_running && m.generation == r.generation {
                     m.error = r.error.clone();
                     m.revision += 1;
                     s.save_monitor(&m)?;
@@ -720,6 +721,67 @@ pub(crate) mod tests {
         assert_eq!(p.engine.store.borrow().run(&id).unwrap().status,"running");
         assert_eq!(finish(&p,&id).await.status,"complete");
     }).await;
+    }
+    #[tokio::test]
+    async fn cancelling_queued_work_does_not_invalidate_active_run() {
+        tokio::task::LocalSet::new()
+            .run_until(async {
+                let p =
+                    fixture("{async run(ctx){await ctx.sleep(60);await ctx.publish('metric',7)}}");
+                let active = p
+                    .request("x", "active", "manual", 0)
+                    .unwrap()
+                    .run_id
+                    .unwrap();
+                let queued = p
+                    .request("x", "queued", "watch", 1)
+                    .unwrap()
+                    .run_id
+                    .unwrap();
+                tokio::time::sleep(Duration::from_millis(10)).await;
+                p.cancel(&queued).unwrap();
+                assert_eq!(finish(&p, &active).await.status, "complete");
+                assert_eq!(
+                    p.engine.store.borrow().run(&queued).unwrap().status,
+                    "cancelled"
+                );
+                assert_eq!(
+                    p.engine.store.borrow().instance("metric").unwrap().value["value"][1].as_f64(),
+                    Some(7.0)
+                );
+            })
+            .await;
+    }
+    #[tokio::test]
+    async fn removed_and_recreated_instance_fences_old_work() {
+        tokio::task::LocalSet::new()
+            .run_until(async {
+                let p =
+                    fixture("{async run(ctx){await ctx.sleep(60);await ctx.publish('metric',99)}}");
+                let id = p.request("x", "old", "manual", 0).unwrap().run_id.unwrap();
+                tokio::time::sleep(Duration::from_millis(10)).await;
+                let mut c = p.engine.store.borrow().monitoring_config().unwrap();
+                let x = c.instances.remove(0);
+                c.version = 2;
+                p.engine
+                    .store
+                    .borrow_mut()
+                    .configure_monitoring(&c, 1)
+                    .unwrap();
+                c.version = 3;
+                c.instances.push(x);
+                p.engine
+                    .store
+                    .borrow_mut()
+                    .configure_monitoring(&c, 2)
+                    .unwrap();
+                assert_eq!(finish(&p, &id).await.status, "cancelled");
+                assert_eq!(
+                    p.engine.store.borrow().instance("metric").unwrap().value["value"][1].as_f64(),
+                    Some(1.0)
+                );
+            })
+            .await;
     }
     #[test]
     fn recovery_distinguishes_pending_from_unknown() {

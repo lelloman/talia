@@ -27,20 +27,23 @@ separate MCP capabilities.
 The server engine uses Rust/Axum with an embedded JavaScript runtime for Pipeline
 and Watch logic. DataSources, Pipelines, Variables and stateful Watches are
 configured at runtime without service restarts. Definitions and retained data/state
-are persisted; SQLite remains a storage candidate. Clients access this server
+are persisted in SQLite. Clients access this server
 engine through an API rather than hosting their own monitoring engine.
 Variables carry typed values and quality metadata with configurable history.
 Computed values support stateful getters/setters, dependency updates and caching;
 async operations may interleave on the same instance, with short atomic state
 updates and configurable shared-refresh or independent-read behavior.
 
-These documents record the **high-level product direction discussed with the
-user**, not a signed-off detailed specification or implementation architecture.
+These documents record the product direction and the accepted contracts refined
+for each roadmap stage. Remaining future-stage details are tracked in Crumbles.
 Isolated [runtime](docs/runtime-prototype.md) and [client–server transport](docs/transport-prototype.md)
 prototypes have been implemented and tested. The shared [P1 dashboard clients](dashboard/README.md)
-now implement the UI/VM contract on web and native Android. They use a loopback
-engine fixture; the production monitoring service has not been deployed.
+implement the UI/VM contract on web and native Android. The Rust engine now
+collects Prometheus/HTTP data and runs durable Pipelines and Watches. Both clients
+can render the same monitoring package. Production deployment remains a later stage.
 
+- [P3 monitoring qualification](docs/p3-qualification.md): collection, Watches, both clients and current evidence.
+- [Monitoring contract](docs/monitoring.md): accepted source, execution, scheduling and recovery rules.
 - [P1 dashboard implementation and qualification](docs/p1-qualification.md): client behavior, evidence and remaining acceptance.
 - [P0 qualification status](docs/p0-qualification.md): passing four-platform evidence and acceptance scope.
 - [Runtime contract](docs/runtime-contract.md): approved execution, authority, lifecycle and failure behavior.
@@ -64,4 +67,4 @@ engine fixture; the production monitoring service has not been deployed.
 
 - [Brand identity](docs/branding.md): selected Wide gaze icon, assets and exploration.
 
-The [P2 durable engine](engine/README.md) provides SQLite-backed state, runtime definition updates, computed evaluation and restart-aware client integration. Its qualification report distinguishes tested platforms from missing devices.
+The [P2 durable engine](engine/README.md) provides SQLite-backed state, runtime definition updates, computed evaluation and restart-aware client integration. Its [qualification report](docs/p2-qualification.md) records the P2 baseline; P3 records current integration checks.

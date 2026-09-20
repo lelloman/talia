@@ -5,7 +5,7 @@ const client=new TaliaConnection({client:'web-'+crypto.randomUUID(),send:async b
 },status:s=>{status.textContent=s;status.hidden=!s;}});
 setInterval(()=>client.tick(),500);client.tick();
 export class DurableBridge {
- constructor(deliver,changed,grants={reads:['value'],writes:['value'],runs:[]}){Object.assign(this,{deliver,changed,grants,subscriptions:new Map(),actions:client.actions,nextActionId:'a-'+crypto.randomUUID(),paused:false,closed:false,last:0});client.onSnapshot=()=>this.poll();client.setResources([]).catch(()=>{});}
+ constructor(deliver,changed,grants={reads:['value'],writes:['value'],runs:[]}){Object.assign(this,{deliver,changed,grants,subscriptions:new Map(),actions:client.actions,nextActionId:'a-'+crypto.randomUUID(),paused:false,closed:false,last:0});client.onSnapshot=()=>{this.poll().catch(e=>{if(!this.closed&&!this.paused)this.changed(e);});};client.setResources([]).catch(()=>{});}
  allowed(kind,id){if(!(this.grants[kind]||[]).includes(id))throw Error('resource grant');}
  async sync(){await client.setResources([...this.subscriptions.values()].map(s=>s.resource));await client.setActive(!this.paused&&!this.closed&&this.subscriptions.size>0);}
  async requests(requests){for(const r of requests){if(this.closed||this.paused)return;if(!Number.isSafeInteger(r.id)||r.id<=this.last){this.changed('bridge replay');return;}this.last=r.id;

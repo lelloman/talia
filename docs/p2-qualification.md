@@ -1,5 +1,9 @@
 # P2 durable engine qualification
 
+This records the P2 baseline at `79d882c`. Current monitoring and client integration
+checks are recorded in [P3 qualification](p3-qualification.md). References below to
+current sources or evidence describe that preserved P2 baseline.
+
 **Status: fully qualified on 2026-09-20.** Chromium, Android 36.1 x86_64
 emulator and physical ARM64 OnePlus CPH2493 pass. No platforms are missing.
 Both clients match on final observable state, and packaged shared assets match
