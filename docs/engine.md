@@ -1,5 +1,13 @@
 # Server engine
 
+> P2 refinement (TALIA-3, 2026-09-20) supersedes the older policies below:
+> extended values follow [engine values](engine-values.md); shared reads are the
+> default and continue after their last waiter leaves. Stale getters reevaluate
+> within reader deadlines; stale setters/actions fail without retry. SQLite
+> commits precede successful writes; definition/state migrations activate
+> atomically and fence old work. Historical P0 behavior remains regression evidence.
+
+
 Status: decisions recorded from discussion, 2026-09-18. This defines the agreed
 model and implementation direction, not finalized schemas or runtime semantics.
 
