@@ -13,3 +13,4 @@ axum = "=0.8.9"
 chrono = "=0.4.45"
 chrono-tz = "=0.10.4"
 url = "=2.5.8"
+reqwest = { version = "=0.12.28", default-features = false, features = ["rustls-tls", "json", "stream"] }

@@ -63,6 +63,25 @@ pub fn undefined() -> Value {
 pub fn number(n: f64) -> Value {
     json!({"version":1,"value":["number",if n.is_nan(){json!("NaN")}else if n==f64::INFINITY{json!("Infinity")}else if n==f64::NEG_INFINITY{json!("-Infinity")}else if n==0.0&&n.is_sign_negative(){json!("-0")}else{json!(n)}]})
 }
+/// Convert ordinary JSON into the lossless envelope; special numeric samples use `number`.
+pub fn from_json(v: &Value) -> Value {
+    fn convert(v: &Value) -> Value {
+        match v {
+            Value::Null => json!(["null"]),
+            Value::Bool(x) => json!(["boolean", x]),
+            Value::Number(x) => number(x.as_f64().unwrap())["value"].clone(),
+            Value::String(x) => json!(["string", x]),
+            Value::Array(xs) => json!(["array", xs.iter().map(convert).collect::<Vec<_>>()]),
+            Value::Object(xs) => json!([
+                "object",
+                xs.iter()
+                    .map(|(k, v)| json!([k, convert(v)]))
+                    .collect::<Vec<_>>()
+            ]),
+        }
+    }
+    json!({"version":1,"value":convert(v)})
+}
 pub fn matches_schema(v: &Value, schema: &str) -> bool {
     validate(v).is_ok() && (schema == "any" || v["value"][0].as_str() == Some(schema))
 }

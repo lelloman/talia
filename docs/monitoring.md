@@ -85,3 +85,23 @@ SQLite transaction spans I/O. Later execution tables extend this schema monotoni
 Web and native Android consume named engine resources with identical value semantics.
 Full MCP authoring, remote agent/ticket integrations, alert delivery, authentication
 and production deployment are later roadmap stages.
+
+## Source adapter API
+
+A Pipeline requests a bound source with `{kind:"query",query,time?}` or
+`{kind:"range",query,start,end,step}` (seconds), or an HTTP request with
+`{kind:"http",path,method?,body?,text?}`. HTTP defaults to GET and JSON decoding;
+`text:true` returns UTF-8 text. Paths must remain on the configured origin;
+redirects are not followed. POST/PUT/PATCH/DELETE are effectful operations.
+Bearer credentials resolve from `TALIA_SECRET_<credential_ref>` at request time;
+errors omit bodies/URLs and echoed credential strings are redacted from results.
+
+Prometheus results retain `resultType`, `warnings`, `infos` and `result`. Vector and
+matrix entries contain `metric` labels and `samples` pairs `[timestamp, number]`.
+Scalar/string results are one pair. Numeric strings become lossless JS numbers;
+label strings remain strings. Native histogram samples currently return an explicit
+unsupported-result error. The adapter follows the
+[Prometheus HTTP API](https://prometheus.io/docs/prometheus/latest/querying/api/).
+Range requests are bounded to 11,001 time steps; decoded values must also fit the
+engine's 128 KiB value budget. There is no implicit cross-query cache; Pipeline
+instances control polling and persisted latest results retain their original age.
