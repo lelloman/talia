@@ -20,6 +20,7 @@ pub struct Instance {
     pub history_age_ms: i64,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Definition {
     pub id: String,
     pub version: u64,
@@ -58,7 +59,7 @@ impl Store {
         let version: i64 = conn
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .map_err(err)?;
-        if version > 4 {
+        if version > 5 {
             return Err("database schema newer than engine".into());
         }
         if version == 0 {
@@ -91,6 +92,11 @@ PRAGMA user_version=3;").map_err(err)?;
         }
         if version < 4 {
             conn.execute_batch("BEGIN IMMEDIATE; ALTER TABLE monitoring_events ADD COLUMN depth INTEGER NOT NULL DEFAULT 0; PRAGMA user_version=4; COMMIT;").map_err(err)?;
+        }
+        if version < 5 {
+            let tx = conn.transaction().map_err(err)?;
+            tx.execute_batch(include_str!("../migrations/005_catalog.sql")).map_err(err)?;
+            tx.commit().map_err(err)?;
         }
         Ok(Self { conn })
     }

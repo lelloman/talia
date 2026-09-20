@@ -52,3 +52,8 @@ created for these tests (`adb -s emulator-5570 emu kill`).
 See [values](../docs/engine-values.md), [storage](../docs/engine-storage.md),
 [definitions](../docs/engine-definitions.md), [computed execution](../docs/engine-computed.md)
 and [transport](../docs/engine-transport.md) for contracts and limits.
+
+P4 now includes a trusted [authored catalog and package compiler](../docs/authoring-storage.md)
+through the Rust Store API. Atomic source bundles reuse canonical engine records
+and compile version-1 packages with the shared UI compiler. MCP exposure, permissions
+and client delivery remain separate integration work.

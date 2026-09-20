@@ -44,7 +44,7 @@ pub fn validate(d: &Definition) -> Result<()> {
     }
     Ok(())
 }
-fn graph(defs: &[Definition], instances: &[Instance]) -> Result<()> {
+pub(crate) fn graph(defs: &[Definition], instances: &[Instance]) -> Result<()> {
     let defs: HashMap<_, _> = defs.iter().map(|d| (&d.id, d)).collect();
     let instances: HashMap<_, _> = instances.iter().map(|i| (&i.id, i)).collect();
     fn visit<'a>(

@@ -11,3 +11,5 @@ pub mod store;
 pub mod scheduling;
 
 pub mod watches;
+
+pub mod catalog;

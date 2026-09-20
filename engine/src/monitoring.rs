@@ -470,7 +470,7 @@ impl Store {
             }
             states.push(st);
         }
-        let tx = self.conn.transaction().map_err(err)?;
+        let tx = self.conn.savepoint().map_err(err)?;
         tx.execute("INSERT INTO monitoring_config VALUES(1,?) ON CONFLICT(id) DO UPDATE SET body=excluded.body",[serde_json::to_string(next).map_err(err)?]).map_err(err)?;
         tx.execute("DELETE FROM monitoring_state", [])
             .map_err(err)?;
