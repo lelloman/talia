@@ -1,5 +1,8 @@
 # Product specification
 
+Accepted P3 collection, scheduling and Watch decisions are consolidated in
+[Monitoring contract](monitoring.md), superseding corresponding open questions here.
+
 Status: high-level direction recorded from discussion, 2026-09-18.
 Detailed behavior and architecture are not signed off. This document supersedes
 the earlier speculative v0.1 design; its numerical defaults and implementation

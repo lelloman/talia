@@ -58,7 +58,7 @@ impl Store {
         let version: i64 = conn
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .map_err(err)?;
-        if version > 1 {
+        if version > 2 {
             return Err("database schema newer than engine".into());
         }
         if version == 0 {
@@ -70,6 +70,13 @@ CREATE INDEX history_instance ON history(instance,seq);
 CREATE TABLE actions(id TEXT PRIMARY KEY, request TEXT NOT NULL, status TEXT NOT NULL, outcome TEXT);
 CREATE TABLE metadata(key TEXT PRIMARY KEY, value INTEGER NOT NULL);
 INSERT INTO metadata VALUES('revision',0); PRAGMA user_version=1;").map_err(err)?;
+            tx.commit().map_err(err)?;
+        }
+        if version < 2 {
+            let tx = conn.transaction().map_err(err)?;
+            tx.execute_batch("CREATE TABLE monitoring_config(id INTEGER PRIMARY KEY CHECK(id=1), body TEXT NOT NULL);
+CREATE TABLE monitoring_state(id TEXT PRIMARY KEY, body TEXT NOT NULL);
+PRAGMA user_version=2;").map_err(err)?;
             tx.commit().map_err(err)?;
         }
         Ok(Self { conn })

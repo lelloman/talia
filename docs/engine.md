@@ -1,5 +1,8 @@
 # Server engine
 
+Accepted P3 collection, scheduling and Watch decisions are consolidated in
+[Monitoring contract](monitoring.md), superseding corresponding open questions here.
+
 > P2 refinement (TALIA-3, 2026-09-20) supersedes the older policies below:
 > extended values follow [engine values](engine-values.md); shared reads are the
 > default and continue after their last waiter leaves. Stale getters reevaluate

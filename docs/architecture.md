@@ -1,5 +1,8 @@
 # Architecture boundaries
 
+Accepted P3 collection, scheduling and Watch decisions are consolidated in
+[Monitoring contract](monitoring.md), superseding corresponding open questions here.
+
 Status: agreed conceptual boundaries and language direction, 2026-09-18.
 Detailed architecture remains open. See the [product specification](specification.md),
 [dashboard model](dashboards.md) and [server engine](engine.md).
