@@ -146,7 +146,7 @@ PRAGMA user_version=3;").map_err(err)?;
     }
     pub fn create_instance(&mut self, i: &Instance) -> Result<()> {
         self.check_instance(i)?;
-        let tx = self.conn.transaction().map_err(err)?;
+        let tx = self.conn.savepoint().map_err(err)?;
         tx.execute(
             "INSERT INTO instances VALUES(?,?,?)",
             params![i.id, i.definition, serde_json::to_string(i).map_err(err)?],

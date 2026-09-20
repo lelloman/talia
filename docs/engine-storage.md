@@ -1,8 +1,9 @@
 # Durable engine storage
 
 The P2 engine uses SQLite with WAL, synchronous=FULL and foreign keys enabled.
-Schema version 2 adds monitoring configuration and per-instance state transactionally
-to version 1. Existing P2 data is preserved; newer unsupported schemas are rejected.
+Schema versions 2–4 add monitoring configuration, state, runs, request identities
+and ordered observations transactionally to version 1. Existing P2 data is preserved;
+newer unsupported schemas are rejected.
 A synchronous storage call returns only after commit. It never holds a transaction
 across a script await, network request or external effect. OS/filesystem durability
 still depends on the storage device honoring synchronization.

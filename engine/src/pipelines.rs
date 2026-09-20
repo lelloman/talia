@@ -310,7 +310,7 @@ impl Pipelines {
         .into();
         r.error = Some(error.chars().take(2048).collect());
         r.finished = Some(self.engine.now());
-        s.monitoring_atomic(|s| {
+        let result = s.monitoring_atomic(|s| {
             s.save_run(&r)?;
             if let Ok(mut m) = s.monitor_state(&r.instance) {
                 if m.generation == r.generation {
@@ -333,7 +333,20 @@ impl Pipelines {
                 }
             }
             Ok(())
-        })
+        });
+        if let Err(storage_error) = result {
+            // Backpressure on observation publication must not leave a run falsely running.
+            r.error = Some(format!("{error}; quality publication: {storage_error}"));
+            s.save_run(&r)?;
+            if let Ok(mut m) = s.monitor_state(&r.instance) {
+                if m.generation == r.generation {
+                    m.error = r.error.clone();
+                    m.revision += 1;
+                    s.save_monitor(&m)?;
+                }
+            }
+        }
+        Ok(())
     }
     pub(crate) fn fence(
         &self,
@@ -744,5 +757,52 @@ mod effect_tests {
   assert_eq!(p.request("x","effect","manual",0).unwrap().run_id,Some(id));assert_eq!(count.load(Ordering::SeqCst),1);
   assert_eq!(p.engine.store.borrow().instance("metric").unwrap().value["value"][1].as_f64(),Some(1.0));server.abort();
  }).await;
+    }
+}
+
+impl Store {
+    pub fn run_admission(&self, id: &str) -> Result<Option<Admission>> {
+        let body: Option<String> = self
+            .conn
+            .query_row(
+                "SELECT body FROM monitoring_requests WHERE id=?",
+                [id],
+                |r| r.get(0),
+            )
+            .optional()
+            .map_err(err)?;
+        body.map(|b| serde_json::from_str(&b).map_err(err))
+            .transpose()
+    }
+    /// Read-only synthetic resources, using the same lossless sample contract as Variables.
+    pub fn monitoring_values(&self) -> Result<Vec<Value>> {
+        let config = self.monitoring_config()?;
+
+        let mut out = vec![];
+        for i in &config.instances {
+            let state = self.monitor_state(&i.id)?;
+            let latest_id: Option<String> = self
+                .conn
+                .query_row(
+                    "SELECT id FROM monitoring_runs WHERE instance=? ORDER BY rowid DESC LIMIT 1",
+                    [&i.id],
+                    |r| r.get(0),
+                )
+                .optional()
+                .map_err(err)?;
+            let latest_run = latest_id.map(|id| self.run(&id)).transpose()?;
+            let latest = latest_run.as_ref();
+            let mut payload = value::from_json(
+                &json!({"state":null,"error":state.error,"faulted":state.faulted,"nextDue":state.next_due,"missed":state.missed,"lastGap":state.last_gap,"lastActions":state.last_actions,"run":latest}),
+            );
+            for pair in payload["value"][1].as_array_mut().unwrap() {
+                if pair[0] == "state" {
+                    pair[1] = state.state["value"].clone();
+                }
+            }
+            // Run.result is itself tagged; clients can decode that explicitly when inspecting run history.
+            out.push(json!({"id":format!("monitor.{}",i.id),"value":payload,"hasValue":true,"timestamp":latest.and_then(|r|r.finished.or(r.started)).unwrap_or(0),"quality":if state.error.is_some(){"error"}else{"good"},"revision":self.revision()?,"generation":state.generation,"evaluation":if state.faulted{"error"}else{"idle"},"error":state.error}));
+        }
+        Ok(out)
     }
 }

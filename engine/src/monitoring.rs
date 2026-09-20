@@ -262,6 +262,9 @@ impl MonitoringConfig {
         let mut producers = HashSet::new();
         for i in &self.instances {
             let d = self.definition(&i.definition)?;
+            if store.instance(&format!("monitor.{}", i.id)).is_ok() {
+                return Err("monitoring resource name conflicts with Variable".into());
+            }
             value::validate(&i.params)?;
             if !(1..=300_000).contains(&i.timeout_ms)
                 || i.retries > 8

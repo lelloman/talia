@@ -82,6 +82,17 @@ fn graph(defs: &[Definition], instances: &[Instance]) -> Result<()> {
 }
 impl Store {
     pub fn define(&mut self, d: &Definition, expected: u64, migration: Option<&str>) -> Result<()> {
+        self.monitoring_atomic(|s| {
+            s.define_inner(d, expected, migration)?;
+            s.monitoring_config()?.validate(s)
+        })
+    }
+    fn define_inner(
+        &mut self,
+        d: &Definition,
+        expected: u64,
+        migration: Option<&str>,
+    ) -> Result<()> {
         validate(d)?;
         let old = self.definition(&d.id).ok();
         if old.as_ref().map_or(0, |x| x.version) != expected || d.version != expected + 1 {
@@ -120,7 +131,7 @@ impl Store {
             i.revision += 1;
         }
         // This synchronous method holds engine ownership across staging and commit, but never I/O.
-        let tx = self.conn.transaction().map_err(err)?;
+        let tx = self.conn.savepoint().map_err(err)?;
         tx.execute(
             "INSERT INTO definitions VALUES(?,?) ON CONFLICT(id) DO UPDATE SET body=excluded.body",
             params![d.id, serde_json::to_string(d).map_err(err)?],
@@ -139,6 +150,12 @@ impl Store {
         Ok(())
     }
     pub fn add_instance(&mut self, i: &Instance) -> Result<()> {
+        self.monitoring_atomic(|s| {
+            s.add_instance_inner(i)?;
+            s.monitoring_config()?.validate(s)
+        })
+    }
+    fn add_instance_inner(&mut self, i: &Instance) -> Result<()> {
         identifier(&i.id)?;
         if i.revision != 1 || i.generation != 1 {
             return Err("initial revision/generation".into());
@@ -161,7 +178,7 @@ impl Store {
         i.revision += 1;
         i.generation += 1;
         self.check_instance(&i)?;
-        let tx = self.conn.transaction().map_err(err)?;
+        let tx = self.conn.savepoint().map_err(err)?;
         tx.execute(
             "UPDATE instances SET body=? WHERE id=?",
             params![serde_json::to_string(&i).map_err(err)?, id],
@@ -173,10 +190,16 @@ impl Store {
         Ok(())
     }
     pub fn remove_instance(&mut self, id: &str) -> Result<()> {
+        self.monitoring_atomic(|s| {
+            s.remove_instance_inner(id)?;
+            s.monitoring_config()?.validate(s)
+        })
+    }
+    fn remove_instance_inner(&mut self, id: &str) -> Result<()> {
         let mut all = self.instances()?;
         all.retain(|i| i.id != id);
         graph(&self.definitions()?, &all)?;
-        let tx = self.conn.transaction().map_err(err)?;
+        let tx = self.conn.savepoint().map_err(err)?;
         tx.execute("DELETE FROM instances WHERE id=?", [id])
             .map_err(err)?;
         tx.execute("UPDATE metadata SET value=value+1 WHERE key='revision'", [])
@@ -185,6 +208,12 @@ impl Store {
         Ok(())
     }
     pub fn remove_definition(&mut self, id: &str) -> Result<()> {
+        self.monitoring_atomic(|s| {
+            s.remove_definition_inner(id)?;
+            s.monitoring_config()?.validate(s)
+        })
+    }
+    fn remove_definition_inner(&mut self, id: &str) -> Result<()> {
         self.conn
             .execute("DELETE FROM definitions WHERE id=?", [id])
             .map_err(err)?;

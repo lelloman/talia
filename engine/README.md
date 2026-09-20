@@ -1,9 +1,10 @@
-# Talìa durable engine (P2)
+# Talìa monitoring engine
 
 Rust/Axum owns SQLite definitions, variables, computed state and action records.
-Configurable JavaScript executes inside bounded QuickJS contexts. This is a
-loopback development service; authentication, source adapters, scheduled collection,
-Watches, complete MCP tools, alert delivery and production deployment follow later.
+Configurable JavaScript executes inside bounded QuickJS contexts. P3 adds Prometheus
+and HTTP adapters, durable Pipelines, schedules and stateful Watches. This is a
+loopback development service; authentication, complete MCP tools, alert delivery
+and production deployment follow later. See [monitoring](../docs/monitoring.md).
 
 ```sh
 cargo test --manifest-path engine/Cargo.toml --offline

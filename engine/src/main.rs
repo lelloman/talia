@@ -12,9 +12,13 @@ use std::{
 };
 use talia_engine::{
     definitions::identifier,
+    monitoring::MonitoringConfig,
+    pipelines::Pipelines,
     runtime::Engine,
+    scheduling::Scheduler,
     store::{Definition, Instance, Result, Store},
     value,
+    watches::Watches,
 };
 use tokio::sync::{mpsc, oneshot};
 struct Request {
@@ -24,6 +28,9 @@ struct Request {
 #[derive(Clone)]
 struct Service {
     engine: Engine,
+    pipelines: Pipelines,
+    watches: Watches,
+    monitoring_error: Rc<RefCell<Option<String>>>,
     incarnation: String,
     clients: Rc<RefCell<HashMap<String, u64>>>,
     leases: Rc<RefCell<HashMap<String, (String, i64)>>>,
@@ -32,12 +39,22 @@ impl Service {
     fn snapshot(&self) -> Result<Value> {
         let s = self.engine.store.borrow();
         let all = s.instances()?;
-        let values:Vec<Value>=all.into_iter().map(|i|{let meta=self.engine.evaluation.borrow().get(&i.id).cloned().unwrap_or_default();json!({"id":i.id,"value":i.value,"hasValue":i.has_value,"timestamp":i.timestamp,"quality":i.quality,"revision":i.revision,"generation":i.generation,"evaluation":if meta.running>0{"refreshing"}else if meta.error.is_some(){"error"}else if meta.invalidated{"invalidated"}else{"idle"},"error":meta.error})}).collect();
-        Ok(json!({"revision":s.revision()?,"values":values}))
+        let mut values:Vec<Value>=all.into_iter().map(|i|{let meta=self.engine.evaluation.borrow().get(&i.id).cloned().unwrap_or_default();json!({"id":i.id,"value":i.value,"hasValue":i.has_value,"timestamp":i.timestamp,"quality":i.quality,"revision":i.revision,"generation":i.generation,"evaluation":if meta.running>0{"refreshing"}else if meta.error.is_some(){"error"}else if meta.invalidated{"invalidated"}else{"idle"},"error":meta.error})}).collect();
+        values.extend(s.monitoring_values()?);
+        Ok(
+            json!({"revision":s.revision()?,"values":values,"monitoringVersion":s.monitoring_config()?.version,"monitoringError":self.monitoring_error.borrow().clone()}),
+        )
     }
     fn status(&self, id: &str) -> Result<Value> {
         identifier(id)?;
-        Ok(match self.engine.store.borrow().action(id)? {
+        let store = self.engine.store.borrow();
+        if let Some(a) = store.run_admission(id)? {
+            let run = a.run_id.as_ref().map(|id| store.run(id)).transpose()?;
+            return Ok(
+                json!({"actionId":id,"status":run.as_ref().map(|r|r.status.as_str()).unwrap_or("skipped"),"runId":a.run_id,"admission":a.disposition,"outcome":run}),
+            );
+        }
+        Ok(match store.action(id)? {
             Some((_, status, outcome)) => {
                 json!({"actionId":id,"status":status,"outcome":outcome.and_then(|x|serde_json::from_str::<Value>(&x).ok())})
             }
@@ -76,7 +93,46 @@ impl Service {
         let id = a["id"].as_str().unwrap_or("value");
         match op {
             "snapshot" => self.snapshot(),
+            "monitoringConfig" => {
+                Ok(serde_json::to_value(self.engine.store.borrow().monitoring_config()?).unwrap())
+            }
+            "configureMonitoring" => {
+                let config: MonitoringConfig =
+                    serde_json::from_value(a["config"].clone()).map_err(|e| e.to_string())?;
+                self.engine.store.borrow_mut().configure_monitoring(
+                    &config,
+                    a["expected"]
+                        .as_u64()
+                        .ok_or("expected monitoring version")?,
+                )?;
+                self.snapshot()
+            }
+            "run" => {
+                let action = a["actionId"].as_str().ok_or("action id")?;
+                if self.engine.store.borrow().action(action)?.is_some() {
+                    return Err("action identity belongs to a value mutation".into());
+                }
+                self.pipelines.request(id, action, "manual", 0)?;
+                self.status(action)
+            }
+            "runs" => Ok(serde_json::to_value(self.engine.store.borrow().runs()?).unwrap()),
+            "runStatus" => Ok(serde_json::to_value(self.engine.store.borrow().run(id)?).unwrap()),
+            "cancelRun" => Ok(serde_json::to_value(self.pipelines.cancel(id)?).unwrap()),
+            "resumeWatch" => {
+                self.watches.resume(id)?;
+                self.snapshot()
+            }
             "read" => {
+                if id.starts_with("monitor.") {
+                    return self
+                        .engine
+                        .store
+                        .borrow()
+                        .monitoring_values()?
+                        .into_iter()
+                        .find(|v| v["id"] == id)
+                        .ok_or_else(|| "monitoring resource missing".into());
+                }
                 let i = self.engine.read(id, Duration::from_secs(5)).await?;
                 Ok(serde_json::to_value(i).unwrap())
             }
@@ -87,11 +143,17 @@ impl Service {
                     if leases.len() >= 1024 {
                         return Err("subscription capacity".into());
                     }
-                    self.engine.subscribe(id)?;
+                    if id.starts_with("monitor.") {
+                        self.engine.store.borrow().monitor_state(&id[8..])?;
+                    } else {
+                        self.engine.subscribe(id)?;
+                    }
                 }
                 leases.insert(key, (id.into(), self.engine.now()));
                 drop(leases);
-                self.engine.invalidate(id)?;
+                if !id.starts_with("monitor.") {
+                    self.engine.invalidate(id)?;
+                }
                 self.snapshot()
             }
             "unsubscribe" => {
@@ -115,6 +177,9 @@ impl Service {
             "write" | "set" => {
                 let action = a["actionId"].as_str().ok_or("action id")?;
                 identifier(action)?;
+                if self.engine.store.borrow().run_admission(action)?.is_some() {
+                    return Err("action identity belongs to a Pipeline run".into());
+                }
                 value::validate(&a["value"])?;
                 let request=json!({"client":client,"op":op,"id":id,"value":a["value"],"expected":a["expected"]}).to_string();
                 if !self.engine.store.borrow().accept_action(action, &request)? {
@@ -247,8 +312,15 @@ async fn main() -> Result<()> {
         .map_err(|e| e.to_string())?
         .trim()
         .to_string();
+    let engine = Engine::new(store);
+    engine.store.borrow_mut().recover_runs(engine.now())?;
+    let pipelines = Pipelines::new(engine.clone())?;
+    let watches = Watches::new(pipelines.clone());
     let service = Service {
-        engine: Engine::new(store),
+        engine,
+        pipelines,
+        watches,
+        monitoring_error: Default::default(),
         incarnation: incarnation.clone(),
         clients: Default::default(),
         leases: Default::default(),
@@ -256,7 +328,7 @@ async fn main() -> Result<()> {
     let (tx, mut rx) = mpsc::channel::<Request>(128);
     let router = Router::new()
         .route("/engine", post(rpc))
-        .layer(DefaultBodyLimit::max(262144))
+        .layer(DefaultBodyLimit::max(2_359_296))
         .with_state(tx);
     let listener = tokio::net::TcpListener::bind((
         "127.0.0.1",
@@ -272,6 +344,16 @@ async fn main() -> Result<()> {
     );
     let local = tokio::task::LocalSet::new();
     local.run_until(async move{
+  let monitoring=service.clone();tokio::task::spawn_local(async move{
+    let scheduler=Scheduler{pipelines:monitoring.pipelines.clone()};
+    loop {
+      let mut errors=vec![];
+      if let Err(e)=scheduler.tick(){errors.push(e);}
+      if let Err(e)=monitoring.watches.tick(){errors.push(e);}
+      *monitoring.monitoring_error.borrow_mut()=if errors.is_empty(){None}else{Some(errors.join("; "))};
+      tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+  });
   let leases=service.clone();tokio::task::spawn_local(async move{loop{tokio::time::sleep(Duration::from_secs(10)).await;let expired:Vec<_>=leases.leases.borrow().iter().filter(|(_,(_,t))|leases.engine.now()-*t>60000).map(|(k,_)|k.clone()).collect();for key in expired{if let Some((id,_))=leases.leases.borrow_mut().remove(&key){leases.engine.unsubscribe(&id);}}}});
   tokio::task::spawn_local(async move{let active=Rc::new(Cell::new(0usize));while let Some(request)=rx.recv().await{if active.get()>=128{let _=request.reply.send(json!({"error":"server busy"}));continue;}let active=active.clone();active.set(active.get()+1);let s=service.clone();tokio::task::spawn_local(async move{let result=s.execute(&request.body).await;let response=match result{Ok(value)=>json!({"version":1,"incarnation":s.incarnation,"epoch":request.body["epoch"],"value":value}),Err(error)=>json!({"version":1,"incarnation":s.incarnation,"epoch":request.body["epoch"],"error":error})};let _=request.reply.send(response);active.set(active.get()-1);});}});
   axum::serve(listener,router).await.map_err(|e|e.to_string())

@@ -24,3 +24,23 @@ reconnect, restore subscriptions and reconcile action IDs before indicating reco
 Running JS heaps/subscriptions are recreated; stored values retain original age.
 The bounded development service allows 256 client identities, 1024 leases and 128
 active requests. Production identity/authentication remains a separate boundary.
+
+P3 adds `monitoringConfig`, `configureMonitoring({expected,config})`,
+`run({id,actionId})`, `runs`, `runStatus({id})`, `cancelRun({id})` and
+`resumeWatch({id})`. Configuration is replaced atomically with an expected version;
+removing/redefining referenced Variables also validates the monitoring graph before
+commit. Request bodies are bounded to 2.25 MiB for configuration bundles.
+
+`monitor.<instanceId>` is a read-only synthetic resource containing lossless Watch
+or Pipeline state, errors, schedule/gap information, latest run and investigation
+admissions. It participates in the same read/subscribe/snapshot API as Variables.
+Actual Variables cannot collide with these names. Snapshot includes
+`monitoringVersion` and `monitoringError` for scheduler/dispatch faults.
+`status({actionId})` reconciles both existing value mutations and Pipeline admission
+identities; an ID cannot be reused across those operation families. Status does not
+admit or retry work. Configuration returns credential references, never their values.
+
+The server starts scheduling and Watch processing independently of HTTP requests.
+A startup recovery pass marks unfinished running Pipelines unknown, retaining known
+pending work. Full configuration/MCP authorization remains a subsequent stage; the
+service continues to bind loopback only.

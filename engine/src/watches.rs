@@ -101,6 +101,10 @@ impl Watches {
     }
     pub fn resume(&self, id: &str) -> Result<()> {
         let s = self.pipelines.engine.store.borrow();
+        let config = s.monitoring_config()?;
+        if config.definition(&config.instance(id)?.definition)?.kind != "watch" {
+            return Err("not a Watch".into());
+        }
         let mut state = s.monitor_state(id)?;
         state.faulted = false;
         state.error = None;
