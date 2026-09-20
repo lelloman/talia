@@ -9,3 +9,4 @@ rquickjs = { version = "=0.13.0", features = ["bindgen"] }
 rusqlite = { version = "=0.32.1", features = ["bundled", "backup"] }
 tokio = { version = "1", features = ["macros", "rt", "rt-multi-thread", "net", "sync", "time", "test-util"] }
 futures-util = "0.3"
+axum = "=0.8.9"

@@ -1,0 +1,279 @@
+use axum::{
+    extract::{DefaultBodyLimit, State},
+    routing::post,
+    Json, Router,
+};
+use serde_json::{json, Value};
+use std::{
+    cell::{Cell, RefCell},
+    collections::HashMap,
+    rc::Rc,
+    time::Duration,
+};
+use talia_engine::{
+    definitions::identifier,
+    runtime::Engine,
+    store::{Definition, Instance, Result, Store},
+    value,
+};
+use tokio::sync::{mpsc, oneshot};
+struct Request {
+    body: Value,
+    reply: oneshot::Sender<Value>,
+}
+#[derive(Clone)]
+struct Service {
+    engine: Engine,
+    incarnation: String,
+    clients: Rc<RefCell<HashMap<String, u64>>>,
+    leases: Rc<RefCell<HashMap<String, (String, i64)>>>,
+}
+impl Service {
+    fn snapshot(&self) -> Result<Value> {
+        let s = self.engine.store.borrow();
+        let all = s.instances()?;
+        let values:Vec<Value>=all.into_iter().map(|i|{let meta=self.engine.evaluation.borrow().get(&i.id).cloned().unwrap_or_default();json!({"id":i.id,"value":i.value,"hasValue":i.has_value,"timestamp":i.timestamp,"quality":i.quality,"revision":i.revision,"generation":i.generation,"evaluation":if meta.running>0{"refreshing"}else if meta.error.is_some(){"error"}else if meta.invalidated{"invalidated"}else{"idle"},"error":meta.error})}).collect();
+        Ok(json!({"revision":s.revision()?,"values":values}))
+    }
+    fn status(&self, id: &str) -> Result<Value> {
+        identifier(id)?;
+        Ok(match self.engine.store.borrow().action(id)? {
+            Some((_, status, outcome)) => {
+                json!({"actionId":id,"status":status,"outcome":outcome.and_then(|x|serde_json::from_str::<Value>(&x).ok())})
+            }
+            None => json!({"actionId":id,"status":"unknown"}),
+        })
+    }
+    async fn execute(&self, r: &Value) -> Result<Value> {
+        if r["version"] != 1 {
+            return Err("protocol version".into());
+        }
+        let client = r["client"].as_str().ok_or("client identity")?;
+        identifier(client)?;
+        let epoch = r["epoch"]
+            .as_u64()
+            .filter(|x| *x > 0 && *x < 9_007_199_254_740_991)
+            .ok_or("client epoch")?;
+        {
+            let mut clients = self.clients.borrow_mut();
+            if !clients.contains_key(client) && clients.len() >= 256 {
+                return Err("client capacity".into());
+            }
+            let active = clients.entry(client.into()).or_default();
+            if epoch < *active {
+                return Err("stale client epoch".into());
+            }
+            *active = epoch;
+        }
+        let op = r["op"].as_str().ok_or("operation")?;
+        let a = &r["args"];
+        if op == "hello" {
+            return self.snapshot();
+        }
+        if r["incarnation"] != self.incarnation {
+            return Err("server incarnation changed".into());
+        }
+        let id = a["id"].as_str().unwrap_or("value");
+        match op {
+            "snapshot" => self.snapshot(),
+            "read" => {
+                let i = self.engine.read(id, Duration::from_secs(5)).await?;
+                Ok(serde_json::to_value(i).unwrap())
+            }
+            "subscribe" => {
+                let key = format!("{client}:{id}");
+                let mut leases = self.leases.borrow_mut();
+                if !leases.contains_key(&key) {
+                    if leases.len() >= 1024 {
+                        return Err("subscription capacity".into());
+                    }
+                    self.engine.subscribe(id)?;
+                }
+                leases.insert(key, (id.into(), self.engine.now()));
+                drop(leases);
+                self.engine.invalidate(id)?;
+                self.snapshot()
+            }
+            "unsubscribe" => {
+                if let Some((id, _)) = self.leases.borrow_mut().remove(&format!("{client}:{id}")) {
+                    self.engine.unsubscribe(&id);
+                }
+                Ok(Value::Null)
+            }
+            "poll" => {
+                for (_, (_, seen)) in self
+                    .leases
+                    .borrow_mut()
+                    .iter_mut()
+                    .filter(|(k, _)| k.starts_with(&format!("{client}:")))
+                {
+                    *seen = self.engine.now();
+                }
+                self.snapshot()
+            }
+            "status" => self.status(a["actionId"].as_str().ok_or("action id")?),
+            "write" | "set" => {
+                let action = a["actionId"].as_str().ok_or("action id")?;
+                identifier(action)?;
+                value::validate(&a["value"])?;
+                let request=json!({"client":client,"op":op,"id":id,"value":a["value"],"expected":a["expected"]}).to_string();
+                if !self.engine.store.borrow().accept_action(action, &request)? {
+                    return self.status(action);
+                }
+                // This task is detached from the HTTP wait; accepted work finishes independently.
+                let outcome = if op == "write" {
+                    let expected = a["expected"].as_u64().ok_or("expected revision");
+                    match expected {
+                        Ok(n) => self.engine.write(id, n, a["value"].clone()),
+                        Err(e) => Err(e.into()),
+                    }
+                } else {
+                    self.engine.set(id, a["value"].clone()).await
+                };
+                let (status, body) = match outcome {
+                    Ok(i) => ("complete", serde_json::to_value(i).unwrap()),
+                    Err(e) => ("failed", json!({"error":e})),
+                };
+                self.engine
+                    .store
+                    .borrow()
+                    .finish_action(action, status, &body.to_string())?;
+                self.status(action)
+            }
+            "define" => {
+                let d: Definition =
+                    serde_json::from_value(a["definition"].clone()).map_err(|e| e.to_string())?;
+                let expected = a["expected"].as_u64().ok_or("expected version")?;
+                self.engine
+                    .store
+                    .borrow_mut()
+                    .define(&d, expected, a["migration"].as_str())?;
+                let all = self.engine.store.borrow().instances()?;
+                for i in all.iter().filter(|i| i.definition == d.id) {
+                    self.engine.invalidate(&i.id)?;
+                    self.engine.changed(&i.id);
+                }
+                self.snapshot()
+            }
+            "create" => {
+                let i: Instance =
+                    serde_json::from_value(a["instance"].clone()).map_err(|e| e.to_string())?;
+                self.engine.store.borrow_mut().add_instance(&i)?;
+                self.snapshot()
+            }
+            "parameters" => {
+                self.engine.store.borrow_mut().reconfigure(
+                    id,
+                    a["expected"].as_u64().ok_or("expected revision")?,
+                    a["value"].clone(),
+                )?;
+                self.engine.invalidate(id)?;
+                self.engine.changed(id);
+                self.snapshot()
+            }
+            "remove" => {
+                self.engine.store.borrow_mut().remove_instance(id)?;
+                self.snapshot()
+            }
+            "removeDefinition" => {
+                self.engine.store.borrow_mut().remove_definition(id)?;
+                self.snapshot()
+            }
+            "invalidate" => {
+                self.engine.invalidate(id)?;
+                self.snapshot()
+            }
+            "history" => Ok(serde_json::to_value(
+                self.engine.store.borrow().history(id, self.engine.now())?,
+            )
+            .unwrap()),
+            _ => Err("unknown operation".into()),
+        }
+    }
+}
+async fn rpc(State(tx): State<mpsc::Sender<Request>>, Json(body): Json<Value>) -> Json<Value> {
+    let (reply, rx) = oneshot::channel();
+    if tx.try_send(Request { body, reply }).is_err() {
+        return Json(json!({"error":"server busy"}));
+    }
+    Json(
+        rx.await
+            .unwrap_or_else(|_| json!({"error":"server stopped"})),
+    )
+}
+#[tokio::main(flavor = "current_thread")]
+async fn main() -> Result<()> {
+    let args: Vec<_> = std::env::args().collect();
+    let path = args
+        .get(1)
+        .ok_or("usage: talia-engine DATABASE [PORT] [--seed]")?;
+    let lock = std::fs::OpenOptions::new()
+        .create(true)
+        .truncate(false)
+        .write(true)
+        .open(format!("{path}.lock"))
+        .map_err(|e| e.to_string())?;
+    lock.try_lock().map_err(|_| "database already owned")?;
+    let mut store = Store::open(path)?;
+    store.recover_actions()?;
+    if args.iter().any(|s| s == "--seed") && store.definitions()?.is_empty() {
+        let d = Definition {
+            id: "stored".into(),
+            version: 1,
+            source: "".into(),
+            kind: "stored".into(),
+            value_schema: "any".into(),
+            state_schema: "any".into(),
+            dependencies: vec![],
+            read_policy: "shared".into(),
+        };
+        store.define(&d, 0, None)?;
+        store.add_instance(&Instance {
+            id: "value".into(),
+            definition: d.id,
+            params: value::undefined(),
+            state: value::undefined(),
+            value: value::number(62.0),
+            has_value: true,
+            timestamp: 0,
+            quality: "seed".into(),
+            revision: 1,
+            generation: 1,
+            history_count: 100,
+            history_age_ms: 86400000,
+        })?;
+    }
+    let incarnation = std::fs::read_to_string("/proc/sys/kernel/random/uuid")
+        .map_err(|e| e.to_string())?
+        .trim()
+        .to_string();
+    let service = Service {
+        engine: Engine::new(store),
+        incarnation: incarnation.clone(),
+        clients: Default::default(),
+        leases: Default::default(),
+    };
+    let (tx, mut rx) = mpsc::channel::<Request>(128);
+    let router = Router::new()
+        .route("/engine", post(rpc))
+        .layer(DefaultBodyLimit::max(262144))
+        .with_state(tx);
+    let listener = tokio::net::TcpListener::bind((
+        "127.0.0.1",
+        args.get(2)
+            .and_then(|p| p.parse::<u16>().ok())
+            .unwrap_or(18745),
+    ))
+    .await
+    .map_err(|e| e.to_string())?;
+    println!(
+        "{}",
+        json!({"port":listener.local_addr().unwrap().port(),"incarnation":incarnation})
+    );
+    let local = tokio::task::LocalSet::new();
+    local.run_until(async move{
+  let leases=service.clone();tokio::task::spawn_local(async move{loop{tokio::time::sleep(Duration::from_secs(10)).await;let expired:Vec<_>=leases.leases.borrow().iter().filter(|(_,(_,t))|leases.engine.now()-*t>60000).map(|(k,_)|k.clone()).collect();for key in expired{if let Some((id,_))=leases.leases.borrow_mut().remove(&key){leases.engine.unsubscribe(&id);}}}});
+  tokio::task::spawn_local(async move{let active=Rc::new(Cell::new(0usize));while let Some(request)=rx.recv().await{if active.get()>=128{let _=request.reply.send(json!({"error":"server busy"}));continue;}let active=active.clone();active.set(active.get()+1);let s=service.clone();tokio::task::spawn_local(async move{let result=s.execute(&request.body).await;let response=match result{Ok(value)=>json!({"version":1,"incarnation":s.incarnation,"epoch":request.body["epoch"],"value":value}),Err(error)=>json!({"version":1,"incarnation":s.incarnation,"epoch":request.body["epoch"],"error":error})};let _=request.reply.send(response);active.set(active.get()-1);});}});
+  axum::serve(listener,router).await.map_err(|e|e.to_string())
+ }).await
+}

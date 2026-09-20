@@ -169,9 +169,12 @@ impl Store {
         let mut all = self.instances()?;
         all.retain(|i| i.id != id);
         graph(&self.definitions()?, &all)?;
-        self.conn
-            .execute("DELETE FROM instances WHERE id=?", [id])
+        let tx = self.conn.transaction().map_err(err)?;
+        tx.execute("DELETE FROM instances WHERE id=?", [id])
             .map_err(err)?;
+        tx.execute("UPDATE metadata SET value=value+1 WHERE key='revision'", [])
+            .map_err(err)?;
+        tx.commit().map_err(err)?;
         Ok(())
     }
     pub fn remove_definition(&mut self, id: &str) -> Result<()> {

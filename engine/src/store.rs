@@ -122,12 +122,15 @@ INSERT INTO metadata VALUES('revision',0); PRAGMA user_version=1;").map_err(err)
     }
     pub fn create_instance(&mut self, i: &Instance) -> Result<()> {
         self.check_instance(i)?;
-        self.conn
-            .execute(
-                "INSERT INTO instances VALUES(?,?,?)",
-                params![i.id, i.definition, serde_json::to_string(i).map_err(err)?],
-            )
+        let tx = self.conn.transaction().map_err(err)?;
+        tx.execute(
+            "INSERT INTO instances VALUES(?,?,?)",
+            params![i.id, i.definition, serde_json::to_string(i).map_err(err)?],
+        )
+        .map_err(err)?;
+        tx.execute("UPDATE metadata SET value=value+1 WHERE key='revision'", [])
             .map_err(err)?;
+        tx.commit().map_err(err)?;
         Ok(())
     }
     pub fn check_instance(&self, i: &Instance) -> Result<()> {
@@ -372,7 +375,7 @@ mod crash_tests {
             child.kill().unwrap();
             child.wait().unwrap();
             let s = Store::open(&path).unwrap();
-            assert_eq!(s.revision().unwrap(), if mode == "before" { 0 } else { 1 });
+            assert_eq!(s.revision().unwrap(), if mode == "before" { 1 } else { 2 });
             assert_eq!(s.instance("metric").unwrap().timestamp, 100);
             assert_eq!(
                 s.instance("metric").unwrap().value,

@@ -75,7 +75,10 @@ impl Engine {
         }
     }
     pub fn invalidate(&self, id: &str) -> Result<()> {
-        self.store.borrow().instance(id)?;
+        let i = self.store.borrow().instance(id)?;
+        if self.store.borrow().definition(&i.definition)?.kind == "stored" {
+            return Ok(());
+        }
         let mut meta = self.evaluation.borrow_mut();
         meta.entry(id.into()).or_default().invalidated = true;
         drop(meta);
