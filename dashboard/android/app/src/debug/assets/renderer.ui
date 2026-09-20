@@ -1,0 +1,7 @@
+<Dashboard id="test"><Surface id="surface"><Column id="root">
+  <For id="items" items={state.items} key={item.id}><Switch id="switch" label={item.label} value={item.value} onChange={actions.change}/></For>
+  <Text id="hidden" text="Hidden space" visibility="hidden"/>
+  <Text id="collapsed" text="Collapsed space" visibility="collapsed"/>
+  <Column id="narrow" width="120px"><Text id="long" text="This deliberately long text must wrap across several lines on both platforms without truncating the content."/></Column>
+  <Grid id="grid" columns={2} gap="8dp"><Button id="one" text="One" onClick={actions.change}/><Button id="two" text="Two" onClick={actions.change}/></Grid>
+</Column></Surface></Dashboard>

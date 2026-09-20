@@ -170,3 +170,17 @@ The [first milestone plan](implementation-plan.md) develops web and native Andro
 together. Runtime, UI-contract and persistence prototypes precede final choices
 of JS host, renderer framework and storage adapter. Candidate runtime libraries
 are not yet selected or qualified.
+
+## Shared dashboard implementation
+
+[P1](../dashboard/README.md) now supplies a restricted UI compiler, shared
+JavaScript ViewModel bindings, a DOM renderer and native Android Views. The same
+versioned package includes UI references and VM source. Web hosts VM scripts in a
+capped QuickJS WASM Worker; Android uses native QuickJS on a HandlerThread with a
+separate trusted UI context. Network operations run asynchronously outside guest
+execution. Client preferences select composition and web dp scale.
+
+The development adapter still uses the loopback, in-memory Rust engine fixture.
+This does not implement the durable production engine, authenticated MCP service,
+notification delivery or deployment. [Qualification](p1-qualification.md) records
+which concrete builds and platforms have been exercised.

@@ -129,7 +129,8 @@ The package's `ui` is the versioned `{version,root}` compiler result. Its SHA-25
 revision covers UI, referenced definitions, parameters and ViewModel source.
 `build-web.sh` and `build-android.sh` compile the same package; Android also bundles
 it as an offline initial baseline. The development host serves one complete saved
-package at `/dashboard/package.json`. Replace a published file atomically.
+package at `/dashboard/package.json?dashboard=ID`. Client selection and cached baselines
+are scoped to the saved dashboard ID. Replace a published file atomically.
 
 Clients poll for newer saved revisions while foregrounded. Failed update checks
 leave the loaded dashboard running. Explicit Reload/Restart fetches the latest
@@ -143,3 +144,12 @@ extra exercise the future live-MCP boundary: source runs in the VM context and
 marks it dirty. They are development adapters, not the authenticated MCP API.
 A web client can opt into the `talia-dashboard-failure` host event via its
 `failureSignals` configuration. Alert delivery belongs to the later alert story.
+
+A ViewModel may define `resume(ctx,event)`. The host invokes it after refreshing
+subscriptions and reconciling action outcomes, with outcomes in `event.value`.
+It may clear transient UI state (the example clears its interrupted busy flag);
+it is not a replay of the original handler. Ordinary cancellation still forbids
+late effects and commits from the interrupted invocation. Android can opt into
+host failure records through the `failure_signals` client setting; the debug
+launcher exposes it as an intent extra. These host records/events are alert
+integration points, not a notification-delivery implementation.

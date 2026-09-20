@@ -15,8 +15,10 @@ export class Guest {
  close(reason=null){if(!this.alive)return;this.alive=false;this.worker.terminate();for(const p of this.pending.values()){clearTimeout(p.timer);p.reject(Error(reason||'closed'));}this.pending.clear();if(reason)this.onFailure(reason);}
 }
 export class EngineBridge {
- constructor(deliver,changed){this.deliver=deliver;this.changed=changed;this.epoch=1;this.id=0;this.last=0;this.subscriptions=new Map();this.actions=new Map();this.paused=false;this.closed=false;this.controllers=new Set();this.timer=setInterval(()=>this.poll(),250);}
+ constructor(deliver,changed){this.deliver=deliver;this.changed=changed;this.epoch=1;this.id=0;this.last=0;this.subscriptions=new Map();this.actions=new Map();this.nextActionId='a-'+crypto.randomUUID();this.paused=false;this.closed=false;this.controllers=new Set();this.timer=setInterval(()=>this.poll(),250);}
  async rpc(op,args){
+  if(this.closed||this.paused)throw Error('cancelled');
+  if(this.controllers.size>=64)throw Error('I/O queue limit');
   const epoch=this.epoch,controller=new AbortController();this.controllers.add(controller);const timer=setTimeout(()=>controller.abort(),5000);
   try{
    const r=await fetch('/rpc',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({session:'p1-dashboard',channel:'dashboard',epoch,id:++this.id,op,args}),signal:controller.signal});
@@ -33,7 +35,8 @@ export class EngineBridge {
     case 'read':if(r.value!=='value')throw Error('unknown resource');value=await this.rpc('read',{tag:'ui-read'});break;
     case 'write':{
      if(!Number.isInteger(r.value)||Math.abs(r.value)>1000000)throw Error('write value');
-     const actionId='a-'+crypto.randomUUID();this.actions.set(actionId,{status:'unknown'});value=await this.rpc('action',{actionId,value:r.value});this.actions.set(actionId,value);break;
+     if(this.actions.size>=128)throw Error('action tracking limit');
+     const actionId=this.nextActionId;this.nextActionId='a-'+crypto.randomUUID();this.actions.set(actionId,{status:'unknown'});value=await this.rpc('action',{actionId,value:r.value});this.actions.set(actionId,value);break;
     }
     case 'subscribe':if(r.value!=='value')throw Error('unknown resource');if(this.subscriptions.size>=16)throw Error('subscription limit');value='s'+r.id;this.subscriptions.set(value,{revision:-1});break;
     case 'unsubscribe':if(!this.subscriptions.delete(r.value))throw Error('subscription ownership');value=null;break;

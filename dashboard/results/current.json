@@ -1,0 +1,494 @@
+{
+  "date": "2026-09-19T22:07:38.108221+00:00",
+  "base_commit": "5062c89b21d0fbf324a37f5ace67416ff106a75c",
+  "source_sha256": {
+    "dashboard/compile.mjs": "7c8339bbc48aa5343373e92e59c2deabe737cd329241cfa2c0735ad75131ff6e",
+    "dashboard/build-android.sh": "e1d7a9b6dd905d403d18246e81bd1f87f7999c9fcbf1495dc0448e3d63a72719",
+    "dashboard/qualify.py": "c55470ae970c082fd939613762cf056c0d6c52c87107702d0c66d5b238f1f626",
+    "dashboard/README.md": "42a7222df969016447548ae70ab16879f3eb984f93f625149a9b205bc9fc604f",
+    "dashboard/build-web.sh": "32e5dea59a58ac14d6f4fda2fa5ff3437e161149d4d9cd0c88f566625a3f531b",
+    "dashboard/serve.py": "15347bd239b7ca27808c258456fd2c5685be53d8803f424defb52ff2f480f284",
+    "dashboard/android/settings.gradle": "27c54bc908cad68e6cbce875a53ff5629a516de6d63fe1712953edb2d861949e",
+    "dashboard/android/build.gradle": "96a33edb21d173da2c36f5312f50cdfb9f71d9f5078c081c81f2d029547f6cb9",
+    "dashboard/android/app/build.gradle": "8a665e4897b351e0b64c4999e5753fff3c51ecdc9448fc87a8b353417469c3c4",
+    "dashboard/android/app/src/debug/assets/renderer.ui": "39ad8ee1f94cc344ecdec24a9bdf52d5561375902bd0d01e94cc28f205ba540a",
+    "dashboard/android/app/src/main/AndroidManifest.xml": "350971d849f7054037d8b8e9c0aa05ccdfa118cace3f53319f56f0d619e92356",
+    "dashboard/android/app/src/main/java/com/lelloman/talia/dashboard/MainActivity.java": "9f4d4ccece7b0511060f6c42f87fb46de14e3a0605716522eeeec574a770e0c2",
+    "dashboard/android/app/src/main/java/com/lelloman/talia/dashboard/RendererChecks.java": "73f702029dc421332e7360054da65e1d10d162b6cba6d864b11589c4e7d03c50",
+    "dashboard/android/app/src/main/java/com/lelloman/talia/dashboard/NativeRenderer.java": "f32a80bb64ef1cdb48e08f90d03ef343395606733c88d54dcad1e7238e385b18",
+    "dashboard/android/app/src/main/res/drawable/ic_brand.xml": "215b96dfe45d0a83e93bea6197bc1b5239ef28be8dc9fd0885d7f33bd32952e2",
+    "dashboard/tests/responsive.mjs": "1eaf1b3a9d4ada69c5df5c5aa56e4f9f1bb173b68ab10525d06f44d5c49914a7",
+    "dashboard/tests/compiler.test.mjs": "911af03a86f36b52b4e6f83a6eacdbbe24b7c42c3994ac71cd45b9a249509647",
+    "dashboard/tests/android.py": "59128a2074b8e68513323318624bfcfca16ec71ff7a5f16c27b8c15bbd22a9cb",
+    "dashboard/tests/emulator.py": "f602a213e6ef3cb373eb1a3796770efd9013dde79f86b5781efd473f2a47fdc8",
+    "dashboard/tests/vm.test.mjs": "8acec5e94b80fc248686bf6f555db6701ad5606e5ae982155f9419f748ec7c45",
+    "dashboard/tests/lifecycle.mjs": "7b015199f1faccab1f37f1cfa4ae84c467284e6964b8a62724345434fc7b2335",
+    "dashboard/tests/web.mjs": "173011456baa83fe9df438be1cb8d1c1be3a2f1eb95ab48faf7c3a7e4750bc75",
+    "dashboard/tests/updates.mjs": "deeea65b5d3821dc6b1252de4657d8e6da96f2db839216f9cac922418d28ab99",
+    "dashboard/shared/ui.js": "69cbc58ed83bed8e475b9484d3262231ae1f195e5802f3505ad53a75c7196f86",
+    "dashboard/shared/vm.js": "1d69bf909aa13664b710c05af8846818d4d48d747027e3ddd9a2e78aa5d67db9",
+    "dashboard/web/renderer.js": "482d1b7094418c9ff34dea5e22b3d246cbad48c46a709a5ad83057a4c52879e0",
+    "dashboard/web/style.css": "9b177ddb68663a9df467c7c0dfae36081e62fb6a9ae13c65debe490ab0efbad3",
+    "dashboard/web/host.js": "d8bc63e14a0f46c1f00bb746c64ca222f54114fc2cfc85de76ff7aa1572832a1",
+    "dashboard/web/app.js": "645148df66e801255b011403a23c43967604eb85a82a938065231b572d3e113b",
+    "dashboard/web/index.html": "0c30fbde5f4e20c4cabc7f4125bfb52854eefe9220b97ab2a51ac82aac7ad7e9",
+    "dashboard/web/worker.js": "84df1099ca72ffe2690e962ed7a22933791b333ce4a05eb058733208a45b3c82",
+    "dashboard/contracts/v1/README.md": "92cf9576c92bd99b88b3956cefed7796b8a1a6445a40d4de535477f98312cf5b",
+    "dashboard/examples/notice.ui": "80366c53b23ae8bf5718a67aa46df47ecd2c1644b27bfc32fe590d3d2eaad75e",
+    "dashboard/examples/monitor.ui": "9978deb91db5fd476cf68422eeb89b9715bb1c523145d1cdd1c7ecf350b5bb06",
+    "dashboard/examples/monitor.vm.js": "1f025c895d809383a741ece0122e253967736bc396cd96266ec3d8074cd1d61b",
+    "dashboard/examples/monitor.package.json": "820fc4a0f54afd9c8c12a87a3907d129c37545918537de5b6880f945f02bd316",
+    "dashboard/native/Cargo.toml": "82dbed8691a39f315709da211d39372cdf67006baaea6e32d18b8f9381552e11",
+    "dashboard/native/Cargo.lock": "7ab5ea4a6fc51d34f2f7ef20151b62f0a9a7a4b583c947fef1e05299e5b25573",
+    "dashboard/native/src/lib.rs": "981dca1744b8d1f207585d15053c61e991df64a63dc617d3c5574506b19ed3cd",
+    "spikes/runtime/package-lock.json": "8ece00b75ee6cef5a26565fe64f822b0c6144451083c0bfa4dad01d28542d443",
+    "spikes/transport/server/src/main.rs": "b68e841d450b43f0e273266d9c50165a1f0d4ebabc670c2aa29831c3763d93e4",
+    "spikes/transport/server/Cargo.lock": "b1dc00060891ecfa344649de828b63d8bce4b4602a13c2a5824c4ed778cda06e",
+    "docs/runtime-contract.md": "133f3acb7e2fed8b4793eae224396b511de5a8bf56cd718e4ba1ff381a86272a"
+  },
+  "commands": [
+    {
+      "command": [
+        "node",
+        "--test",
+        "--test-reporter=tap",
+        "dashboard/tests/compiler.test.mjs"
+      ],
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "node",
+        "--test",
+        "--test-reporter=tap",
+        "dashboard/tests/vm.test.mjs"
+      ],
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "dashboard/native/Cargo.toml",
+        "--locked",
+        "--offline"
+      ],
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "cargo",
+        "build",
+        "--manifest-path",
+        "spikes/transport/server/Cargo.toml",
+        "--locked",
+        "--offline"
+      ],
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "bash",
+        "dashboard/build-web.sh"
+      ],
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "node",
+        "dashboard/tests/web.mjs"
+      ],
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "node",
+        "dashboard/tests/responsive.mjs"
+      ],
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "node",
+        "dashboard/tests/updates.mjs"
+      ],
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "node",
+        "dashboard/tests/lifecycle.mjs"
+      ],
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "bash",
+        "dashboard/build-android.sh"
+      ],
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "python3",
+        "dashboard/tests/android.py",
+        "emulator-5570"
+      ],
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "bash",
+        "dashboard/build-android.sh"
+      ],
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "python3",
+        "dashboard/tests/android.py",
+        "OZQ49XDILZ4PTSHI"
+      ],
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "python3",
+        "spikes/qualification/check.py",
+        "spikes/qualification/results/full-2026-09-19.json"
+      ],
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "python3",
+        "spikes/qualification/check.py",
+        "dashboard/results/p0-regression.json",
+        "--allow-missing-physical"
+      ],
+      "exit_code": 0
+    }
+  ],
+  "platforms": {
+    "browser": {
+      "web": {
+        "passed": true,
+        "checks": [
+          "shared VM in bounded QuickJS Worker",
+          "live server subscription",
+          "keyboard slider and live pointer drag",
+          "switch/conditional",
+          "write outcome",
+          "navigation preserves state and subscription",
+          "accessible chart"
+        ],
+        "state": {
+          "state": {
+            "title": {
+              "text": "Tal\u00eca \u00b7 monitoring"
+            },
+            "explanation": {
+              "text": "Writes change server state and survive dashboard reload."
+            },
+            "screen": "overviewScreen",
+            "value": 26,
+            "details": false,
+            "busy": false,
+            "status": "Server revision 0",
+            "history": [
+              0
+            ],
+            "services": [
+              {
+                "id": "engine",
+                "label": "Engine connection"
+              }
+            ]
+          },
+          "revision": "6abeb78784d5930ba4343f835016b42a19263f62d83ba15dbca60e05f724c8b9",
+          "dirty": false,
+          "failure": null,
+          "paused": false,
+          "subscriptions": 1,
+          "client": {
+            "scale": 1,
+            "dashboardId": "monitor",
+            "params": {
+              "sidebar": false
+            }
+          },
+          "width": 842,
+          "actions": [
+            {
+              "result": {
+                "revision": 1,
+                "value": 26
+              },
+              "status": "completed"
+            }
+          ],
+          "actionIds": [
+            "a-4f5f541a-c69c-4ef6-b962-1847e5c3266b"
+          ],
+          "nextActionId": "a-e022363a-2a03-44db-aa8c-aa19456056bb",
+          "externalError": null
+        }
+      },
+      "responsive": {
+        "passed": true,
+        "checks": [
+          "width breakpoints",
+          "manual dp scale persisted per client",
+          "composition preserves state/navigation",
+          "keyed DOM identity and focus",
+          "hidden versus collapsed"
+        ],
+        "result": {
+          "same": true,
+          "focused": true,
+          "hidden": 22,
+          "collapsed": 0
+        }
+      },
+      "updates": {
+        "passed": true,
+        "checks": [
+          "independent persisted client dashboard selection",
+          "shared definition used by separate instances",
+          "update available without hot adoption",
+          "explicit reload adopts saved revision",
+          "dirty VM discarded",
+          "server effect retained",
+          "visible internal failure and manual restart"
+        ],
+        "revision": "client-selection"
+      },
+      "lifecycle": {
+        "passed": true,
+        "checks": [
+          "actual hidden tab pauses local state/subscriptions while server effect completes",
+          "resume retains dirty VM, reconciles outcome and refreshes without resubmission",
+          "repeated visibility transitions do not leak subscriptions",
+          "exception, CPU and memory faults stop only affected dashboard; manual saved-baseline restart preserves server effects"
+        ],
+        "final": {
+          "state": {
+            "title": {
+              "text": "Tal\u00eca \u00b7 monitoring"
+            },
+            "explanation": {
+              "text": "Writes change server state and survive dashboard reload."
+            },
+            "screen": "overviewScreen",
+            "value": 25,
+            "details": true,
+            "busy": false,
+            "status": "Server revision 5",
+            "history": [
+              62
+            ],
+            "services": [
+              {
+                "id": "engine",
+                "label": "Engine connection"
+              }
+            ]
+          },
+          "revision": "6abeb78784d5930ba4343f835016b42a19263f62d83ba15dbca60e05f724c8b9",
+          "dirty": false,
+          "failure": null,
+          "paused": false,
+          "subscriptions": 1,
+          "client": {
+            "scale": 1,
+            "dashboardId": "monitor",
+            "params": {
+              "sidebar": false
+            }
+          },
+          "width": 992,
+          "actions": [],
+          "actionIds": [],
+          "nextActionId": "a-c34b2a9c-60ec-4d1b-95a2-c180f0806657",
+          "externalError": null
+        }
+      }
+    },
+    "android": {
+      "passed": true,
+      "serial": "emulator-5570",
+      "checks": [
+        "independent persisted client dashboard selection",
+        "native controls, no WebView",
+        "switch and condition",
+        "server write",
+        "accessible chart",
+        "navigation retains VM/subscription",
+        "per-client composition",
+        "update available without adoption",
+        "reload adopts reference revision and discards dirty VM",
+        "exception, CPU and memory failures require manual restart and preserve server effects",
+        "actual background pauses local state and subscriptions",
+        "in-flight action completes in background",
+        "resume reconciles without resubmission",
+        "repeated background transitions retain dirty state"
+      ],
+      "renderer": {
+        "passed": true,
+        "checks": [
+          "native keyed identity",
+          "focus survives reorder",
+          "hidden retains space",
+          "collapsed removes space",
+          "long text wraps",
+          "native switch accessibility",
+          "equal grid columns"
+        ]
+      },
+      "report": {
+        "state": {
+          "title": {
+            "text": "Tal\u00eca \u00b7 monitoring"
+          },
+          "explanation": {
+            "text": "Writes change server state and survive dashboard reload."
+          },
+          "screen": "overviewScreen",
+          "value": 25,
+          "details": true,
+          "busy": false,
+          "status": "Server revision 5",
+          "history": [
+            62
+          ],
+          "services": [
+            {
+              "id": "engine",
+              "label": "Engine connection"
+            }
+          ]
+        },
+        "revision": 1,
+        "dirty": false,
+        "failure": null,
+        "paused": false,
+        "subscriptions": 1,
+        "dashboardId": "secondary",
+        "definitionRevision": "client-selection",
+        "updateAvailable": false,
+        "width": 1048,
+        "scale": 2.625,
+        "sidebar": false,
+        "signals": [],
+        "actions": [],
+        "actionIds": [],
+        "nextActionId": "a-5aff514a-d2eb-4def-b2d4-ffc6f03fc3c1",
+        "externalError": null
+      },
+      "cleanup_verified": true
+    },
+    "android-arm64": {
+      "passed": true,
+      "serial": "OZQ49XDILZ4PTSHI",
+      "checks": [
+        "independent persisted client dashboard selection",
+        "native controls, no WebView",
+        "switch and condition",
+        "server write",
+        "accessible chart",
+        "navigation retains VM/subscription",
+        "per-client composition",
+        "update available without adoption",
+        "reload adopts reference revision and discards dirty VM",
+        "exception, CPU and memory failures require manual restart and preserve server effects",
+        "actual background pauses local state and subscriptions",
+        "in-flight action completes in background",
+        "resume reconciles without resubmission",
+        "repeated background transitions retain dirty state"
+      ],
+      "renderer": {
+        "passed": true,
+        "checks": [
+          "native keyed identity",
+          "focus survives reorder",
+          "hidden retains space",
+          "collapsed removes space",
+          "long text wraps",
+          "native switch accessibility",
+          "equal grid columns"
+        ]
+      },
+      "report": {
+        "state": {
+          "title": {
+            "text": "Tal\u00eca \u00b7 monitoring"
+          },
+          "explanation": {
+            "text": "Writes change server state and survive dashboard reload."
+          },
+          "screen": "overviewScreen",
+          "value": 25,
+          "details": true,
+          "busy": false,
+          "status": "Server revision 5",
+          "history": [
+            62
+          ],
+          "services": [
+            {
+              "id": "engine",
+              "label": "Engine connection"
+            }
+          ]
+        },
+        "revision": 1,
+        "dirty": false,
+        "failure": null,
+        "paused": false,
+        "subscriptions": 1,
+        "dashboardId": "secondary",
+        "definitionRevision": "client-selection",
+        "updateAvailable": false,
+        "width": 1208,
+        "scale": 3.5,
+        "sidebar": false,
+        "signals": [],
+        "actions": [],
+        "actionIds": [],
+        "nextActionId": "a-71142714-51a5-42e0-bdd7-1867c275b806",
+        "externalError": null
+      },
+      "cleanup_verified": true
+    }
+  },
+  "qualified": true,
+  "unit_tests": {
+    "compiler": "TAP version 13\n# Subtest: complete example compiles and binds without evaluating source\nok 1 - complete example compiles and binds without evaluating source\n  ---\n  duration_ms: 3.750496\n  type: 'test'\n  ...\n# Subtest: compiler diagnoses unsafe expressions and invalid structures\nok 2 - compiler diagnoses unsafe expressions and invalid structures\n  ---\n  duration_ms: 1.817018\n  type: 'test'\n  ...\n# Subtest: dynamic types, missing paths, repeat keys and responsive units are checked\nok 3 - dynamic types, missing paths, repeat keys and responsive units are checked\n  ---\n  duration_ms: 0.666501\n  type: 'test'\n  ...\n# Subtest: unknown references and malformed precompiled versions are rejected\nok 4 - unknown references and malformed precompiled versions are rejected\n  ---\n  duration_ms: 0.205259\n  type: 'test'\n  ...\n# Subtest: reusable definitions are validated, scoped and parameterized\nok 5 - reusable definitions are validated, scoped and parameterized\n  ---\n  duration_ms: 0.445012\n  type: 'test'\n  ...\n1..5\n# tests 5\n# suites 0\n# pass 5\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 62.929681\n",
+    "vm": "TAP version 13\n# Subtest: async actions interleave; stale commit fails without undoing earlier effects\nok 1 - async actions interleave; stale commit fails without undoing earlier effects\n  ---\n  duration_ms: 3.764593\n  type: 'test'\n  ...\n# Subtest: pause cancels pending work, forbids late effects and keeps retained state\nok 2 - pause cancels pending work, forbids late effects and keeps retained state\n  ---\n  duration_ms: 1.669589\n  type: 'test'\n  ...\n# Subtest: VM references have independent state; functions resolve by name\nok 3 - VM references have independent state; functions resolve by name\n  ---\n  duration_ms: 2.219559\n  type: 'test'\n  ...\n# Subtest: shared example handles engine subscriptions and control actions\nok 4 - shared example handles engine subscriptions and control actions\n  ---\n  duration_ms: 3.273383\n  type: 'test'\n  ...\n# Subtest: referenced ViewModels receive start and resume lifecycle independently\nok 5 - referenced ViewModels receive start and resume lifecycle independently\n  ---\n  duration_ms: 2.203309\n  type: 'test'\n  ...\n1..5\n# tests 5\n# suites 0\n# pass 5\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 60.562162\n"
+  },
+  "native_tests": "\nrunning 2 tests\ntest tests::portable_vm ... ok\ntest tests::bounded_and_isolated ... ok\n\ntest result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.50s\n\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+  "package_revision": "6abeb78784d5930ba4343f835016b42a19263f62d83ba15dbca60e05f724c8b9",
+  "apks": {
+    "android": {
+      "sha256": "6500acef603009b9a4ade8004f07277071d13d8d1722ef30e748fa2848bf5bd8",
+      "abi": "x86_64",
+      "package_revision": "6abeb78784d5930ba4343f835016b42a19263f62d83ba15dbca60e05f724c8b9",
+      "shared_assets_verified": true
+    },
+    "android-arm64": {
+      "sha256": "ce8331abc89b50dd207e2e81c536b9b4d6fafd9de1082e93ae28ede581c1b2de",
+      "abi": "arm64-v8a",
+      "package_revision": "6abeb78784d5930ba4343f835016b42a19263f62d83ba15dbca60e05f724c8b9",
+      "shared_assets_verified": true
+    }
+  },
+  "build_logs": {
+    "android": "6abeb78784d5930ba4343f835016b42a19263f62d83ba15dbca60e05f724c8b9\nTo honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.13/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.\nDaemon will be stopped at the end of the build \n> Task :app:preBuild UP-TO-DATE\n> Task :app:preDebugBuild UP-TO-DATE\n> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE\n> Task :app:generateDebugBuildConfig UP-TO-DATE\n> Task :app:javaPreCompileDebug UP-TO-DATE\n> Task :app:checkDebugAarMetadata UP-TO-DATE\n> Task :app:processDebugNavigationResources UP-TO-DATE\n> Task :app:compileDebugNavigationResources UP-TO-DATE\n> Task :app:generateDebugResValues UP-TO-DATE\n> Task :app:mapDebugSourceSetPaths UP-TO-DATE\n> Task :app:generateDebugResources UP-TO-DATE\n> Task :app:mergeDebugResources UP-TO-DATE\n> Task :app:packageDebugResources UP-TO-DATE\n> Task :app:parseDebugLocalResources UP-TO-DATE\n> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE\n> Task :app:extractDeepLinksDebug UP-TO-DATE\n> Task :app:processDebugMainManifest UP-TO-DATE\n> Task :app:processDebugManifest UP-TO-DATE\n> Task :app:processDebugManifestForPackage UP-TO-DATE\n> Task :app:processDebugResources UP-TO-DATE\n> Task :app:compileDebugJavaWithJavac UP-TO-DATE\n> Task :app:mergeDebugShaders UP-TO-DATE\n> Task :app:compileDebugShaders NO-SOURCE\n> Task :app:generateDebugAssets UP-TO-DATE\n> Task :app:mergeDebugAssets UP-TO-DATE\n> Task :app:compressDebugAssets UP-TO-DATE\n> Task :app:desugarDebugFileDependencies UP-TO-DATE\n> Task :app:dexBuilderDebug UP-TO-DATE\n> Task :app:mergeDebugGlobalSynthetics UP-TO-DATE\n> Task :app:processDebugJavaRes NO-SOURCE\n> Task :app:mergeDebugJavaResource UP-TO-DATE\n> Task :app:checkDebugDuplicateClasses UP-TO-DATE\n> Task :app:mergeExtDexDebug UP-TO-DATE\n> Task :app:mergeLibDexDebug UP-TO-DATE\n> Task :app:mergeProjectDexDebug UP-TO-DATE\n> Task :app:mergeDebugJniLibFolders UP-TO-DATE\n> Task :app:mergeDebugNativeLibs UP-TO-DATE\n> Task :app:stripDebugDebugSymbols UP-TO-DATE\n> Task :app:validateSigningDebug UP-TO-DATE\n> Task :app:writeDebugAppMetadata UP-TO-DATE\n> Task :app:writeDebugSigningConfigVersions UP-TO-DATE\n> Task :app:packageDebug UP-TO-DATE\n> Task :app:createDebugApkListingFileRedirect UP-TO-DATE\n> Task :app:assembleDebug UP-TO-DATE\n\n[Incubating] Problems report is available at: file:///home/lelloman/lelloprojects/talia/dashboard/android/build/reports/problems/problems-report.html\n\nDeprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.\n\nYou can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.\n\nFor more on this, please refer to https://docs.gradle.org/8.13/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.\n\nBUILD SUCCESSFUL in 5s\n37 actionable tasks: 37 up-to-date\n",
+    "android-arm64": "6abeb78784d5930ba4343f835016b42a19263f62d83ba15dbca60e05f724c8b9\nTo honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.13/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.\nDaemon will be stopped at the end of the build \n> Task :app:preBuild UP-TO-DATE\n> Task :app:preDebugBuild UP-TO-DATE\n> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE\n> Task :app:generateDebugBuildConfig UP-TO-DATE\n> Task :app:javaPreCompileDebug UP-TO-DATE\n> Task :app:checkDebugAarMetadata UP-TO-DATE\n> Task :app:processDebugNavigationResources UP-TO-DATE\n> Task :app:compileDebugNavigationResources UP-TO-DATE\n> Task :app:generateDebugResValues UP-TO-DATE\n> Task :app:mapDebugSourceSetPaths UP-TO-DATE\n> Task :app:generateDebugResources UP-TO-DATE\n> Task :app:mergeDebugResources UP-TO-DATE\n> Task :app:packageDebugResources UP-TO-DATE\n> Task :app:parseDebugLocalResources UP-TO-DATE\n> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE\n> Task :app:extractDeepLinksDebug UP-TO-DATE\n> Task :app:processDebugMainManifest UP-TO-DATE\n> Task :app:processDebugManifest UP-TO-DATE\n> Task :app:processDebugManifestForPackage UP-TO-DATE\n> Task :app:processDebugResources UP-TO-DATE\n> Task :app:compileDebugJavaWithJavac UP-TO-DATE\n> Task :app:mergeDebugShaders UP-TO-DATE\n> Task :app:compileDebugShaders NO-SOURCE\n> Task :app:generateDebugAssets UP-TO-DATE\n> Task :app:mergeDebugAssets UP-TO-DATE\n> Task :app:compressDebugAssets UP-TO-DATE\n> Task :app:desugarDebugFileDependencies UP-TO-DATE\n> Task :app:dexBuilderDebug UP-TO-DATE\n> Task :app:mergeDebugGlobalSynthetics UP-TO-DATE\n> Task :app:processDebugJavaRes NO-SOURCE\n> Task :app:mergeDebugJavaResource UP-TO-DATE\n> Task :app:checkDebugDuplicateClasses UP-TO-DATE\n> Task :app:mergeExtDexDebug UP-TO-DATE\n> Task :app:mergeLibDexDebug UP-TO-DATE\n> Task :app:mergeProjectDexDebug UP-TO-DATE\n> Task :app:mergeDebugJniLibFolders UP-TO-DATE\n> Task :app:mergeDebugNativeLibs UP-TO-DATE\n> Task :app:stripDebugDebugSymbols UP-TO-DATE\n> Task :app:validateSigningDebug UP-TO-DATE\n> Task :app:writeDebugAppMetadata UP-TO-DATE\n> Task :app:writeDebugSigningConfigVersions UP-TO-DATE\n> Task :app:packageDebug\n> Task :app:createDebugApkListingFileRedirect UP-TO-DATE\n> Task :app:assembleDebug\n\n[Incubating] Problems report is available at: file:///home/lelloman/lelloprojects/talia/dashboard/android/build/reports/problems/problems-report.html\n\nDeprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.\n\nYou can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.\n\nFor more on this, please refer to https://docs.gradle.org/8.13/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.\n\nBUILD SUCCESSFUL in 5s\n37 actionable tasks: 1 executed, 36 up-to-date\n"
+  },
+  "p0_baseline": "Recorded platform checks and source provenance pass. Missing: none\n",
+  "p0_regression": "Recorded platform checks and source provenance pass. Missing: none\n",
+  "p0_regression_sha256": "e47e61b38b1db5a27e772344686d703b0046eb342ee51d61e0c789eee13790ee",
+  "missing_platforms": []
+}

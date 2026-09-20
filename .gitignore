@@ -26,3 +26,5 @@ dashboard/jniLibs/
 dashboard/__pycache__/
 
 dashboard/generated/
+
+dashboard/tests/__pycache__/

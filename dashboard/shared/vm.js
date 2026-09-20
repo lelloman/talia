@@ -30,7 +30,7 @@
   function invoke(cell,name,event){
     if(paused||failure)return Promise.reject(Error(paused?'paused':'dashboard stopped'));
     if(tasks.size>=64){stop('invocation limit');return Promise.reject(Error(failure));}
-    const action=name==='@start'?cell.def.start:cell.def.actions[name];
+    const action=name==='@start'?cell.def.start:name==='@resume'?cell.def.resume:cell.def.actions[name];
     if(typeof action!=='function'){stop('unknown handler '+name);return Promise.reject(Error(failure));}
     const task={epoch,cancelled:false};tasks.add(task);const snapshots=new WeakMap();
     const ctx=Object.freeze({
@@ -50,7 +50,7 @@
         const signature=JSON.stringify([reference,copy(params)]);
         let child=cell.children.get(name);
         if(child&&child.signature!==signature)throw Error('instance parameters changed; reload required');
-        if(!child){if(cell.children.size>=64||cell.path.length>1024)throw Error('instance limit');child=make(definitions.get(reference),params,cell.path+'/'+name);child.signature=signature;cell.children.set(name,child);}
+        if(!child){if(cell.children.size>=64||cell.path.length>1024)throw Error('instance limit');child=make(definitions.get(reference),params,cell.path+'/'+name);child.signature=signature;cell.children.set(name,child);if(child.def.start)invoke(child,'@start',{target:child.path,value:null}).catch(()=>{});}
         return Object.freeze({state:()=>{check(task);return copy(child.value);},dispatch:(action,event={target:name,value:null})=>{check(task);return invoke(child,action,event);}});
       },
       fn(name,...args){check(task);const fn=functions.get(name);if(!fn)throw Error('unknown function reference');return fn(...copy(args));}
@@ -84,7 +84,7 @@
     defineVM:{value:defineVM},
     defineVMReference:{value:(name,def)=>{if(root||definitions.has(name))throw Error('definition registry closed/duplicate');definitions.set(name,def);}},
     defineFunction:{value:(name,fn)=>{if(root||functions.has(name)||typeof fn!=='function')throw Error('function registry closed/duplicate');functions.set(name,fn);}},
-    TaliaVM:{value:Object.freeze({start,dispatch,receive,pause,resume,snapshot,stop,
+    TaliaVM:{value:Object.freeze({start,dispatch,receive,pause,resume,snapshot,stop,reconcile(outcomes){const visit=cell=>{if(cell.def.resume)invoke(cell,'@resume',{target:cell.path,value:outcomes}).catch(()=>{});for(const child of cell.children.values())visit(child);};visit(root);},
       markDirty(){dirty=true;},replaceAction(name,fn){if(!root||typeof fn!=='function')throw Error('action');root.def.actions[name]=fn;dirty=true;}})}
   });
 })();

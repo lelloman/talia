@@ -10,12 +10,12 @@ export class Renderer {
     el=document.createElement(({Text:'p',Status:'p',Button:'button',Slider:'label',Switch:'label',Chart:'figure'})[n.type]||'div');el.dataset.nodeId=n.id;el.dataset.type=n.type;
     if(n.type==='Slider'||n.type==='Switch'){
      const caption=document.createElement('span'),input=document.createElement('input');input.type=n.type==='Slider'?'range':'checkbox';el.append(caption,input);
-     input.addEventListener('change',()=>this.emit(n.id,n.type==='Slider'?Number(input.value):input.checked));
+     input.addEventListener(n.type==='Slider'?'input':'change',()=>this.emit(n.id,n.type==='Slider'?Number(input.value):input.checked));
     }
     if(n.type==='Button')el.addEventListener('click',()=>this.emit(n.id,null));
     this.cache.set(n.id,el);
    }
-   const p=n.props;el.hidden=p.visibility==='collapsed';el.style.visibility=p.visibility==='hidden'?'hidden':'visible';
+   const p=n.props;el.hidden=p.visibility==='collapsed';el.style.visibility=p.visibility==='hidden'?'hidden':'';
    for(const k of ['width','height','gap','padding'])el.style[k]=p[k]!==undefined?length(p[k]):'';
    if(['Row','Column','Grid','Scroll'].includes(n.type)){
     el.style.display=n.type==='Grid'?'grid':'flex';el.style.flexDirection=n.type==='Row'?'row':'column';

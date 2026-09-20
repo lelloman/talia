@@ -21,3 +21,9 @@ test('shared example handles engine subscriptions and control actions',async()=>
  g.run(`TaliaVM.receive('${JSON.stringify({id:1,value:'s1'})}')`);await flush();g.run(`TaliaVM.receive('${JSON.stringify({event:'s1',value:{value:4,revision:1}})}')`);await flush();
  g.run(`TaliaVM.dispatch('controls',{target:'controls',value:null})`);await flush();assert.equal(g.state().state.screen,'controlsScreen');assert.deepEqual(g.state().state.history,[4]);assert.equal(g.state().subscriptions.length,1);
 });
+
+test('referenced ViewModels receive start and resume lifecycle independently',async()=>{
+ const g=guest(`defineVMReference('child',{initial:p=>({n:p.n}),start(c){const s=c.state();c.commit(s,{n:s.value.n+10})},resume(c){const s=c.state();c.commit(s,{n:s.value.n+100})},actions:{read(c){return c.state().value}}});defineVM({initial:()=>({a:null,b:null}),actions:{async inspect(c){const a=c.instance('a','child',{n:1}),b=c.instance('b','child',{n:2});await a.dispatch('read');const s=c.state();c.commit(s,{a:a.state(),b:b.state()});}}});`);
+ g.run(`TaliaVM.dispatch('inspect',{target:'x',value:null})`);await flush();assert.deepEqual(g.state().state,{a:{n:11},b:{n:12}});
+ g.run('TaliaVM.pause();TaliaVM.resume();TaliaVM.reconcile([]);');await flush();g.run(`TaliaVM.dispatch('inspect',{target:'x',value:null})`);await flush();assert.deepEqual(g.state().state,{a:{n:111},b:{n:112}});
+});

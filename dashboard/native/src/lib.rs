@@ -60,10 +60,16 @@ impl Guest {
         let until = Instant::now() + Duration::from_millis(500);
         self.rt
             .set_interrupt_handler(Some(Box::new(move || Instant::now() > until)));
-        let value = self
-            .ctx
-            .with(|c| c.eval::<String, _>(source))
-            .map_err(|e| format!("script: {e}"))?;
+        let value = self.ctx.with(|c| {
+            c.eval::<String, _>(source).map_err(|error| {
+                let exception = c.catch();
+                let detail = exception
+                    .as_object()
+                    .and_then(|o| o.get::<_, String>("message").ok())
+                    .or_else(|| exception.as_string().and_then(|s| s.to_string().ok()));
+                format!("script: {}", detail.unwrap_or_else(|| error.to_string()))
+            })
+        })?;
         for _ in 0..10000 {
             if !self.rt.is_job_pending() {
                 break;
@@ -166,4 +172,13 @@ mod tests {
         assert!(command("globalThis.secret=42;'ok'", false, true).contains("ok"));
         assert!(command("String(typeof secret)", true, true).contains("undefined"));
     }
+}
+
+#[no_mangle]
+pub extern "system" fn Java_com_lelloman_talia_dashboard_MainActivity_retire(
+    _env: jni::JNIEnv,
+    _class: jni::objects::JClass,
+) {
+    VM.with(|s| *s.borrow_mut() = None);
+    UI.with(|s| *s.borrow_mut() = None);
 }

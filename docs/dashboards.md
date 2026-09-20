@@ -140,15 +140,13 @@ Illustrative UI:
 </Column>
 ```
 
-`Column`, property names and expression syntax illustrate the intended shape;
-the exact vocabulary and grammar are not finalized. Stable element IDs, component
-discovery, precise validation errors and targeted edits are proposed authoring
-facilities to make agent work easier.
+This early example illustrates the direction. The implemented
+[contract v1](../dashboard/contracts/v1/README.md) is authoritative for exact
+syntax, vocabulary, explicit dp/px units, IDs and validation diagnostics.
 
-The runtime will need common layout, interaction and JavaScript execution
-semantics. Responsive definitions should accommodate available space, while
-native controls can retain platform-appropriate appearance. Specific sizing,
-accessibility, conditional rendering and repeated-item semantics remain open.
+Web and Android implement common layout, interaction and JavaScript semantics.
+Responsive definitions use available surface width, with platform-native controls.
+Contract v1 defines sizing, labels, conditions and stable keyed repetition.
 
 ## Engine contract
 
@@ -196,7 +194,13 @@ Live MCP operations need to target a particular running client/dashboard
 instance. Saving a definition is distinct from applying it to a live instance;
 explicit reload adopts the latest coherent saved revision.
 
-## Open details
+## Historical open details and remaining scope
+
+The list below predates P1. Contract v1 and the [P1 implementation](../dashboard/README.md)
+now resolve the initial component grammar, bindings, lifecycle, responsive layout,
+reference scoping and explicit revision adoption. Production publishing, client
+assignment and authenticated MCP tools remain later work.
+
 
 - Exact components, properties, units, layouts, responsive and accessibility rules.
 - UI grammar, allowed expressions, conditional and repeated-content syntax.

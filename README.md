@@ -37,9 +37,11 @@ updates and configurable shared-refresh or independent-read behavior.
 These documents record the **high-level product direction discussed with the
 user**, not a signed-off detailed specification or implementation architecture.
 Isolated [runtime](docs/runtime-prototype.md) and [client–server transport](docs/transport-prototype.md)
-prototypes have been implemented and tested; the product has not been implemented
-or deployed.
+prototypes have been implemented and tested. The shared [P1 dashboard clients](dashboard/README.md)
+now implement the UI/VM contract on web and native Android. They use a loopback
+engine fixture; the production monitoring service has not been deployed.
 
+- [P1 dashboard implementation and qualification](docs/p1-qualification.md): client behavior, evidence and remaining acceptance.
 - [P0 qualification status](docs/p0-qualification.md): passing four-platform evidence and acceptance scope.
 - [Runtime contract](docs/runtime-contract.md): approved execution, authority, lifecycle and failure behavior.
 - [Transport findings](docs/transport-prototype.md): real HTTP reads/writes, subscriptions,
