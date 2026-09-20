@@ -15,3 +15,5 @@ pub mod watches;
 pub mod catalog;
 
 pub mod authority;
+
+pub mod clients;

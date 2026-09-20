@@ -59,3 +59,7 @@ and compile version-1 packages with the shared UI compiler. The
 [agent authority layer](../docs/agent-authority.md) adds credentials, scoped permissions
 and durable audits around trusted operations. MCP exposure and client delivery
 remain separate integration work; the development HTTP routes are not authenticated.
+
+P4 also includes [client registration](../docs/client-registration.md): persistent
+named clients, independent slots, fresh live IDs on replacement, authenticated host
+reports and immediate availability checks for future live-command dispatch.

@@ -23,11 +23,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
   if self.path=='/':self.path='/dashboard/web/index.html'
   super().do_GET()
  def do_POST(self):
-  if self.path not in ['/rpc','/engine']:self.send_error(404);return
+  if self.path not in ['/rpc','/engine','/clients']:self.send_error(404);return
   size=int(self.headers.get('Content-Length','0'))
   if size>262144:self.send_error(413);return
   try:
-   request=urllib.request.Request(f'http://127.0.0.1:{port}{self.path}',data=self.rfile.read(size),headers={'Content-Type':'application/json'})
+   request=urllib.request.Request(f'http://127.0.0.1:{port}{self.path}',data=self.rfile.read(size),headers={'Content-Type':'application/json', 'Authorization':self.headers.get('Authorization','')})
    with urllib.request.urlopen(request,timeout=6) as r:body=r.read()
    self.send_response(200);self.send_header('Content-Type','application/json');self.end_headers();self.wfile.write(body)
   except (BrokenPipeError,ConnectionResetError):pass

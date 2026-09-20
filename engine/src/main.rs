@@ -1,7 +1,7 @@
 use axum::{
     extract::{DefaultBodyLimit, State},
     routing::post,
-    Json, Router,
+    http::HeaderMap, Json, Router,
 };
 use serde_json::{json, Value};
 use std::{
@@ -23,6 +23,7 @@ use talia_engine::{
 use tokio::sync::{mpsc, oneshot};
 struct Request {
     body: Value,
+    credential: Option<String>,
     reply: oneshot::Sender<Value>,
 }
 #[derive(Clone)]
@@ -258,13 +259,19 @@ impl Service {
 }
 async fn rpc(State(tx): State<mpsc::Sender<Request>>, Json(body): Json<Value>) -> Json<Value> {
     let (reply, rx) = oneshot::channel();
-    if tx.try_send(Request { body, reply }).is_err() {
+    if tx.try_send(Request { body, reply, credential: None }).is_err() {
         return Json(json!({"error":"server busy"}));
     }
     Json(
         rx.await
             .unwrap_or_else(|_| json!({"error":"server stopped"})),
     )
+}
+async fn client_rpc(State(tx): State<mpsc::Sender<Request>>, headers: HeaderMap, Json(body): Json<Value>) -> Json<Value> {
+    let credential = headers.get("authorization").and_then(|s|s.to_str().ok()).and_then(|s|s.strip_prefix("Bearer ")).unwrap_or("").to_string();
+    let (reply, rx) = oneshot::channel();
+    if tx.try_send(Request { body, reply, credential: Some(credential) }).is_err() { return Json(json!({"error":"limit_exceeded"})); }
+    Json(rx.await.unwrap_or_else(|_|json!({"error":"internal_error"})))
 }
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
@@ -281,6 +288,7 @@ async fn main() -> Result<()> {
     lock.try_lock().map_err(|_| "database already owned")?;
     let mut store = Store::open(path)?;
     store.recover_actions()?;
+    store.clients_recover().map_err(|_|"client recovery failed".to_string())?;
     if args.iter().any(|s| s == "--seed") && store.definitions()?.is_empty() {
         let d = Definition {
             id: "stored".into(),
@@ -329,6 +337,7 @@ async fn main() -> Result<()> {
     let (tx, mut rx) = mpsc::channel::<Request>(128);
     let router = Router::new()
         .route("/engine", post(rpc))
+        .route("/clients", post(client_rpc))
         .layer(DefaultBodyLimit::max(2_359_296))
         .with_state(tx);
     let listener = tokio::net::TcpListener::bind((
@@ -356,7 +365,10 @@ async fn main() -> Result<()> {
     }
   });
   let leases=service.clone();tokio::task::spawn_local(async move{loop{tokio::time::sleep(Duration::from_secs(10)).await;let expired:Vec<_>=leases.leases.borrow().iter().filter(|(_,(_,t))|leases.engine.now()-*t>60000).map(|(k,_)|k.clone()).collect();for key in expired{if let Some((id,_))=leases.leases.borrow_mut().remove(&key){leases.engine.unsubscribe(&id);}}}});
-  tokio::task::spawn_local(async move{let active=Rc::new(Cell::new(0usize));while let Some(request)=rx.recv().await{if active.get()>=128{let _=request.reply.send(json!({"error":"server busy"}));continue;}let active=active.clone();active.set(active.get()+1);let s=service.clone();tokio::task::spawn_local(async move{let result=s.execute(&request.body).await;let response=match result{Ok(value)=>json!({"version":1,"incarnation":s.incarnation,"epoch":request.body["epoch"],"value":value}),Err(error)=>json!({"version":1,"incarnation":s.incarnation,"epoch":request.body["epoch"],"error":error})};let _=request.reply.send(response);active.set(active.get()-1);});}});
+  tokio::task::spawn_local(async move{let active=Rc::new(Cell::new(0usize));while let Some(request)=rx.recv().await{if active.get()>=128{let _=request.reply.send(json!({"error":"server busy"}));continue;}let active=active.clone();active.set(active.get()+1);let s=service.clone();tokio::task::spawn_local(async move{if let Some(credential)=request.credential {
+    let result=serde_json::from_value::<talia_engine::clients::Request>(request.body).map_err(|_|talia_engine::authority::ErrorCode::InvalidInput).and_then(|r|s.engine.store.borrow_mut().client_request(&credential,r,s.engine.now()));
+    let response=match result {Ok(value)=>json!({"value":value,"incarnation":s.incarnation}),Err(error)=>json!({"error":error,"incarnation":s.incarnation})};let _=request.reply.send(response);active.set(active.get()-1);return;
+  }let result=s.execute(&request.body).await;let response=match result{Ok(value)=>json!({"version":1,"incarnation":s.incarnation,"epoch":request.body["epoch"],"value":value}),Err(error)=>json!({"version":1,"incarnation":s.incarnation,"epoch":request.body["epoch"],"error":error})};let _=request.reply.send(response);active.set(active.get()-1);});}});
   axum::serve(listener,router).await.map_err(|e|e.to_string())
  }).await
 }

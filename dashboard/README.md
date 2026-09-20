@@ -99,3 +99,8 @@ Run admission returns a receipt; named `monitor.<id>` resources expose live stat
 Backgrounding detaches client subscriptions while autonomous server collection
 continues. Reconnect restores each resource and reconciles action identities before
 showing back online. Dashboard reload restores the saved UI/VM baseline.
+
+The durable mode now uses [persistent client registration](../docs/client-registration.md).
+Browser tabs share registration but keep separate slots and selections; Android
+preserves registration across process recreation. Reload replaces the live instance
+while network reconnect preserves it. Registry credentials remain in the host.
