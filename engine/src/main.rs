@@ -314,6 +314,7 @@ async fn main() -> Result<()> {
         .to_string();
     let engine = Engine::new(store);
     engine.store.borrow_mut().recover_runs(engine.now())?;
+    engine.store.borrow_mut().agent_recover(engine.now()).map_err(|_| "agent recovery failed".to_string())?;
     let pipelines = Pipelines::new(engine.clone())?;
     let watches = Watches::new(pipelines.clone());
     let service = Service {

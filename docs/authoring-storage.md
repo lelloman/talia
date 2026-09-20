@@ -2,7 +2,8 @@
 
 [TALIA-39](https://crumbles.lelloman.com/w/LLPR/TALIA/39) implements the storage and
 compiler foundation of the [MCP contract](mcp-contract.md). It is a trusted Rust
-library API, not an exposed MCP or HTTP authoring endpoint. Authentication/audits,
+library API, not an exposed MCP or HTTP authoring endpoint. The
+[agent authority layer](agent-authority.md) adds authenticated wrappers and audits;
 client assignment and package delivery are separate P4 subtasks.
 
 ## Storage and revisions
@@ -39,9 +40,9 @@ No authored UI/VM startup or function body is executed by the compiler.
 
 A successful save commits every proposed engine change and compiled package in one
 SQLite transaction. Invalid UI, JS, references, schemas, migrations, or package
-limits roll back the whole bundle. Nested savepoints allow future authorization/
-audit admission to enclose the save in its own transaction. This subtask itself does
-not create authenticated request identities or audit records.
+limits roll back the whole bundle. Nested savepoints allow the agent authority
+wrapper to commit catalog activation and its success audit in one transaction.
+The unrestricted catalog methods themselves do not create identities or audits.
 
 ## Change set and records
 
@@ -133,9 +134,9 @@ source and packages to 256 KiB; declared references to 64 per source/dashboard, 
 The existing UI node/expansion and QuickJS memory/CPU limits still apply.
 
 Grant syntax is checked here; authenticated resource ceilings are enforced by the
-permissions subtask. Catalog reads and saves must stay behind trusted server code
-until that boundary exists. MCP adapters will add principal-scoped request deduplication,
-permissions/audits and scoped discovery rather than exposing these methods directly.
+agent authority wrapper. Catalog reads and saves must stay behind trusted server
+code. MCP adapters must use the authenticated wrappers for principal-scoped request
+deduplication, permissions/audits and scoped discovery.
 After a committed engine configuration change, the service integration must notify
 computed evaluation/subscribers using the existing engine invalidation/change hooks,
 as the legacy transport does. Storage generation checks already fence old work.

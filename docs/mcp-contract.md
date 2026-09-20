@@ -4,7 +4,9 @@ This is the implementation contract for [TALIA-38](https://crumbles.lelloman.com
 following the approved P4 refinement. It specifies behavior to implement; it does
 not claim that the MCP tools or client registry already exist. The
 [authoring storage implementation](authoring-storage.md) supplies the first persistence/compilation layer. Crumbles owns the
-execution plan and status. P1–P3 qualification remains historical evidence.
+execution plan and status. The [agent authority implementation](agent-authority.md)
+supplies permission checks, authenticated catalog wrappers and durable audit admission
+for the forthcoming adapters. P1–P3 qualification remains historical evidence.
 
 External MCP agents author Talìa. Embedded chat, production deployment and actual
 Crumbles/Simple Agents task execution are outside P4. Web and native Android use

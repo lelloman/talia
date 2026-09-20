@@ -13,3 +13,5 @@ pub mod scheduling;
 pub mod watches;
 
 pub mod catalog;
+
+pub mod authority;

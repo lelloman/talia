@@ -55,5 +55,7 @@ and [transport](../docs/engine-transport.md) for contracts and limits.
 
 P4 now includes a trusted [authored catalog and package compiler](../docs/authoring-storage.md)
 through the Rust Store API. Atomic source bundles reuse canonical engine records
-and compile version-1 packages with the shared UI compiler. MCP exposure, permissions
-and client delivery remain separate integration work.
+and compile version-1 packages with the shared UI compiler. The
+[agent authority layer](../docs/agent-authority.md) adds credentials, scoped permissions
+and durable audits around trusted operations. MCP exposure and client delivery
+remain separate integration work; the development HTTP routes are not authenticated.

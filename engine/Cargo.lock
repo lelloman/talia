@@ -1363,6 +1363,7 @@ dependencies = [
  "chrono-tz",
  "futures-util",
  "reqwest",
+ "ring",
  "rquickjs",
  "rusqlite",
  "serde",
