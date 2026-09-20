@@ -105,3 +105,22 @@ unsupported-result error. The adapter follows the
 Range requests are bounded to 11,001 time steps; decoded values must also fit the
 engine's 128 KiB value budget. There is no implicit cross-query cache; Pipeline
 instances control polling and persisted latest results retain their original age.
+
+## Pipeline script API and run records
+
+A Pipeline definition is `{async run(ctx) { ... }}`. The context provides mutable
+`state`, instance `params`, `now()` milliseconds, `read(inputAlias)` (a sample with
+value/age/quality), `source(sourceAlias, request)`, `publish(outputAlias, value)`,
+`commit()` and `sleep(ms)`. Await capability calls. Independent awaited operations
+can overlap, including continuations while other requests remain outstanding.
+Publication is staged; completion commits state, all staged outputs and the run
+outcome together. Explicit `commit()` publishes earlier staging; later failure
+cannot undo it. Conflicting input/output revisions fail without automatic replay.
+
+Schema 3 adds durable runs, admission identities and a bounded observation journal.
+Runs distinguish pending/queued/running/complete/failed/cancelled/timed_out/unknown.
+The engine commits running status before dispatch. A restart changes unfinished
+running records to unknown; pending records may still start. Stable caller request
+IDs deduplicate admission even after restart. Admission identities have no automatic
+expiry; status listing returns the latest 1,000 runs, and individual IDs remain
+queryable. Active/pending work is capped at 128, with at most 64 executing runs.

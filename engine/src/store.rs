@@ -58,7 +58,7 @@ impl Store {
         let version: i64 = conn
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .map_err(err)?;
-        if version > 2 {
+        if version > 3 {
             return Err("database schema newer than engine".into());
         }
         if version == 0 {
@@ -77,6 +77,16 @@ INSERT INTO metadata VALUES('revision',0); PRAGMA user_version=1;").map_err(err)
             tx.execute_batch("CREATE TABLE monitoring_config(id INTEGER PRIMARY KEY CHECK(id=1), body TEXT NOT NULL);
 CREATE TABLE monitoring_state(id TEXT PRIMARY KEY, body TEXT NOT NULL);
 PRAGMA user_version=2;").map_err(err)?;
+            tx.commit().map_err(err)?;
+        }
+        if version < 3 {
+            let tx = conn.transaction().map_err(err)?;
+            tx.execute_batch("CREATE TABLE monitoring_runs(id TEXT PRIMARY KEY, instance TEXT NOT NULL, status TEXT NOT NULL, body TEXT NOT NULL);
+CREATE INDEX monitoring_runs_instance ON monitoring_runs(instance,status);
+CREATE TABLE monitoring_requests(id TEXT PRIMARY KEY, signature TEXT NOT NULL, body TEXT NOT NULL);
+CREATE TABLE monitoring_events(seq INTEGER PRIMARY KEY AUTOINCREMENT, body TEXT NOT NULL);
+INSERT INTO metadata VALUES('run_sequence',0);
+PRAGMA user_version=3;").map_err(err)?;
             tx.commit().map_err(err)?;
         }
         Ok(Self { conn })
@@ -176,12 +186,35 @@ PRAGMA user_version=2;").map_err(err)?;
         if next.revision != expected + 1 {
             return Err("revision must increment".into());
         }
-        let tx = self.conn.transaction().map_err(err)?;
+        let track = self
+            .monitoring_config()?
+            .definitions
+            .iter()
+            .any(|d| d.kind == "watch");
+        if track
+            && self
+                .conn
+                .query_row("SELECT count(*) FROM monitoring_events", [], |r| {
+                    r.get::<_, u64>(0)
+                })
+                .map_err(err)?
+                >= 10000
+        {
+            return Err("Watch observation backlog full".into());
+        }
+        let tx = self.conn.savepoint().map_err(err)?;
         tx.execute(
             "UPDATE instances SET body=? WHERE id=?",
             params![serde_json::to_string(next).map_err(err)?, next.id],
         )
         .map_err(err)?;
+        if track {
+            tx.execute(
+                "INSERT INTO monitoring_events(body) VALUES(?)",
+                [serde_json::to_string(next).map_err(err)?],
+            )
+            .map_err(err)?;
+        }
         if sample && next.has_value && next.history_count > 0 && next.history_age_ms > 0 {
             tx.execute(
                 "INSERT INTO history(instance,timestamp,body) VALUES(?,?,?)",
