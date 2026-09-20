@@ -58,7 +58,7 @@ impl Store {
         let version: i64 = conn
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .map_err(err)?;
-        if version > 3 {
+        if version > 4 {
             return Err("database schema newer than engine".into());
         }
         if version == 0 {
@@ -88,6 +88,9 @@ CREATE TABLE monitoring_events(seq INTEGER PRIMARY KEY AUTOINCREMENT, body TEXT 
 INSERT INTO metadata VALUES('run_sequence',0);
 PRAGMA user_version=3;").map_err(err)?;
             tx.commit().map_err(err)?;
+        }
+        if version < 4 {
+            conn.execute_batch("BEGIN IMMEDIATE; ALTER TABLE monitoring_events ADD COLUMN depth INTEGER NOT NULL DEFAULT 0; PRAGMA user_version=4; COMMIT;").map_err(err)?;
         }
         Ok(Self { conn })
     }

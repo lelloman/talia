@@ -432,6 +432,7 @@ impl Pipelines {
                 v.timestamp = now;
                 v.quality = "good".into();
                 s.commit(rev, &v, true, now)?;
+                s.conn.execute("UPDATE monitoring_events SET depth=? WHERE seq=(SELECT max(seq) FROM monitoring_events) AND body=?",params![r.depth,serde_json::to_string(&v).map_err(err)?]).map_err(err)?;
             }
             s.save_monitor(&next)?;
             if let Some(result) = result {

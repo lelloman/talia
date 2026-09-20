@@ -134,3 +134,26 @@ repeated ticks cannot admit the same occurrence twice. Gap metadata includes mis
 count and the last affected interval. Freshness marks existing observations stale
 without replacing their value or timestamp; the next successful observation restores
 good quality, including when its numeric value has not changed.
+
+## Watch script API and delivery
+
+A Watch definition is `{async evaluate(ctx) { ... }}`. Context provides `state`,
+`params`, `now()`, `reason` (initial/input/timer), `changed` input aliases,
+`read(inputAlias)`, `trigger(actionAlias)` and bounded `sleep(ms)`. Reads use the
+ordered observation snapshot for that evaluation; they cannot skip forward to a
+newer reading. Trigger calls stage requests and must be awaited. Only successful
+evaluation commits the new state, cursor and all requests; no external action is
+dispatched inside that transaction. The example is `engine/examples/disk-watch.js`.
+
+Schema 4 adds causal depth to observations. Each Watch persists its consumed cursor
+and input snapshots; publication journals observations atomically. Unchanged values
+still refresh stored observation metadata, but do not trigger threshold reevaluation.
+Watch timers handle absence of new data. Computed inputs are subscribed by the server
+Watch runtime even with no connected clients. The journal prunes only observations
+consumed by all enabled Watches; 10,000 pending observations cause explicit backpressure.
+
+Internal Watch errors preserve the prior flags/cursor and fault that Watch until
+explicit resume or a configuration update. No action from its failed evaluation is
+admitted. Configuration replacement cuts over to a fresh input snapshot and fences
+the old evaluation; disabled instances do not retain a journal backlog. A trigger
+chain is bounded to depth 16; each evaluation can request at most 32 action aliases.

@@ -149,6 +149,16 @@ pub struct MonitorState {
     pub last_gap: Option<(i64, i64)>,
     #[serde(default)]
     pub observed: BTreeMap<String, u64>,
+    #[serde(default)]
+    pub inputs: BTreeMap<String, crate::store::Instance>,
+    #[serde(default)]
+    pub cursor: u64,
+    #[serde(default)]
+    pub evaluated: bool,
+    #[serde(default)]
+    pub faulted: bool,
+    #[serde(default)]
+    pub last_actions: Vec<crate::pipelines::Admission>,
 }
 impl MonitoringConfig {
     pub fn instance(&self, id: &str) -> Result<&MonitorInstance> {
@@ -398,6 +408,11 @@ impl Store {
                     missed: 0,
                     last_gap: None,
                     observed: BTreeMap::new(),
+                    inputs: BTreeMap::new(),
+                    cursor: 0,
+                    evaluated: false,
+                    faulted: false,
+                    last_actions: vec![],
                 }
             };
             if let Some(p) = prior {
@@ -424,11 +439,28 @@ impl Store {
                     st.revision += 1;
                     st.error = None;
                     st.observed.clear();
+                    st.evaluated = false;
+                    st.faulted = false;
                     if p.schedule != i.schedule || p.enabled != i.enabled {
                         st.next_due = None;
                         st.last_due = None;
                     }
                 }
+            }
+            if !st.evaluated {
+                st.inputs = i
+                    .inputs
+                    .iter()
+                    .map(|(alias, id)| Ok((alias.clone(), self.instance(id)?)))
+                    .collect::<Result<_>>()?;
+                st.cursor = self
+                    .conn
+                    .query_row(
+                        "SELECT coalesce(max(seq),0) FROM monitoring_events",
+                        [],
+                        |r| r.get(0),
+                    )
+                    .map_err(err)?;
             }
             if !value::matches_schema(&st.state, &d.state_schema) {
                 return Err("monitoring state migration schema".into());
