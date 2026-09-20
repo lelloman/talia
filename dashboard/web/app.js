@@ -43,7 +43,7 @@ async function start(){
  loaded=structuredClone(pkg);state=null;update.hidden=true;
  const codec=await (await fetch('/engine/shared/value.js')).text();
  let localGuest;
- const localBridge=new (durable?DurableBridge:EngineBridge)(msg=>localGuest.eval(`TaliaVM.receive(${JSON.stringify(JSON.stringify(msg))});'ok';`).then(refresh),e=>{if(stamp===generation)fail(e);});
+ const localBridge=new (durable?DurableBridge:EngineBridge)(msg=>localGuest.eval(`TaliaVM.receive(${JSON.stringify(JSON.stringify(msg))});'ok';`).then(refresh),e=>{if(stamp===generation)fail(e);},loaded.grants);
  localGuest=new Guest(requests=>localBridge.requests(requests),e=>{if(stamp===generation)fail(e);});bridge=localBridge;guest=localGuest;
  await guest.eval(codec+'\n'+library+'\n'+loaded.viewModel+'\nTaliaVM.start('+JSON.stringify({...loaded.params,...config.params})+');\'ok\';',true);
  if(stamp!==generation){localBridge.close();localGuest.close();return;}

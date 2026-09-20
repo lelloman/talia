@@ -38,7 +38,7 @@
       params:copy(cell.params),
       state(){check(task);const s={revision:cell.revision,value:copy(cell.value)};snapshots.set(s,cell.revision);return s;},
       commit(s,next){check(task);if(snapshots.get(s)!==cell.revision)throw Error('stale snapshot');const value=copy(next);check(task);if(snapshots.get(s)!==cell.revision)throw Error('stale snapshot');cell.value=value;cell.revision++;},
-      read:key=>call(task,'read',key),write:value=>call(task,'write',globalThis.TaliaValue?{wire:TaliaValue.encode(value)}:value),
+      read:key=>call(task,'read',key),write:(...args)=>call(task,'write',globalThis.TaliaValue?{...(args.length===2?{id:args[0]}:{}),wire:TaliaValue.encode(args.at(-1))}:args.at(-1)),run:id=>call(task,'run',id),
       async subscribe(key,handler){
         if(typeof cell.def.actions[handler]!=='function')throw Error('unknown subscription handler');
         const id=await call(task,'subscribe',key);check(task);

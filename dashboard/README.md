@@ -83,3 +83,19 @@ and limits. Test ports, debug live-script intents and host inspection objects ar
 development facilities. They are not the authenticated production MCP interface.
 
 For persistent server state and connection recovery, run the [P2 durable engine](../engine/README.md). Set `TALIA_ENGINE_DB` for the web development host and pass `--ez durable true` to Android. Without those switches these P1 commands retain the in-memory fixture.
+
+P3 adds the shared `monitoring` package, rendered by the same DOM/native hosts.
+It displays CPU, memory, two disks, Watch flags, data age/quality, investigation
+results and a manual investigation action. Build scripts compile both example
+packages. On web select it with `talia.selectDashboard('monitoring')`; on Android
+launch with `--ez durable true --es dashboard monitoring` against a configured
+engine. `engine/tests/monitoring_fixture.py` supplies isolated development fixtures.
+
+Package `grants` lists `reads`, `writes` and `runs`; absent grants retain the P1/P2
+`value` read/write capability. Both hosts enforce grants independently of guest JS.
+ViewModels use `ctx.read(id)`, `ctx.subscribe(id,handler)`, `ctx.write(id,value)` and
+`ctx.run(pipelineId)`; single-argument `ctx.write(value)` remains supported.
+Run admission returns a receipt; named `monitor.<id>` resources expose live status.
+Backgrounding detaches client subscriptions while autonomous server collection
+continues. Reconnect restores each resource and reconciles action identities before
+showing back online. Dashboard reload restores the saved UI/VM baseline.

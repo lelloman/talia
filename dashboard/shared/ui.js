@@ -178,6 +178,7 @@
   function compileDefinition(source){return compile('<Dashboard id="DefinitionRoot"><Surface id="DefinitionSurface">'+source+'</Surface></Dashboard>').root.children[0].children[0];}
   function validatePackage(pkg){
     if(!pkg||pkg.version!==1||typeof pkg.id!=='string'||!pkg.id||typeof pkg.revision!=='string'||!pkg.revision||typeof pkg.viewModel!=='string'||pkg.viewModel.length>131072)throw Error('invalid dashboard package');
+    if(pkg.grants){if(typeof pkg.grants!=='object'||Array.isArray(pkg.grants))throw Error('invalid grants');for(const [kind,ids]of Object.entries(pkg.grants)){if(!['reads','writes','runs'].includes(kind)||!Array.isArray(ids)||ids.length>64||new Set(ids).size!==ids.length||ids.some(id=>typeof id!=='string'||!/^[A-Za-z0-9_.-]{1,128}$/.test(id)))throw Error('invalid resource grants');}}
     validate(pkg.ui,pkg.definitions||{});return pkg;
   }
   globalThis.TaliaUI=Object.freeze({compile,compileDefinition,validate,validatePackage,resolve,px,schema});

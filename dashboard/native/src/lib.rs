@@ -33,7 +33,7 @@ impl Guest {
                                 && v["id"]
                                     .as_u64()
                                     .is_some_and(|i| i > 0 && i <= 9_007_199_254_740_991)
-                                && ["read", "write", "subscribe", "unsubscribe"]
+                                && ["read", "write", "subscribe", "unsubscribe", "run"]
                                     .contains(&v["op"].as_str().unwrap_or(""))
                         });
                     if valid && !*p.borrow() {

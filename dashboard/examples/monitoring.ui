@@ -1,0 +1,27 @@
+<Dashboard id="monitoring">
+  <Screen id="overview">
+    <Scroll id="overviewScroll"><Column id="metrics" gap="10dp" padding="12dp">
+      <Text id="heading" text="Host monitoring" />
+      <Width id="wide" min="640dp"><Text id="wideLabel" text="Live collection · expanded layout" /></Width>
+      <Width id="compact" max="640dp"><Text id="compactLabel" text="Live collection" /></Width>
+      <For id="metricList" items={state.metrics} key={item.id}><Text id="metric" text={item.label} /></For>
+      <Chart id="cpuHistory" values={state.history} label="CPU observations" height="100dp" />
+      <Status id="watchX" text={state.watchX} />
+      <Status id="watchY" text={state.watchY} />
+      <If id="collectionFailure" when={state.hasCollectionError}><Status id="error" text={state.collectionError} /></If>
+    </Column></Scroll>
+  </Screen>
+  <Screen id="investigation">
+    <Scroll id="investigationScroll"><Column id="probe" gap="10dp" padding="12dp">
+      <Text id="probeHeading" text="Disk investigation" />
+      <Status id="runStatus" text={state.runStatus} />
+      <Button id="investigate" text="Run investigation" enabled={!state.busy} onClick={actions.investigate} />
+      <Text id="message" text={state.message} />
+      <For id="serviceList" items={state.services} key={item.id}><Text id="service" text={item.label} /></For>
+    </Column></Scroll>
+  </Screen>
+  <Surface id="surface"><Column id="shell" gap="8dp">
+    <ScreenRef id="destination" screen={state.screen} />
+    <Row id="navigation" gap="8dp"><Button id="overviewButton" text="Overview" onClick={actions.overview} /><Button id="investigationButton" text="Investigation" onClick={actions.investigation} /></Row>
+  </Column></Surface>
+</Dashboard>

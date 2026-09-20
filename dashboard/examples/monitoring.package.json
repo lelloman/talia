@@ -1,0 +1,10 @@
+{
+  "id": "monitoring",
+  "ui": "monitoring.ui",
+  "viewModel": "monitoring.vm.js",
+  "grants": {
+    "reads": ["cpu", "memory", "disk", "disk-y", "breakdown", "monitor.disk-x", "monitor.disk-y", "monitor.investigate", "monitor.collection"],
+    "writes": [],
+    "runs": ["investigate"]
+  }
+}

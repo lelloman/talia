@@ -2,6 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 node compile.mjs examples/monitor.package.json generated/monitor.json
+node compile.mjs examples/monitoring.package.json generated/monitoring.json
 SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-$HOME/Android/Sdk}}"
 NDK="${TALIA_NDK:-$SDK/ndk/27.0.12077973}"
 TOOLCHAIN="$NDK/toolchains/llvm/prebuilt/linux-x86_64"

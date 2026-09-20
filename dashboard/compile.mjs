@@ -5,5 +5,6 @@ const load=path=>readFileSync(resolve(root,path),'utf8');
 const definitions=Object.fromEntries(Object.entries(manifest.definitions||{}).map(([name,path])=>[name,TaliaUI.compileDefinition(load(path))]));
 const viewModel=(manifest.scripts||[]).map(load).concat(load(manifest.viewModel)).join('\n');new vm.Script(viewModel,{filename:manifest.viewModel});
 const pkg={version:1,id:manifest.id,ui:TaliaUI.compile(load(manifest.ui)),definitions,viewModel,params:manifest.params||{}};
+if(manifest.grants)pkg.grants=manifest.grants;
 pkg.revision=createHash('sha256').update(JSON.stringify(pkg)).digest('hex');TaliaUI.validatePackage(pkg);
 mkdirSync(dirname(output),{recursive:true});const temporary=output+'.'+process.pid+'.tmp';writeFileSync(temporary,JSON.stringify(pkg,null,2)+'\n');renameSync(temporary,output);console.log(pkg.revision);
