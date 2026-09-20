@@ -2,6 +2,8 @@
 
 Accepted P3 collection, scheduling and Watch decisions are consolidated in
 [Monitoring contract](monitoring.md), superseding corresponding open questions here.
+Accepted P4 authoring and live-control decisions are specified in the
+[MCP contract](mcp-contract.md); it defines implementation requirements, not completed tools.
 
 Status: high-level direction recorded from discussion, 2026-09-18.
 Detailed behavior and architecture are not signed off. This document supersedes

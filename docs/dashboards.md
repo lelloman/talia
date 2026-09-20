@@ -2,7 +2,8 @@
 
 Status: decisions recorded from discussion, 2026-09-18. The boundaries and
 language direction below are agreed; the grammar, runtime and detailed behavior
-still need specification. Examples illustrate intent, not an implemented schema.
+are specified by the linked stage contracts. Examples below illustrate the original
+direction; [P4 MCP](mcp-contract.md) now defines authoring and live-control requirements.
 
 Planning, open-decision tracking and execution status live in the
 [Crumbles Stories](implementation-plan.md). This document is technical reference;
@@ -17,7 +18,8 @@ platform-specific dashboard source.
 Each client instance selects its own dashboard configuration. A phone can use
 bottom navigation while a browser uses a sidebar, but both configurations use
 the same language and engine contract. Definitions can be reused across clients;
-assignment, sharing and synchronization details remain open.
+P4 defines persistent client registration, independent per-tab selection and
+explicit revision adoption in the [MCP contract](mcp-contract.md).
 
 Humans view and interact with dashboards. Agents author and modify their saved
 definitions through MCP. This replaces the earlier assumption of a human-facing
@@ -160,11 +162,11 @@ Both ViewModels and MCP access engine capabilities:
 These are categories of operation, not finalized method signatures. A chart
 can bind to subscribed data; a button can invoke a write; a switch can read and
 update a setting. The engine remains the authority for its state and operations.
-The transport and permissions still need definition. Authority lives in the
-server engine; the client API is a bridge, not a second monitoring engine.
+Transport is specified by [P2/P3](engine-transport.md), and agent permissions
+by [P4](mcp-contract.md). Authority lives in the server engine; the client API is a bridge, not a second monitoring engine.
 Client reload does not reset server Watches, Variables or running monitoring.
 
-## Two MCP capabilities
+## MCP capabilities
 
 | Capability | Scope | Persistence |
 |---|---|---|
@@ -198,8 +200,10 @@ explicit reload adopts the latest coherent saved revision.
 
 The list below predates P1. Contract v1 and the [P1 implementation](../dashboard/README.md)
 now resolve the initial component grammar, bindings, lifecycle, responsive layout,
-reference scoping and explicit revision adoption. Production publishing, client
-assignment and authenticated MCP tools remain later work.
+reference scoping and explicit revision adoption. Production publishing remains
+later work. Client assignment and authenticated MCP tools are covered by the P4
+contract and remain to be implemented. The historical questions below are superseded where answered
+by those stage contracts.
 
 
 - Exact components, properties, units, layouts, responsive and accessibility rules.
@@ -213,8 +217,7 @@ assignment and authenticated MCP tools remain later work.
 - Dashboard definition versioning, publishing, client assignment, and which saved
   revision a reload uses when authoring has occurred concurrently.
 - Exact MCP tools for discovery, validation, preview, editing and live targeting.
-- Whether authors interact through an assistant inside Talìa, external MCP agents,
-  or both; this has not been selected.
+- P4 selects external MCP agents; embedded chat remains outside this stage.
 
 ## P0 lifecycle implementation evidence
 

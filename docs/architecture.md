@@ -2,6 +2,8 @@
 
 Accepted P3 collection, scheduling and Watch decisions are consolidated in
 [Monitoring contract](monitoring.md), superseding corresponding open questions here.
+Accepted P4 authoring and live-control decisions are specified in the
+[MCP contract](mcp-contract.md); it defines implementation requirements, not completed tools.
 
 Status: agreed conceptual boundaries and language direction, 2026-09-18.
 Detailed architecture remains open. See the [product specification](specification.md),
@@ -94,8 +96,9 @@ modifications, while preserving effects already performed through the engine.
 
 Ordinary state-driven UI updates are allowed, including conditional/repeated
 content declared by the saved View definition. They do not grant a live script
-permission to modify the definition itself. Precise dirty tracking, versioning,
-reload and synchronization semantics still need design.
+permission to modify the definition itself. The [P4 MCP contract](mcp-contract.md)
+defines identity, dirty tracking, atomic authoring, revision conflicts and dedicated
+reload semantics.
 
 ## Monitoring responsibilities
 
@@ -103,7 +106,7 @@ The engine supplies monitoring capabilities, data and operations behind dashboar
 bindings and MCP tools. Talìa coordinates schedules, observations, rule evaluation,
 delegated work, outcome actions and notifications. Agents configure dashboards,
 checks, schedules and alerts through MCP; humans interact with the resulting UI.
-A built-in assistant versus external MCP authoring clients is an open choice.
+P4 exposes MCP to external agents. Embedded chat is outside this stage.
 
 Prometheus supplies current and historical metrics. Direct probes supply further
 observations. Talìa-managed LLM-assisted checks, analyses and investigations run
@@ -151,7 +154,7 @@ that a closed ticket proves a successful check.
 ## Decisions still to make
 
 - Exact UI language, intermediate representation and ViewModel APIs; see the
-  [dashboard open details](dashboards.md#open-details).
+  [dashboard remaining scope](dashboards.md#historical-open-details-and-remaining-scope).
 - Specific JS runtimes, renderer frameworks, storage and deployment topology.
 - Engine API types, client bridge/transport design and stream semantics.
 - Runtime activation, dependency validation, shared-definition propagation and
