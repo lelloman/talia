@@ -11,7 +11,7 @@ execution plan and status. The [agent authority implementation](agent-authority.
 supplies permission checks, authenticated catalog wrappers and durable audit admission
 for adapters. [Engine tools](mcp-engine.md) now expose reads, subscriptions, guarded
 mutations and Pipeline actions. [Live control](mcp-live.md) now implements discovery, inspection, temporary execution
-and dedicated reload; TALIA-46 owns integrated P4 qualification. P1–P3 qualification remains historical evidence.
+and dedicated reload; [TALIA-46 qualification](p4-qualification.md) records the integrated acceptance evidence. P1–P3 qualification remains historical evidence.
 
 External MCP agents author Talìa. Embedded chat, production deployment and actual
 Crumbles/Simple Agents task execution are outside P4. Web and native Android use

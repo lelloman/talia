@@ -122,4 +122,4 @@ and dirty guards, deduplication, cancellation after an effect, failed-guest rest
 new reload identity and paused rejection. Rust tests cover early cancellation,
 expired delivery, host ownership, effect replay, revocation and audit failure.
 Existing authoring, engine and client lifecycle suites remain regressions.
-P4 end-to-end qualification is TALIA-46; deployment and embedded chat are outside P4.
+[P4 end-to-end qualification](p4-qualification.md) passed under TALIA-46; deployment and embedded chat are outside P4.

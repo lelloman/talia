@@ -1,0 +1,606 @@
+{
+  "date": "2026-09-21T08:41:10.741580+00:00",
+  "scope": [
+    "web",
+    "android-emulator"
+  ],
+  "base_commit": "3fea35ecb667971ec989e740d7e7664d4530d582",
+  "source_sha256": {
+    "dashboard/README.md": "72791077a91ff2bc8691dd6a8c1e16c790a844c703936695cd7059e87b914605",
+    "dashboard/android/app/build.gradle": "af7b17f84d849214a36e5430a7ca8dd5f3ab271e3bff6d3ca871d6c3dc6aa92c",
+    "dashboard/android/app/src/debug/assets/renderer.ui": "39ad8ee1f94cc344ecdec24a9bdf52d5561375902bd0d01e94cc28f205ba540a",
+    "dashboard/android/app/src/main/AndroidManifest.xml": "350971d849f7054037d8b8e9c0aa05ccdfa118cace3f53319f56f0d619e92356",
+    "dashboard/android/app/src/main/java/com/lelloman/talia/dashboard/ClientRegistry.java": "26696e4dc3b8ec05f21a174f3df20de1f6cd52e41e646ac85211148dd742dfc4",
+    "dashboard/android/app/src/main/java/com/lelloman/talia/dashboard/DurableConnection.java": "14d663c92c8602f8ca86fd5581312a6bbe26747db26aaca2d2b6878ee94d9aed",
+    "dashboard/android/app/src/main/java/com/lelloman/talia/dashboard/LiveControl.java": "73a48a62df2034abcc384ac837c00ab5c32444c45fdb9cde0c3c35b1eb91cf51",
+    "dashboard/android/app/src/main/java/com/lelloman/talia/dashboard/MainActivity.java": "839184534a449833fe99077a104fef3eb80bc11bab830ffbf6131cb010a8e66c",
+    "dashboard/android/app/src/main/java/com/lelloman/talia/dashboard/NativeRenderer.java": "97405092584ad8792be5ac705d872257355100263f87052e606bf629feff7456",
+    "dashboard/android/app/src/main/java/com/lelloman/talia/dashboard/RendererChecks.java": "73f702029dc421332e7360054da65e1d10d162b6cba6d864b11589c4e7d03c50",
+    "dashboard/android/app/src/main/res/drawable/ic_brand.xml": "215b96dfe45d0a83e93bea6197bc1b5239ef28be8dc9fd0885d7f33bd32952e2",
+    "dashboard/android/build.gradle": "96a33edb21d173da2c36f5312f50cdfb9f71d9f5078c081c81f2d029547f6cb9",
+    "dashboard/android/settings.gradle": "27c54bc908cad68e6cbce875a53ff5629a516de6d63fe1712953edb2d861949e",
+    "dashboard/build-android.sh": "544653833882c81dfe56cb634acc6dfdb6d09a4f4e88fa195d0f8d4bca077b88",
+    "dashboard/build-web.sh": "6c315fabec5577aa15df951c3ec02e51bc3077b1b42a0e7b0a9803c76f8bfa60",
+    "dashboard/compile.mjs": "7074af61b635c58216237a194ce831cabbc227d897b74ee6dcb41f3aa418e0f6",
+    "dashboard/contracts/v1/README.md": "92cf9576c92bd99b88b3956cefed7796b8a1a6445a40d4de535477f98312cf5b",
+    "dashboard/examples/monitor.package.json": "820fc4a0f54afd9c8c12a87a3907d129c37545918537de5b6880f945f02bd316",
+    "dashboard/examples/monitor.ui": "9978deb91db5fd476cf68422eeb89b9715bb1c523145d1cdd1c7ecf350b5bb06",
+    "dashboard/examples/monitor.vm.js": "1f025c895d809383a741ece0122e253967736bc396cd96266ec3d8074cd1d61b",
+    "dashboard/examples/monitoring.package.json": "46686151c642c88bbd3814bf972904fcc0e643314a012f1ba2b8c46d16e6cf57",
+    "dashboard/examples/monitoring.ui": "dbd32ff4c518fc99842f4b705d850f7455e28592f7103c9025a7f9f9e493a65d",
+    "dashboard/examples/monitoring.vm.js": "ddbbd4458e98d32830d5ec96409474c2c4b1e949a8848e7a1fd32731d1459e80",
+    "dashboard/examples/notice.ui": "80366c53b23ae8bf5718a67aa46df47ecd2c1644b27bfc32fe590d3d2eaad75e",
+    "dashboard/native/Cargo.lock": "7ab5ea4a6fc51d34f2f7ef20151b62f0a9a7a4b583c947fef1e05299e5b25573",
+    "dashboard/native/Cargo.toml": "82dbed8691a39f315709da211d39372cdf67006baaea6e32d18b8f9381552e11",
+    "dashboard/native/src/lib.rs": "ced8f087c21b42724b69a4800bbcd63dccb95a9bc0bff3687bc0da3f4ff14ec7",
+    "dashboard/qualify.py": "c55470ae970c082fd939613762cf056c0d6c52c87107702d0c66d5b238f1f626",
+    "dashboard/serve.py": "3c678d0479bd08163ad4ad739a35621de4a68bb21520df9b68826d2bc3782350",
+    "dashboard/shared/live.js": "93b5945904f001175e5a02cb76dc419fecd74da76c83a9c4396d3a2f00aa4743",
+    "dashboard/shared/ui.js": "c0855dd3462bc3acfd1c1656ee83c4e285d96aeaf06387ae1531b80c7ed1beef",
+    "dashboard/shared/vm.js": "7fe7e1a30d8954c80823875853f73b1665caf5fef47c473e943e238350907a86",
+    "dashboard/tests/android.py": "8df7a0a78f1b7787db15a032bbb7b334533d2821693b973838999884eb0a76a3",
+    "dashboard/tests/compiler.test.mjs": "911af03a86f36b52b4e6f83a6eacdbbe24b7c42c3994ac71cd45b9a249509647",
+    "dashboard/tests/delivery.mjs": "6c112e31fd28f8594eebc2c35cb413a0dae835c39698c3f102d02d494ccb8933",
+    "dashboard/tests/delivery_android.py": "183756d4ed051f017b2a966f7673542481aa412f30463e0966f5b5568a92388d",
+    "dashboard/tests/emulator.py": "f602a213e6ef3cb373eb1a3796770efd9013dde79f86b5781efd473f2a47fdc8",
+    "dashboard/tests/lifecycle.mjs": "7b015199f1faccab1f37f1cfa4ae84c467284e6964b8a62724345434fc7b2335",
+    "dashboard/tests/mcp-authoring.mjs": "5203d93926e7a37d1ffc437d0b320b1a32d655c168805e5aaafec6f1896991e6",
+    "dashboard/tests/mcp_authoring_android.py": "77a69b43805efe893f46ab520a3307b1be383fa72ee5fca4cdcbcb2d61e40d74",
+    "dashboard/tests/registration.mjs": "f859304dc0af1d95fddbda4be4d5e29f6f38f941ebf31b303ae71dbbdf8884af",
+    "dashboard/tests/registration_android.py": "c249e399309a50e4179257db5d40227657e39d1a791d9a5f1742f259211d6d8b",
+    "dashboard/tests/responsive.mjs": "1eaf1b3a9d4ada69c5df5c5aa56e4f9f1bb173b68ab10525d06f44d5c49914a7",
+    "dashboard/tests/updates.mjs": "deeea65b5d3821dc6b1252de4657d8e6da96f2db839216f9cac922418d28ab99",
+    "dashboard/tests/vm.test.mjs": "8acec5e94b80fc248686bf6f555db6701ad5606e5ae982155f9419f748ec7c45",
+    "dashboard/tests/web.mjs": "01a0b1d4a8473c3332d3c46ba0ed3df9ff1deeb644f7ff8df2dc77b54e867924",
+    "dashboard/web/app.js": "b2f43c862bd2be706df1cee5d8d5c606fb1a3b2fff77831ac330da084ebc4212",
+    "dashboard/web/durable.js": "c36901ff6cb7b086404048567681a8f153f53f850dabfc71fd5723850b08e915",
+    "dashboard/web/host.js": "15c161af8f711b53850a0237b26aeb6b8920814bcbbdb8da86964361402c6f45",
+    "dashboard/web/index.html": "d6f3bbfbe34e626d76bf1a56b03b981d46d16f12a6574d6e2fdb7bbfdf971eab",
+    "dashboard/web/live.js": "f353e3631a77f0cd8cbff6370f96dc50816e41fe1063f5f54ae8c1fdb90288d1",
+    "dashboard/web/registry.js": "eac9f1cb306ccbc3f8d941520d68adc97d1627175a48df05ac10fa11dedcf0d0",
+    "dashboard/web/renderer.js": "a26547dbb0a431d481b4cc76913433f3ba8f179ce67e8b74ae31823e267bad5e",
+    "dashboard/web/style.css": "9b177ddb68663a9df467c7c0dfae36081e62fb6a9ae13c65debe490ab0efbad3",
+    "dashboard/web/worker.js": "c93488d2805c4b9cdab62a7fbfe7520b8482b2c06c507694813266656f5a4612",
+    "engine/Cargo.lock": "d4f1706311b6d32f25000d9ee6b479bb4d6af952006017cff98b0c5e30e2dba5",
+    "engine/Cargo.toml": "b6d39d6a5294c8519b2427d5feffe138c8b9ac4e9b7abbbfd0e94195ffe550ae",
+    "engine/README.md": "f334346b614c74db2527c37a3203b6c107d8069b94319f706bfd41bacf16a6db",
+    "engine/examples/delivery_fixture.rs": "06b141c05789559fe59e7646b79dfd7a9ce8cf01b2ee65e5f5be283b7b0b8e8e",
+    "engine/examples/disk-watch.js": "22287b4f8dff73768a5f7c75e910f08140458a5704d6364be1d83a6305c5337b",
+    "engine/migrations/005_catalog.sql": "2d8701d26c2816410ac3fb8e96cf4110f3162ab55ae4cc288e48fd30d01cf851",
+    "engine/migrations/006_authority.sql": "23a76ffa2144fd89bb2137312a09e71217e09788df269dfb560d9cd52afbc94d",
+    "engine/migrations/007_clients.sql": "6de6c604247a6670c9379ce5da307bda22bed42c71188340ea0359d39604cc36",
+    "engine/migrations/008_delivery.sql": "a021061840d9fa5fdde9beedc18974db57757b468203c6f1d8c7c5f1b73b3f6a",
+    "engine/migrations/009_live.sql": "30e5a2db870d7690f1239f2a4a1761bcc8c2c44493041f49a36f9481cf32b89a",
+    "engine/qualify-p3.py": "e479500acbf28d6283ebf80aa77dd8118718ebcdc2c5f539978b4c2375d13552",
+    "engine/qualify-p4.py": "7a97c5837d3808dceabd307af35d8aa28ef64f2f0427fc7b53fa8e1b875e50ba",
+    "engine/qualify.py": "b3962642a5a44a91ee348958b81790def978f632daafa0d71bb6da5306178dd8",
+    "engine/shared/client.js": "290d8fe138258f080bd8e0f9fd23859fe28ff869f8c70b219a9a69f2f235152e",
+    "engine/shared/computed.js": "b4ab85621125575841ee69000e7175ea8aadc39addc6f7ec39d6292163d01770",
+    "engine/shared/pipeline.js": "7826ff743cad8ff22be231b3cf80e4756304db8057399add05166a401dace962",
+    "engine/shared/value.js": "746beb01164abc0cd3ad83a8700ca90fa1482d801b38f2fd1a08ef4c4f8b289a",
+    "engine/shared/watch.js": "7725e18fbba23d6d3d840f740c33b8b9d8e259b4a16b1d61bd9a51d0c58d8f6b",
+    "engine/src/authority.rs": "3f34e6312db2768ea7ba9c24a3dcb043098387dc2dd4b360f8558c3173307e6e",
+    "engine/src/authority/assignment.rs": "ce422129a95055091bd088ad1ad61dd96efe836fc4b7b1c0073f6fb4f5d5a9f7",
+    "engine/src/authority/audit.rs": "a32f1bf9f9ff14ddb0c9bf7891ae139194c2223f056952fa89bbc770ecc448a1",
+    "engine/src/authority/authoring.rs": "b211b1a42bacaac6ec3f5b7daa2508db8889bb7b7e27de11dd1c0dec0e375d89",
+    "engine/src/authority/discovery.rs": "89fa44bfb039fa39913db3f0c694574e58948f0b633d9304a8c9763a4f711301",
+    "engine/src/authority/tests.rs": "48cd82b565114ba93b587498a44e4f0e1c57f6d5c81c54e672e3d79fdda5809c",
+    "engine/src/bin/talia-agent.rs": "b2fe06ca1786b9b77c845cd0b36531ec03cfb40b6766b3f3c1f72c932da06e10",
+    "engine/src/bin/talia-mcp.rs": "e4232e024095dc8096de3f9ba99aa8eb093dab3ddab79c9ab4b8386c1cfbf46c",
+    "engine/src/catalog.rs": "fff17111df4c8a3a481190e408eee407843c51b75d1c08e4dc4926ea6273437c",
+    "engine/src/catalog/compiler.rs": "9f94b6dead9d39d56f8c33ef31969000484f0288ed57047a9b769752fcce85ab",
+    "engine/src/catalog/tests.rs": "92544dc9162315973390bfcaf9fadb36297e06f6ec5f63484885b0d7c1f09ffd",
+    "engine/src/clients.rs": "ad7c7bac28137fb330f1c1fd8700c01f6d659f74e9a194acbd974bb686740162",
+    "engine/src/clients/tests.rs": "ab9c308932343f931f0f596e0ffcf2adfd36d94264632daa935f4b1d6e5679e3",
+    "engine/src/definitions.rs": "73f12129c3de8b003f011ca69b44549d32bcd5cb55fa922647e7598ed74148e3",
+    "engine/src/delivery.rs": "430f1bf6c00871f936423984329aa818768d3c8ce0aae3ecfc979e1b68ce916c",
+    "engine/src/delivery/tests.rs": "482af2117e9c98a95910c80dbf2b9a1222145ba2288f594d2dc211a9c93190ea",
+    "engine/src/lib.rs": "c6eeed2b66322051752190b418aa2ae0fb37c21ee8c969977b013a2da8553da4",
+    "engine/src/main.rs": "4120a35037b346d5126ab52dd3d71ddf9ed7b1ab8bda5857ff6bd7bd097a4943",
+    "engine/src/mcp.rs": "5ff7968b410993a19b1c7fcb99bd64f62da246b9c02047270e681b23810ca945",
+    "engine/src/mcp_engine.rs": "1eefda36d175bb214681787a9a99aff9d6dc42865bf709639230dc6851aff08d",
+    "engine/src/mcp_engine/tests.rs": "2d26cac242d46490d35c9e781b524f2e96566e79a18b071a43ad89b822c71a54",
+    "engine/src/mcp_live.rs": "e7069413a32d77086c8766672284890e4d006dd4dfbb2093b7b69c65d3ac55e2",
+    "engine/src/mcp_live/tests.rs": "e07760f97400765725eb1a9f6e6b8dbf6f9000ba2513e97c748615e6d74252b2",
+    "engine/src/monitoring.rs": "8178d8694fa102ed16d8341e50308a3fdcc07a640ba3a809df4a3a580a260071",
+    "engine/src/pipelines.rs": "a31d9bb84ec08d3a613636051e06d5b748047b851136bbd314390434cbcbd980",
+    "engine/src/runtime.rs": "87166733c39d328da23b34b79e6c4934687fc544e4ced4745dba6727363c1384",
+    "engine/src/scheduling.rs": "44483e007083c21f0e7370106e486093272cc3695bc8aa1515e00420ac827070",
+    "engine/src/script.rs": "67b91b81fa4d5007b570d8fa2bc2c7a8f3f6e1b6aff4935f947d5ceffc4efe98",
+    "engine/src/sources.rs": "528baebbf03d6009066d2490b7f9f0fd6085beb811544ef5b72d996da3060712",
+    "engine/src/store.rs": "809a50b71f6971714d61b79a350bc31225cc0557b6e3a523b9d27df73f4fb968",
+    "engine/src/value.rs": "9f50deb4da595f3c4852de38b299ba500efe8d017738bbd3401f86ac0978ab1d",
+    "engine/src/watches.rs": "59611d059a2d1745a9b2d48c1131c2416575bdd51cd06e56ff6866a4d3737f0a",
+    "engine/tests/android.py": "28dcbd5c9bdfa2cf22a2e6f768ddd2bcf94691b9ae66ea377a026e9a766fb725",
+    "engine/tests/client.test.mjs": "64dce3b522d3d79e7b05257291811c843bb7577a21f2b284f645988e2505f9bd",
+    "engine/tests/clients.py": "aca4acbaaf17c71a6cea7981f1e10e1b1a5b6bffc7484d8e2e838f818b437f71",
+    "engine/tests/emulator.py": "700e4c902e13b8c60f6666b5f662935812f72f83b0b73dd124c9527d2ca75446",
+    "engine/tests/mcp-engine-web.mjs": "cdc58068546da41526bdf8d9570956d96114a3d8bfcbdb22a2e6717a3e86a7eb",
+    "engine/tests/mcp-live-web.mjs": "b2141b9d90996a7671af5d919fe2deca403808a1e60b161613aafce1198ebf69",
+    "engine/tests/mcp_authoring.py": "103dbd47d4f7a4756fbe803d02772d9fc0cec4c279f5047ace82cfc4acdbf8fc",
+    "engine/tests/mcp_engine.py": "938b4cb02fd91ef7678c92dfe738a43a0a852812ffda739c1f3b56dc6d60e363",
+    "engine/tests/mcp_engine_android.py": "0bcc311995750b365549488a139e0ef52128a0689a7dcc07c42eef53ae9e12b9",
+    "engine/tests/mcp_live.py": "0641d69473cc0d9519e06502846bd8fb49c522c18dc7da2d9b97452f8cc8eebe",
+    "engine/tests/mcp_live_android.py": "f6c2607b106b8f7a1038a79f581c94c747c9040766c62cfe7e0213c7a53a56f0",
+    "engine/tests/monitoring-android.py": "09469fa2123efae6cac4a4269f356922321a97b9325ab107f28f2a1542d058ce",
+    "engine/tests/monitoring-web.mjs": "186572d6c62d2eeca8ede58fce7f4597ef003b4ce682b10b863f22b01813d3dc",
+    "engine/tests/monitoring.py": "8370cd3d8c0471adb6927e06407ef7339b9888a8cdcaca1a09de2392ec1afc8d",
+    "engine/tests/monitoring_fixture.py": "c1e943ef837bd3c53be91daf68a30b81a9a78ceb9ac587c425dd130bc1b73dd5",
+    "engine/tests/transport.py": "b7e5ba966379c2bb385b15205b201548c67f9ac2c2e2906a8e5dc11c14e0cf27",
+    "engine/tests/value.test.mjs": "5ef937ff167131e4946c2029c52b824b486f93a2747ff1d261654167eb3a3a55",
+    "engine/tests/web.mjs": "0bdca8fd10dba7d82ed50b96c9704cac23cca78b04c1024fae830a1c1099a47c"
+  },
+  "checks": {
+    "rust": {
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "engine/Cargo.toml",
+        "--locked",
+        "--offline",
+        "--target-dir",
+        "/tmp/talia-p3-target"
+      ],
+      "exit_code": 0,
+      "stdout": "\nrunning 89 tests\ntest authority::tests::credentials_and_families_are_independent ... ok\ntest authority::tests::exact_scopes_and_operation_target_types ... ok\ntest authority::tests::permitted_catalog_reads_do_not_grant_audit_access_or_references ... ok\ntest authority::tests::operator_provision_rolls_back_policy_when_ceiling_is_invalid ... ok\ntest authority::tests::unsupported_fields_and_credential_authority_do_not_enter_catalog ... ok\ntest authority::tests::changed_request_failures_are_audited_without_overwriting_original_outcomes ... ok\ntest authority::tests::admissions_denials_deduplication_and_principal_isolation ... ok\ntest authority::tests::audit_failure_after_external_effect_leaves_unknown_on_recovery ... ok\ntest authority::tests::live_effects_require_host_and_agent_grants_and_active_invocation ... ok\ntest authority::tests::revocation_is_checked_before_start_and_after_await ... ok\ntest authority::tests::sensitive_arguments_and_migration_errors_are_not_audited ... ok\ntest authority::tests::source_diagnostics_are_actionable_and_save_rejections_are_audited ... ok\ntest catalog::tests::new_variables_initialize_once_and_deleted_ids_fence_old_work ... ok\ntest catalog::tests::final_graph_allows_removing_monitor_and_its_variable_together ... ok\ntest authority::tests::failed_audit_persistence_never_commits_catalog_effect ... ok\ntest catalog::tests::script_references_link_without_running_code ... ok\ntest authority::tests::discovery_scopes_and_cursors_do_not_grant_source_access ... ok\ntest authority::tests::catalog_success_and_audit_commit_together_with_ceiling ... ok\ntest catalog::tests::shared_screen_references_resolve_in_the_containing_dashboard ... ok\ntest authority::tests::audit_read_scope_and_catalog_discovery_are_filtered ... ok\ntest catalog::tests::authored_package_uses_shared_runtime_and_duplicate_changes_are_rejected ... ok\ntest catalog::tests::deletion_cycles_and_unused_sources_are_validated ... ok\ntest catalog::tests::shared_packages_and_local_parameters ... ok\ntest catalog::tests::engine_records_share_storage_and_legacy_edits_conflict ... ok\ntest clients::tests::lifecycle_lease_and_reconnect ... ok\ntest clients::tests::credentials_names_and_scopes ... ok\ntest clients::tests::report_order_and_strict_schema ... ok\ntest catalog::tests::mixed_engine_and_ui_failure_is_atomic ... ok\ntest clients::tests::separate_tabs_replacement_and_delayed_reports ... ok\ntest catalog::tests::final_graph_is_order_independent_and_migration_failure_rolls_back ... ok\ntest authority::tests::assignments_require_exact_scope_and_commit_audit_atomically ... ok\ntest catalog::tests::invalid_dashboard_rolls_back_successful_variable_migration ... ok\ntest catalog::tests::validation_does_not_reserve_old_runtime_state ... ok\ntest catalog::tests::ui_only_save_preserves_unsorted_monitoring_configuration ... ok\ntest catalog::tests::strict_javascript_syntax_and_fragment_locations ... ok\ntest definitions::tests::shared_activation_is_all_or_nothing ... ok\ntest catalog::tests::validation_conflicts_and_no_authored_execution ... ok\ntest mcp_engine::tests::audit_failures_prevent_admission_and_never_replay_committed_writes ... ok\ntest mcp_engine::tests::subscriptions_are_connection_owned_expire_and_release_demand ... ok\ntest mcp_engine::tests::stored_writes_exceptional_samples_history_and_no_replay ... ok\ntest mcp_live::tests::audit_failure_prevents_dispatch_and_host_rejection_finishes_without_begin ... ok\ntest mcp_live::tests::connection_ownership_cancellation_and_no_effect_replay ... ok\ntest pipelines::tests::recovery_distinguishes_pending_from_unknown ... ok\ntest mcp_live::tests::completion_persistence_failure_keeps_prior_effect_unknown_without_replay ... ok\ntest mcp_live::tests::revocation_fences_effects_and_failed_host_reply_is_durable ... ok\ntest monitoring::tests::atomic_updates_and_independent_state ... ok\ntest scheduling::tests::calendar_dst_gap_fold_weekdays ... ok\ntest authority::tests::outstanding_dispatch_is_bounded_and_cancelled_permits_stay_retired ... ok\ntest delivery::tests::deletion_does_not_resurrect_saved_package ... ok\ntest store::crash_tests::crash_child ... ok\ntest sources::tests::bounded_transport_and_lossless_results ... ok\ntest mcp_engine::tests::runs_resolve_ownership_and_admission_survives_lost_response ... ok\ntest store::tests::action_recovery ... ok\ntest value::tests::boundaries ... ok\ntest value::tests::embedded_round_trip ... ok\ntest runtime::tests::failed_setter_preserves_only_committed_state_and_effects ... ok\ntest store::tests::commits_history_and_conflicts ... ok\ntest catalog::tests::packages_and_catalog_survive_reopen ... ok\ntest definitions::tests::invalid_code_cycle_and_budget ... ok\ntest delivery::tests::saved_shared_packages_and_independent_assignments ... ok\ntest pipelines::tests::retries_deadline_and_atomic_failure ... ok\ntest scheduling::tests::missed_runs_and_freshness_without_clients ... ok\ntest runtime::invalidation_tests::independent_policy_starts_separate_evaluations ... ok\ntest runtime::more_tests::stale_setter_is_not_replayed ... ok\ntest runtime::tests::definition_update_cancels_old_work ... ok\ntest runtime::tests::shared_reads_survive_waiter_cancellation ... ok\ntest pipelines::tests::removed_and_recreated_instance_fences_old_work ... ok\ntest mcp_engine::tests::permissions_are_rechecked_after_await_and_for_nested_effects ... ok\ntest pipelines::tests::cancelling_queued_work_does_not_invalidate_active_run ... ok\ntest runtime::invalidation_tests::explicit_invalidation_fences_old_cache_result ... ok\ntest mcp_live::tests::cancelled_before_dispatch_and_timed_out_commands_cannot_arrive_later ... ok\ntest runtime::more_tests::last_reader_timeout_does_not_cancel_producer ... ok\ntest pipelines::tests::admission_and_async_io ... ok\ntest mcp_engine::tests::setter_cancellation_keeps_prior_effects_and_skips_later_work ... ok\ntest runtime::more_tests::dependency_changes_retry_and_expose_changed_inputs ... ok\ntest runtime::tests::setter_interleaves_and_stale_getter_retries ... ok\ntest authority::tests::recovery_and_audit_survive_reopen_without_dispatch ... ok\ntest pipelines::tests::fast_continuation_does_not_wait_for_unrelated_io ... ok\ntest pipelines::effect_tests::cancelled_effect_remains_unknown_and_never_replays ... ok\ntest clients::tests::restart_keeps_identity_but_requires_new_connection ... ok\ntest watches::tests::availability_timer_runs_without_new_observations ... ok\ntest watches::tests::initial_critical_stale_freeze_and_atomic_action_failure ... ok\ntest authority::tests::restart_upgrade_preserves_catalog_and_credentials_are_not_sources ... ok\ntest delivery::tests::assignments_survive_restart_and_seed_never_overwrites ... ok\ntest pipelines::tests::cancellation_generation_and_prior_commits ... ok\ntest watches::tests::ordered_crossings_independent_flags_rearming_and_reconfiguration ... ok\ntest monitoring::tests::sqlite_v1_upgrade_preserves_existing_values ... ok\ntest catalog::tests::v4_upgrade_preserves_monitoring_and_variable_state ... ok\ntest store::crash_tests::process_crash_and_backup ... ok\n\ntest result: ok. 89 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.77s\n\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n\nrunning 1 test\ntest tests::frame_bound_rejects_unterminated_input_and_resets_per_line ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s\n\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+      "stderr": "    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.13s\n     Running unittests src/lib.rs (/tmp/talia-p3-target/debug/deps/talia_engine-0ea69c6d0447b4b6)\n     Running unittests src/bin/talia-agent.rs (/tmp/talia-p3-target/debug/deps/talia_agent-ce407ed450181ce3)\n     Running unittests src/main.rs (/tmp/talia-p3-target/debug/deps/talia_engine-711ce9e156090432)\n     Running unittests src/bin/talia-mcp.rs (/tmp/talia-p3-target/debug/deps/talia_mcp-4fcd8f7454a926ac)\n   Doc-tests talia_engine\n",
+      "results": []
+    },
+    "native-unit": {
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "dashboard/native/Cargo.toml",
+        "--locked",
+        "--offline"
+      ],
+      "exit_code": 0,
+      "stdout": "\nrunning 2 tests\ntest tests::portable_vm ... ok\ntest tests::bounded_and_isolated ... ok\n\ntest result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.50s\n\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+      "stderr": "    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.03s\n     Running unittests src/lib.rs (dashboard/native/target/debug/deps/talia_dashboard_runtime-6e5243b9e521d9cc)\n   Doc-tests talia_dashboard_runtime\n",
+      "results": []
+    },
+    "build-engine": {
+      "command": [
+        "cargo",
+        "build",
+        "--manifest-path",
+        "engine/Cargo.toml",
+        "--locked",
+        "--offline",
+        "--target-dir",
+        "/tmp/talia-p3-target",
+        "--bins",
+        "--examples"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": "    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.10s\n",
+      "results": []
+    },
+    "shared-js": {
+      "command": [
+        "node",
+        "--test",
+        "engine/tests/value.test.mjs",
+        "engine/tests/client.test.mjs",
+        "dashboard/tests/compiler.test.mjs",
+        "dashboard/tests/vm.test.mjs"
+      ],
+      "exit_code": 0,
+      "stdout": "\u2714 complete example compiles and binds without evaluating source (5.552358ms)\n\u2714 compiler diagnoses unsafe expressions and invalid structures (0.910921ms)\n\u2714 dynamic types, missing paths, repeat keys and responsive units are checked (0.680956ms)\n\u2714 unknown references and malformed precompiled versions are rejected (0.209135ms)\n\u2714 reusable definitions are validated, scoped and parameterized (0.421587ms)\n\u2714 async actions interleave; stale commit fails without undoing earlier effects (5.799344ms)\n\u2714 pause cancels pending work, forbids late effects and keeps retained state (2.123721ms)\n\u2714 VM references have independent state; functions resolve by name (2.792635ms)\n\u2714 shared example handles engine subscriptions and control actions (3.53637ms)\n\u2714 referenced ViewModels receive start and resume lifecycle independently (2.455599ms)\n\u2714 connection recovery reconciles before online; no mutation replay (2.363214ms)\n\u2714 late old-generation response cannot overwrite reconnect state (0.257908ms)\n\u2714 named resources reconcile independently and manual runs are never replayed (1.33952ms)\n\u2714 lossless values, keys, tag-shaped objects and equality (3.258665ms)\n\u2714 reject malformed, unsupported and unbounded values before coercion (2.052948ms)\n\u2139 tests 15\n\u2139 suites 0\n\u2139 pass 15\n\u2139 fail 0\n\u2139 cancelled 0\n\u2139 skipped 0\n\u2139 todo 0\n\u2139 duration_ms 70.359812\n",
+      "stderr": "",
+      "results": []
+    },
+    "transport": {
+      "command": [
+        "python3",
+        "engine/tests/transport.py",
+        "/tmp/talia-p3-target/debug/talia-engine"
+      ],
+      "exit_code": 0,
+      "stdout": "{\"passed\": true, \"checks\": [\"single owner\", \"durable writes\", \"duplicate identity\", \"argument conflict\", \"server incarnation\", \"restart snapshot\", \"original age/quality\", \"response loss reconciliation\", \"unknown stays unknown\", \"stale client epoch\", \"subscription lifecycle\", \"crash after effect remains unknown without replay\"]}\n",
+      "stderr": "",
+      "results": [
+        {
+          "passed": true,
+          "checks": [
+            "single owner",
+            "durable writes",
+            "duplicate identity",
+            "argument conflict",
+            "server incarnation",
+            "restart snapshot",
+            "original age/quality",
+            "response loss reconciliation",
+            "unknown stays unknown",
+            "stale client epoch",
+            "subscription lifecycle",
+            "crash after effect remains unknown without replay"
+          ]
+        }
+      ]
+    },
+    "monitoring": {
+      "command": [
+        "python3",
+        "engine/tests/monitoring.py",
+        "/tmp/talia-p3-target/debug/talia-engine"
+      ],
+      "exit_code": 0,
+      "stdout": "{\"passed\": true, \"checks\": [\"clientless collection\", \"Prometheus and probe fixtures\", \"hot configuration rollback\", \"reference integrity\", \"state subscriptions\", \"history\", \"restart flags\", \"manual deduplication\", \"unknown no replay\", \"credential redaction\"]}\n",
+      "stderr": "",
+      "results": [
+        {
+          "passed": true,
+          "checks": [
+            "clientless collection",
+            "Prometheus and probe fixtures",
+            "hot configuration rollback",
+            "reference integrity",
+            "state subscriptions",
+            "history",
+            "restart flags",
+            "manual deduplication",
+            "unknown no replay",
+            "credential redaction"
+          ]
+        }
+      ]
+    },
+    "clients": {
+      "command": [
+        "python3",
+        "engine/tests/clients.py",
+        "/tmp/talia-p3-target/debug/talia-engine"
+      ],
+      "exit_code": 0,
+      "stdout": "{\"passed\": true, \"checks\": [\"idempotent enrollment\", \"authentication\", \"strict schema\", \"dirty state cannot regress\", \"reconnect cannot clear dirty state\", \"slot ownership\", \"obsolete reports rejected\", \"retired IDs cannot return\", \"credential redaction\", \"restart disconnects until authenticated reconnect\"]}\n",
+      "stderr": "",
+      "results": [
+        {
+          "passed": true,
+          "checks": [
+            "idempotent enrollment",
+            "authentication",
+            "strict schema",
+            "dirty state cannot regress",
+            "reconnect cannot clear dirty state",
+            "slot ownership",
+            "obsolete reports rejected",
+            "retired IDs cannot return",
+            "credential redaction",
+            "restart disconnects until authenticated reconnect"
+          ]
+        }
+      ]
+    },
+    "build-web": {
+      "command": [
+        "bash",
+        "dashboard/build-web.sh"
+      ],
+      "exit_code": 0,
+      "stdout": "6abeb78784d5930ba4343f835016b42a19263f62d83ba15dbca60e05f724c8b9\n0e49cc0192523911d365f97d36fa3ef0aa6de61942b3ea1494c06bd924957420\n",
+      "stderr": "\n  dashboard/web/dist/worker.js  110.1kb\n\n\u26a1 Done in 16ms\n",
+      "results": []
+    },
+    "build-android": {
+      "command": [
+        "bash",
+        "dashboard/build-android.sh"
+      ],
+      "exit_code": 0,
+      "stdout": "6abeb78784d5930ba4343f835016b42a19263f62d83ba15dbca60e05f724c8b9\n0e49cc0192523911d365f97d36fa3ef0aa6de61942b3ea1494c06bd924957420\nTo honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.13/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.\nDaemon will be stopped at the end of the build \n> Task :app:preBuild UP-TO-DATE\n> Task :app:preDebugBuild UP-TO-DATE\n> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE\n> Task :app:generateDebugBuildConfig UP-TO-DATE\n> Task :app:javaPreCompileDebug UP-TO-DATE\n> Task :app:checkDebugAarMetadata UP-TO-DATE\n> Task :app:processDebugNavigationResources UP-TO-DATE\n> Task :app:compileDebugNavigationResources UP-TO-DATE\n> Task :app:generateDebugResValues UP-TO-DATE\n> Task :app:mapDebugSourceSetPaths UP-TO-DATE\n> Task :app:generateDebugResources UP-TO-DATE\n> Task :app:mergeDebugResources UP-TO-DATE\n> Task :app:packageDebugResources UP-TO-DATE\n> Task :app:parseDebugLocalResources UP-TO-DATE\n> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE\n> Task :app:extractDeepLinksDebug UP-TO-DATE\n> Task :app:processDebugMainManifest UP-TO-DATE\n> Task :app:processDebugManifest UP-TO-DATE\n> Task :app:processDebugManifestForPackage UP-TO-DATE\n> Task :app:processDebugResources UP-TO-DATE\n> Task :app:compileDebugJavaWithJavac UP-TO-DATE\n> Task :app:mergeDebugShaders UP-TO-DATE\n> Task :app:compileDebugShaders NO-SOURCE\n> Task :app:generateDebugAssets UP-TO-DATE\n> Task :app:mergeDebugAssets UP-TO-DATE\n> Task :app:compressDebugAssets UP-TO-DATE\n> Task :app:desugarDebugFileDependencies UP-TO-DATE\n> Task :app:dexBuilderDebug UP-TO-DATE\n> Task :app:mergeDebugGlobalSynthetics UP-TO-DATE\n> Task :app:processDebugJavaRes NO-SOURCE\n> Task :app:mergeDebugJavaResource UP-TO-DATE\n> Task :app:checkDebugDuplicateClasses UP-TO-DATE\n> Task :app:mergeExtDexDebug UP-TO-DATE\n> Task :app:mergeLibDexDebug UP-TO-DATE\n> Task :app:mergeProjectDexDebug UP-TO-DATE\n> Task :app:mergeDebugJniLibFolders UP-TO-DATE\n> Task :app:mergeDebugNativeLibs UP-TO-DATE\n> Task :app:stripDebugDebugSymbols UP-TO-DATE\n> Task :app:validateSigningDebug UP-TO-DATE\n> Task :app:writeDebugAppMetadata UP-TO-DATE\n> Task :app:writeDebugSigningConfigVersions UP-TO-DATE\n> Task :app:packageDebug UP-TO-DATE\n> Task :app:createDebugApkListingFileRedirect UP-TO-DATE\n> Task :app:assembleDebug UP-TO-DATE\n\n[Incubating] Problems report is available at: file:///home/lelloman/lelloprojects/talia/dashboard/android/build/reports/problems/problems-report.html\n\nDeprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.\n\nYou can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.\n\nFor more on this, please refer to https://docs.gradle.org/8.13/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.\n\nBUILD SUCCESSFUL in 6s\n37 actionable tasks: 37 up-to-date\n",
+      "stderr": "    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.03s\n",
+      "results": []
+    },
+    "mcp_authoring": {
+      "command": [
+        "python3",
+        "engine/tests/mcp_authoring.py",
+        "--clients"
+      ],
+      "exit_code": 0,
+      "stdout": "{\"passed\":true,\"checks\":[\"MCP-authored saved package on web\",\"shared UI button invokes shared VM/function\",\"clean runtime after authored interaction\"]}\n{\"passed\": true, \"checks\": [\"MCP-authored saved package on native emulator\", \"shared UI button invokes shared VM/function\", \"clean runtime after authored interaction\"]}\n{\"passed\": true, \"checks\": [\"MCP initialization, both protocol generations and tool discovery\", \"atomic shared UI/VM/function and automatic Prometheus/watch authoring without restart\", \"validation rollback, durable deduplication and revision/request conflicts\", \"located source diagnostics, rollback, strict arguments and scoped authorization\", \"MCP-authored interactive shared package on web and native emulator\", \"revisioned desired assignments and coherent shared package updates\", \"permission denials and sanitized audits/status across all mutations\", \"referenced deletion rejection and atomic closure deletion\", \"hot computed parameter activation refreshes subscribers without an explicit read\", \"restart persistence and operator credential revocation\"]}\n",
+      "stderr": "",
+      "results": [
+        {
+          "passed": true,
+          "checks": [
+            "MCP-authored saved package on web",
+            "shared UI button invokes shared VM/function",
+            "clean runtime after authored interaction"
+          ]
+        },
+        {
+          "passed": true,
+          "checks": [
+            "MCP-authored saved package on native emulator",
+            "shared UI button invokes shared VM/function",
+            "clean runtime after authored interaction"
+          ]
+        },
+        {
+          "passed": true,
+          "checks": [
+            "MCP initialization, both protocol generations and tool discovery",
+            "atomic shared UI/VM/function and automatic Prometheus/watch authoring without restart",
+            "validation rollback, durable deduplication and revision/request conflicts",
+            "located source diagnostics, rollback, strict arguments and scoped authorization",
+            "MCP-authored interactive shared package on web and native emulator",
+            "revisioned desired assignments and coherent shared package updates",
+            "permission denials and sanitized audits/status across all mutations",
+            "referenced deletion rejection and atomic closure deletion",
+            "hot computed parameter activation refreshes subscribers without an explicit read",
+            "restart persistence and operator credential revocation"
+          ]
+        }
+      ],
+      "cleanup": {
+        "app_absent": true,
+        "reverse_mappings_restored": true
+      }
+    },
+    "mcp_engine": {
+      "command": [
+        "python3",
+        "engine/tests/mcp_engine.py",
+        "--clients"
+      ],
+      "exit_code": 0,
+      "stdout": "{\"passed\":true,\"checks\":[\"MCP write observed by web subscription\",\"exceptional value visible in chart\",\"authored VM remains clean\"]}\n{\"passed\": true, \"checks\": [\"MCP write observed by native subscription\", \"exceptional value visible in chart\", \"native controls and clean authored VM\"]}\n{\"passed\": true, \"checks\": [\"lossless exceptional values, bounded history, expected revisions and exact write deduplication\", \"separate permission families, bounded async reads and sanitized failures without private Variable state\", \"connection-owned coalesced subscriptions, explicit release and cleanup on MCP EOF\", \"async setter yields; MCP cancellation preserves earlier commits and fences subsequent effects\", \"durable Pipeline admission, run ownership, tagged results and authorized cancellation without replay\", \"monitoring resource access and explicit Watch resume with sanitized exceptions\", \"MCP-written exceptional value consumed by web and native emulator dashboards\", \"reconnect/restart outcome reconciliation and sanitized durable audit records\"]}\n",
+      "stderr": "",
+      "results": [
+        {
+          "passed": true,
+          "checks": [
+            "MCP write observed by web subscription",
+            "exceptional value visible in chart",
+            "authored VM remains clean"
+          ]
+        },
+        {
+          "passed": true,
+          "checks": [
+            "MCP write observed by native subscription",
+            "exceptional value visible in chart",
+            "native controls and clean authored VM"
+          ]
+        },
+        {
+          "passed": true,
+          "checks": [
+            "lossless exceptional values, bounded history, expected revisions and exact write deduplication",
+            "separate permission families, bounded async reads and sanitized failures without private Variable state",
+            "connection-owned coalesced subscriptions, explicit release and cleanup on MCP EOF",
+            "async setter yields; MCP cancellation preserves earlier commits and fences subsequent effects",
+            "durable Pipeline admission, run ownership, tagged results and authorized cancellation without replay",
+            "monitoring resource access and explicit Watch resume with sanitized exceptions",
+            "MCP-written exceptional value consumed by web and native emulator dashboards",
+            "reconnect/restart outcome reconciliation and sanitized durable audit records"
+          ]
+        }
+      ],
+      "cleanup": {
+        "app_absent": true,
+        "reverse_mappings_restored": true
+      }
+    },
+    "mcp_live": {
+      "command": [
+        "python3",
+        "engine/tests/mcp_live.py",
+        "--android"
+      ],
+      "exit_code": 0,
+      "stdout": "{\"passed\":true,\"checks\":[\"simultaneous two-tab and native Android isolation\",\"MCP browser edit leaves Android clean\",\"MCP Android state edit leaves other tab unchanged\"]}\n{\"passed\":true,\"checks\":[\"scoped discovery and clean inspection\",\"isolated live state and engine effects\",\"exact retry without replay\",\"revision guards and dirty acknowledgement\",\"pinned reload replaces only one tab\",\"engine permission intersection\",\"failed guest inspection/restart\",\"MCP cancellation preserves earlier effects\",\"paused immediate rejection\",\"saved definitions unchanged\"]}\n{\"passed\": true, \"checks\": [\"native clean inspection\", \"isolated live state/engine mutation\", \"retry deduplication\", \"dirty acknowledgement\", \"native dedicated reload/new identity\", \"effects survive reload\", \"paused rejection\"]}\n{\"passed\": true, \"checks\": [\"live reload outcome survives server restart\", \"restart disconnects live targets without command replay\"]}\n",
+      "stderr": "",
+      "results": [
+        {
+          "passed": true,
+          "checks": [
+            "simultaneous two-tab and native Android isolation",
+            "MCP browser edit leaves Android clean",
+            "MCP Android state edit leaves other tab unchanged"
+          ]
+        },
+        {
+          "passed": true,
+          "checks": [
+            "scoped discovery and clean inspection",
+            "isolated live state and engine effects",
+            "exact retry without replay",
+            "revision guards and dirty acknowledgement",
+            "pinned reload replaces only one tab",
+            "engine permission intersection",
+            "failed guest inspection/restart",
+            "MCP cancellation preserves earlier effects",
+            "paused immediate rejection",
+            "saved definitions unchanged"
+          ]
+        },
+        {
+          "passed": true,
+          "checks": [
+            "native clean inspection",
+            "isolated live state/engine mutation",
+            "retry deduplication",
+            "dirty acknowledgement",
+            "native dedicated reload/new identity",
+            "effects survive reload",
+            "paused rejection"
+          ]
+        },
+        {
+          "passed": true,
+          "checks": [
+            "live reload outcome survives server restart",
+            "restart disconnects live targets without command replay"
+          ]
+        }
+      ],
+      "cleanup": {
+        "app_absent": true,
+        "reverse_mappings_restored": true
+      }
+    },
+    "registration-web": {
+      "command": [
+        "node",
+        "dashboard/tests/registration.mjs"
+      ],
+      "exit_code": 0,
+      "stdout": "{\"passed\":true,\"checks\":[\"shared persistent client\",\"duplicate tab gets distinct slot\",\"independent selections\",\"refresh retains selection and slot but replaces live ID\",\"dirty/edit reports\",\"rename\",\"restart reconnect preserves live ID and dirty state\",\"paused lifecycle\",\"closed tab disconnects\"]}\n",
+      "stderr": "",
+      "results": [
+        {
+          "passed": true,
+          "checks": [
+            "shared persistent client",
+            "duplicate tab gets distinct slot",
+            "independent selections",
+            "refresh retains selection and slot but replaces live ID",
+            "dirty/edit reports",
+            "rename",
+            "restart reconnect preserves live ID and dirty state",
+            "paused lifecycle",
+            "closed tab disconnects"
+          ]
+        }
+      ]
+    },
+    "registration-android": {
+      "command": [
+        "python3",
+        "dashboard/tests/registration_android.py",
+        "emulator-5570"
+      ],
+      "exit_code": 0,
+      "stdout": "{\"passed\": true, \"checks\": [\"persistent client and slot\", \"dirty/edit reporting\", \"background pause\", \"foreground resume retains live ID\", \"reload creates clean new instance\", \"failure remains visible in registry\", \"failed host background/foreground\", \"process recreation replaces instance\", \"selection survives process recreation\", \"credentials absent from guest report\"]}\n",
+      "stderr": "",
+      "results": [
+        {
+          "passed": true,
+          "checks": [
+            "persistent client and slot",
+            "dirty/edit reporting",
+            "background pause",
+            "foreground resume retains live ID",
+            "reload creates clean new instance",
+            "failure remains visible in registry",
+            "failed host background/foreground",
+            "process recreation replaces instance",
+            "selection survives process recreation",
+            "credentials absent from guest report"
+          ]
+        }
+      ],
+      "cleanup": {
+        "app_absent": true,
+        "reverse_mappings_restored": true
+      }
+    },
+    "delivery-web": {
+      "command": [
+        "node",
+        "dashboard/tests/delivery.mjs"
+      ],
+      "exit_code": 0,
+      "stdout": "{\"passed\":true,\"checks\":[\"server catalog delivery without generated files\",\"independent tab assignments/parameters\",\"saved shared changes notify without adoption\",\"reload clears edits and releases old subscription\",\"committed server effects retained\",\"stale assignment confirmation rejected\",\"scoped offline baseline retained\",\"online reload adopts desired parameters\",\"deleted dashboard preserves live instance but cannot reload\",\"selection survives page recreation\"]}\n",
+      "stderr": "",
+      "results": [
+        {
+          "passed": true,
+          "checks": [
+            "server catalog delivery without generated files",
+            "independent tab assignments/parameters",
+            "saved shared changes notify without adoption",
+            "reload clears edits and releases old subscription",
+            "committed server effects retained",
+            "stale assignment confirmation rejected",
+            "scoped offline baseline retained",
+            "online reload adopts desired parameters",
+            "deleted dashboard preserves live instance but cannot reload",
+            "selection survives page recreation"
+          ]
+        }
+      ]
+    },
+    "delivery-android": {
+      "command": [
+        "python3",
+        "dashboard/tests/delivery_android.py",
+        "emulator-5570"
+      ],
+      "exit_code": 0,
+      "stdout": "{\"passed\": true, \"checks\": [\"saved catalog package\", \"assignment parameters\", \"shared update without adoption\", \"reload clears edits and replaces live instance\", \"one current subscription\", \"server effect retained\", \"scoped cached offline baseline\", \"online reload\", \"deleted dashboard preserves running instance\", \"saved selection survives process recreation\"]}\n",
+      "stderr": "",
+      "results": [
+        {
+          "passed": true,
+          "checks": [
+            "saved catalog package",
+            "assignment parameters",
+            "shared update without adoption",
+            "reload clears edits and replaces live instance",
+            "one current subscription",
+            "server effect retained",
+            "scoped cached offline baseline",
+            "online reload",
+            "deleted dashboard preserves running instance",
+            "saved selection survives process recreation"
+          ]
+        }
+      ],
+      "cleanup": {
+        "app_absent": true,
+        "reverse_mappings_restored": true
+      }
+    },
+    "p0-provenance": {
+      "command": [
+        "python3",
+        "spikes/qualification/check.py",
+        "spikes/qualification/results/full-2026-09-19.json"
+      ],
+      "exit_code": 0,
+      "stdout": "Recorded platform checks and source provenance pass. Missing: none\n",
+      "stderr": "",
+      "results": []
+    }
+  },
+  "qualified": true,
+  "missing_platforms": [],
+  "required_checks": [
+    "rust",
+    "native-unit",
+    "build-engine",
+    "shared-js",
+    "transport",
+    "monitoring",
+    "clients",
+    "build-web",
+    "build-android",
+    "mcp_authoring",
+    "mcp_engine",
+    "mcp_live",
+    "registration-web",
+    "registration-android",
+    "delivery-web",
+    "delivery-android",
+    "p0-provenance"
+  ],
+  "apk": {
+    "abi": "x86_64",
+    "sha256": "861a13c55568d84df884ba83d9a8f7443b581e120544468369098a538a1226f7",
+    "assets": {
+      "assets/ui.js": "c0855dd3462bc3acfd1c1656ee83c4e285d96aeaf06387ae1531b80c7ed1beef",
+      "assets/vm.js": "7fe7e1a30d8954c80823875853f73b1665caf5fef47c473e943e238350907a86",
+      "assets/live.js": "93b5945904f001175e5a02cb76dc419fecd74da76c83a9c4396d3a2f00aa4743",
+      "assets/value.js": "746beb01164abc0cd3ad83a8700ca90fa1482d801b38f2fd1a08ef4c4f8b289a",
+      "lib/x86_64/libtalia_dashboard_runtime.so": "c4b998a930077fd96bffc838bcd1c505c0418c47808367fb4aaa82bb5a3ca02c"
+    }
+  }
+}

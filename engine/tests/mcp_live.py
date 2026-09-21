@@ -13,7 +13,7 @@ with tempfile.TemporaryDirectory(prefix='talia-live-') as temp:
  e=EngineProcess(db);proxy=None
  try:
   e.start();proxy=subprocess.Popen(['python3','dashboard/serve.py','0'],env={**os.environ,'TALIA_ENGINE_DB':str(db),'TALIA_ENGINE_PORT':str(e.port)},stdout=subprocess.PIPE,text=True);port=json.loads(proxy.stdout.readline())['port']
-  subprocess.run(['node','engine/tests/mcp-live-web.mjs',str(e.port),str(port),str(token),str(denied)],check=True)
+  subprocess.run(['node','engine/tests/mcp-live-web.mjs',str(e.port),str(port),str(token),str(denied)]+([os.environ.get('TALIA_EMULATOR','emulator-5570')] if '--android' in sys.argv else []),check=True)
   if '--android' in sys.argv:subprocess.run(['python3','engine/tests/mcp_live_android.py',str(e.port),str(port),str(token)],check=True)
   m=MCP(e.port,token);before=m.tool('operation_status',{'requestId':'reload-ack'});m.close();e.stop();e.start();m=MCP(e.port,token)
   try:
