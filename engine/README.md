@@ -13,6 +13,8 @@ remain deployment work. See [monitoring](../docs/monitoring.md).
 ```sh
 cargo test --manifest-path engine/Cargo.toml --offline
 cargo build --manifest-path engine/Cargo.toml --offline
+npm ci --prefix spikes/runtime
+npm ci --prefix dashboard/web
 bash dashboard/build-web.sh
 TALIA_ENGINE_DB=/tmp/talia-development.db python3 dashboard/serve.py 18744
 ```

@@ -35,3 +35,6 @@ engine/__pycache__/
 
 # Private deployment credentials and recovery copies
 .local/
+
+# Web shell dependencies
+dashboard/web/node_modules/

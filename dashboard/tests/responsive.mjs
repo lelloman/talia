@@ -1,11 +1,11 @@
 import {chromium} from '../../spikes/runtime/node_modules/playwright/index.mjs';import {spawn} from 'node:child_process';import {once} from 'node:events';import assert from 'node:assert/strict';
 const server=spawn('python3',['dashboard/serve.py','0'],{stdio:['ignore','pipe','inherit']});let browser,page;
 try{
- const {port}=JSON.parse(String((await once(server.stdout,'data'))[0]));browser=await chromium.launch({headless:true});page=await browser.newPage({viewport:{width:1000,height:900}});await page.goto(`http://127.0.0.1:${port}`);await page.waitForFunction(()=>window.dashboardReport?.state.history.length>0);
+ const {port}=JSON.parse(String((await once(server.stdout,'data'))[0]));browser=await chromium.launch({headless:true});page=await browser.newPage({viewport:{width:1300,height:900}});await page.goto(`http://127.0.0.1:${port}`);await page.waitForFunction(()=>window.dashboardReport?.state.history.length>0);
  await page.getByText('Expanded monitoring surface',{exact:true}).waitFor();await page.getByRole('button',{name:'Controls',exact:true}).click();await page.getByRole('switch',{name:'Show details'}).click();
- await page.locator('#client-settings summary').click();await page.locator('#dp-scale').fill('2');await page.locator('#dp-scale').dispatchEvent('change');await page.locator('#sidebar').check();await page.waitForFunction(()=>dashboardReport.client.params.sidebar===true);
+ await page.locator('.lv-sidebar a[href="#settings"]').click();await page.locator('#dp-scale').fill('2');await page.locator('#dp-scale').dispatchEvent('change');await page.locator('#sidebar').check();await page.waitForFunction(()=>dashboardReport.client.params.sidebar===true);
  assert.equal(await page.evaluate(()=>dashboardReport.state.details),false);assert.equal(await page.evaluate(()=>dashboardReport.state.screen),'controlsScreen');
- await page.getByRole('button',{name:'Overview',exact:true}).click();await page.getByText('Compact monitoring surface',{exact:true}).waitFor();
+ await page.locator('.lv-sidebar a[href="#dashboard"]').click();await page.getByRole('button',{name:'Overview',exact:true}).click();await page.getByText('Compact monitoring surface',{exact:true}).waitFor();
  await page.reload();await page.waitForFunction(()=>window.dashboardReport?.client.scale===2);assert.equal(await page.locator('#sidebar').isChecked(),true);
  const result=await page.evaluate(async()=>{
   const {Renderer}=await import('/dashboard/web/renderer.js');const target=document.createElement('div');document.body.append(target);const r=new Renderer(target,()=>{});

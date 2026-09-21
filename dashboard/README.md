@@ -4,7 +4,9 @@ P1 renders the same restricted UI and JavaScript ViewModel on the web and native
 Android. It uses the existing loopback Rust engine fixture. This is a development
 client, not the production monitoring service. Durable engine storage and
 [MCP authoring](../docs/mcp-authoring.md) and [live control](../docs/mcp-live.md) are now available in durable mode;
-production authentication and deployment remain later roadmap work.
+the production web host uses LelloAuth OIDC and the homelab deployment described
+in [deployment documentation](../deploy/README.md). Its application chrome adopts
+[LelloDesign](../docs/lellodesign-adoption.md).
 
 ## Build and run
 
@@ -12,6 +14,7 @@ From the repository root, using the locked dependencies already used by P0:
 
 ```sh
 npm ci --prefix spikes/runtime
+npm ci --prefix dashboard/web
 cargo build --manifest-path spikes/transport/server/Cargo.toml --locked
 bash dashboard/build-web.sh
 python3 dashboard/serve.py 18744

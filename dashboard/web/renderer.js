@@ -37,7 +37,7 @@ export class Renderer {
     if(el.dataset.chart!==signature){
      el.dataset.chart=signature;el.replaceChildren();const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 300 100');svg.setAttribute('preserveAspectRatio','none');svg.setAttribute('aria-hidden','true');
      const finite=p.values.filter(Number.isFinite),min=Math.min(0,...finite),max=Math.max(1,...finite),span=max-min;
-     let segment=[];const flush=()=>{if(!segment.length)return;const line=document.createElementNS(svg.namespaceURI,'polyline');line.setAttribute('points',segment.join(' '));line.setAttribute('fill','none');line.setAttribute('stroke','#2563eb');line.setAttribute('stroke-width','2');svg.append(line);segment=[];};
+     let segment=[];const flush=()=>{if(!segment.length)return;const line=document.createElementNS(svg.namespaceURI,'polyline');line.setAttribute('points',segment.join(' '));line.setAttribute('fill','none');line.setAttribute('stroke','var(--ld-primary, #2563eb)');line.setAttribute('stroke-width','2');svg.append(line);segment=[];};
      p.values.forEach((v,i)=>{if(v===null){flush();return;}segment.push(`${i*300/Math.max(1,p.values.length-1)},${95-(v-min)/span*90}`);});flush();
      const caption=document.createElement('figcaption');caption.textContent=p.label+': '+(p.values.length?(p.sampleLabels||p.values).join(', '):'No samples');el.append(svg,caption);el.setAttribute('role','img');el.setAttribute('aria-label',caption.textContent);
     }

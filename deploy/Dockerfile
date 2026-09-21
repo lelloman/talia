@@ -4,6 +4,7 @@ WORKDIR /src
 COPY spikes/runtime/package*.json spikes/runtime/
 RUN cd spikes/runtime && npm ci --no-audit --no-fund
 COPY dashboard dashboard
+RUN cd dashboard/web && npm ci --no-audit --no-fund
 COPY engine/shared engine/shared
 COPY assets assets
 COPY deploy/package-web.py deploy/package-web.py

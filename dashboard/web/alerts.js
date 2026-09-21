@@ -11,7 +11,7 @@ if(panel){
  document.querySelector('#alert-connect').onclick=()=>{if(access.value){sessionStorage.setItem('talia.alertCredential',access.value);access.value='';}refresh();};
  const node=(tag,text)=>{const n=document.createElement(tag);n.textContent=text;return n;};
  const button=(text,action)=>{const b=node('button',text);b.onclick=async()=>{b.disabled=true;try{await action();await refresh();}catch(e){status.textContent=String(e);b.disabled=false;}};return b;};
- async function refresh(){if(!panel.open||document.hidden)return;
+ async function refresh(){if(!panel.open||panel.hidden||panel.closest('[data-shell-page]')?.hidden||document.hidden)return;
   try{const state=await alertRequest('snapshot');list.replaceChildren();status.textContent='';
    for(const a of state.alerts){const item=node('article','');item.append(node('h3',a.key),node('p',`${a.severity} · ${a.active?'Active':'Resolved'}${a.acknowledgement?' · Acknowledged by '+a.acknowledgement.actor:''}`),node('p',a.message));
     if(!window.taliaViewer&&a.active&&!a.acknowledgement)item.append(button('Acknowledge',()=>alertRequest('acknowledge',{key:a.key,occurrence:a.occurrence,expected:a.revision})));
@@ -24,5 +24,5 @@ if(panel){
    if(!state.alerts.length)list.append(node('p','No alerts'));
   }catch(e){status.textContent=String(e);}
  }
- panel.addEventListener('toggle',refresh);document.querySelector('#alert-refresh').onclick=refresh;setInterval(refresh,3000);
+ panel.addEventListener('toggle',refresh);window.addEventListener('hashchange',refresh);document.querySelector('#alert-refresh').onclick=refresh;setInterval(refresh,3000);
 }

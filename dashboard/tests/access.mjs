@@ -26,17 +26,38 @@ try{
  const a=await login(admin),v=await login(viewer);await v.getByRole('heading',{name:'No dashboards available yet'}).waitFor();assert.equal(await v.locator('#sharing').isVisible(),false);
  const api=(p,body)=>p.evaluate(async body=>(await(await fetch('/account',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json()),body);
  assert.equal((await api(v,{op:'role',subject:issuer+'#viewer',admin:true})).error,'forbidden');
- await a.waitForFunction(()=>window.dashboardReport?.registration?.connected);await a.locator('#sharing summary').click();await a.locator('#share-public').check();await a.locator('#save-sharing').click();await a.getByText('Dashboard sharing saved.',{exact:true}).waitFor();
+ await a.waitForFunction(()=>window.dashboardReport?.registration?.connected);await a.locator('.lv-sidebar a[href="#sharing"]').click();// Shared components must retain the live runtime and unsaved sharing form.
+ const liveId=await a.evaluate(()=>window.dashboardReport.registration.liveInstanceId);
+ await a.locator('#share-public').check();
+ await a.getByRole('button',{name:'Change theme: System',exact:true}).click();await a.getByRole('button',{name:'Dark',exact:true}).click();
+ assert.equal(await a.locator('.lello-theme').getAttribute('data-lello-theme'),'blue-dark');
+ await a.getByRole('button',{name:'Collapse sidebar',exact:true}).click();
+ await a.waitForFunction(()=>Math.round(document.querySelector('.lv-sidebar').getBoundingClientRect().width)===80);
+ await a.locator('.lv-sidebar a[href="#settings"]').click();await a.locator('.lv-sidebar a[href="#sharing"]').click();
+ await a.waitForTimeout(10500);assert.equal(await a.locator('#share-public').isChecked(),true);
+ assert.equal(await a.evaluate(()=>window.dashboardReport.registration.liveInstanceId),liveId);
+ await a.emulateMedia({reducedMotion:'reduce'});assert.equal(await a.locator('.lv-scaffold').evaluate(e=>getComputedStyle(e).transitionDuration),'0s');await a.getByRole('button',{name:'Expand sidebar',exact:true}).click();
+ await a.getByRole('button',{name:'Change theme: Dark',exact:true}).click();await a.keyboard.press('Home');await a.keyboard.press('Enter');
+ assert.equal(await a.locator('.lello-theme').getAttribute('data-lello-theme'),'blue-light');
+ assert.equal(await a.getByRole('button',{name:'Change theme: Light',exact:true}).evaluate(e=>e===document.activeElement),true);
+ await a.locator('#share-public').check();await a.locator('#save-sharing').click();await a.getByText('Dashboard sharing saved.',{exact:true}).waitFor();
  await v.locator('#refresh-dashboards').click();await v.waitForFunction(()=>window.dashboardReport?.registration?.connected&&window.dashboardReport.state.history.length>0);assert.equal(await v.evaluate(()=>window.taliaViewer),true);
  await v.locator('#make-default').click();await v.getByText('New clients will open this dashboard automatically.',{exact:true}).waitFor();
  const catalog=await api(v,{op:'catalog'});assert.equal(catalog.defaultDashboard,'monitor');assert.deepEqual(catalog.dashboards,[{id:'monitor'}]);
  const engineCall=(p,op,args)=>p.evaluate(async({op,args})=>(await(await fetch('/engine',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({version:1,epoch:1,client:'probe',op,args,dashboard:window.taliaDashboard})})).json()),{op,args});
  assert.equal((await engineCall(v,'write',{id:'value'})).error,'forbidden');assert.equal((await engineCall(v,'monitoringConfig',{})).error,'forbidden');
  const another=await browser.newContext({ignoreHTTPSErrors:true});const v2=await login(another);await v2.waitForFunction(()=>window.dashboardReport?.registration?.connected);assert.equal(await v2.evaluate(()=>window.taliaDashboard.id),'monitor');
- await v.setViewportSize({width:390,height:844});assert.equal(await v.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);mkdirSync('.local/access-verification',{recursive:true});await v.screenshot({path:'.local/access-verification/viewer-mobile.png',fullPage:true});await a.screenshot({path:'.local/access-verification/admin-desktop.png',fullPage:true});
+ await v.setViewportSize({width:390,height:844});assert.equal(await v.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);mkdirSync('.local/access-verification',{recursive:true});await v.getByRole('button',{name:'Open navigation',exact:true}).click();assert.equal(await v.locator('.lv-drawer .lv-account').count(),1);assert.equal(await v.locator('.lv-header .lv-account').count(),0);await v.keyboard.press('Escape');await v.screenshot({path:'.local/access-verification/viewer-mobile.png',fullPage:true});await a.locator('.lv-sidebar a[href="#dashboard"]').click();await a.locator('[data-shell-page=dashboard]').waitFor({state:'visible'});await a.screenshot({path:'.local/access-verification/admin-desktop.png',fullPage:true});
+ // System appearance follows OS changes without replacing the runtime.
+ await v.getByRole('button',{name:'Change theme: System',exact:true}).click();await v.getByRole('button',{name:'Dark',exact:true}).click();
+ await v.reload();await v.waitForFunction(()=>window.dashboardReport?.registration?.connected);assert.equal(await v.locator('.lello-theme').getAttribute('data-lello-theme'),'blue-dark');
+ await v.getByRole('button',{name:'Change theme: Dark',exact:true}).click();await v.getByRole('button',{name:'System',exact:true}).click();await v.emulateMedia({colorScheme:'dark'});await v.waitForFunction(()=>document.querySelector('.lello-theme').dataset.lelloTheme==='blue-dark');
+ await v.emulateMedia({colorScheme:'light'});await v.waitForFunction(()=>document.querySelector('.lello-theme').dataset.lelloTheme==='blue-light');
+ await v.getByRole('button',{name:'Open navigation',exact:true}).click();await v.setViewportSize({width:1280,height:900});await v.waitForFunction(()=>!document.querySelector('.lv-drawer').open);assert.equal(await v.locator('.lv-sidebar .lv-account').count(),1);
+ await v.setViewportSize({width:320,height:760});assert.equal(await v.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
  // Session and account selection survive page reload.
  await v.reload();await v.waitForFunction(()=>window.dashboardReport?.registration?.connected);assert.equal(await v.evaluate(()=>window.taliaDashboard.id),'monitor');
- await a.locator('#share-public').uncheck();await a.locator('#save-sharing').click();await a.getByText('Dashboard sharing saved.',{exact:true}).waitFor();await v.getByRole('heading',{name:'No dashboards available yet'}).waitFor({timeout:15000});
+ await a.locator('.lv-sidebar a[href="#sharing"]').click();await a.locator('#share-public').uncheck();await a.locator('#save-sharing').click();await a.getByText('Dashboard sharing saved.',{exact:true}).waitFor();await v.getByRole('heading',{name:'No dashboards available yet'}).waitFor({timeout:15000});
  assert.equal((await engineCall(v,'hello',{})).error,'forbidden');assert.equal((await api(v,{op:'catalog'})).defaultDashboard,null);
- console.log(JSON.stringify({passed:true,checks:['real OIDC boundary with local provider','viewer starts empty','admin shares from shell','viewer loads public dashboard','server rejects writes and config','account default opens on new installation','reload retains selection','mobile layout fits viewport','unsharing blocks active viewer']}));
+ console.log(JSON.stringify({passed:true,checks:['shared LelloDesign responsive shell','theme and sidebar preserve live runtime','polling preserves sharing drafts','keyboard theme focus','mobile account placement','real OIDC boundary with local provider','viewer starts empty','admin shares from shell','viewer loads public dashboard','server rejects writes and config','account default opens on new installation','reload retains selection','mobile layout fits viewport','unsharing blocks active viewer']}));
 }finally{await browser?.close();if(engine?.pid){try{process.kill(-engine.pid,'SIGTERM');}catch{}}proxy?.close();provider?.close();rmSync(tmp,{recursive:true,force:true});}

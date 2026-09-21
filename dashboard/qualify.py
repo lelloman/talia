@@ -8,7 +8,7 @@ def digest(path):return hashlib.sha256(pathlib.Path(path).read_bytes()).hexdiges
 def inputs():
  files={}
  for folder,dirs,names in os.walk('dashboard'):
-  dirs[:]=[d for d in dirs if d not in {'target','dist','build','.gradle','jniLibs','generated','results','__pycache__'}]
+  dirs[:]=[d for d in dirs if d not in {'target','dist','build','.gradle','jniLibs','generated','results','__pycache__','node_modules'}]
   for name in names:
    path=pathlib.Path(folder)/name
    if name!='local.properties':files[str(path)]=digest(path)
