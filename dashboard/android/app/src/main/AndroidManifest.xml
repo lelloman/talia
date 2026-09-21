@@ -1,6 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
  <uses-permission android:name="android.permission.INTERNET" />
- <application android:theme="@android:style/Theme.Material.Light.NoActionBar" android:label="Talìa Dashboard" android:icon="@drawable/ic_brand" android:usesCleartextTraffic="true" android:allowBackup="false">
+ <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+ <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+ <application android:name=".TaliaApplication" android:theme="@android:style/Theme.Material.Light.NoActionBar" android:label="Talìa Dashboard" android:icon="@drawable/ic_brand" android:usesCleartextTraffic="true" android:allowBackup="false">
+  <service android:name=".AlertMessagingService" android:exported="false"><intent-filter><action android:name="com.google.firebase.MESSAGING_EVENT" /></intent-filter></service>
+  <service android:name=".PushRegistrationJob" android:permission="android.permission.BIND_JOB_SERVICE" android:exported="false" />
+  <receiver android:name=".AlertAcknowledgementReceiver" android:exported="false" />
   <activity android:name=".AlertsActivity" android:exported="false" />
   <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTop" android:configChanges="orientation|screenSize|smallestScreenSize|density|keyboardHidden">
    <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>

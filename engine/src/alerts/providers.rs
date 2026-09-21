@@ -13,6 +13,12 @@ fn telegram_base() -> String {
 #[derive(Clone, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Provider {
+    Fcm {
+        project: String,
+        service_account: String,
+        #[serde(default = "super::fcm::base_url")]
+        base_url: String,
+    },
     Smtp {
         host: String,
         port: u16,
@@ -35,7 +41,7 @@ fn local(host: &str) -> bool {
             .parse::<std::net::IpAddr>()
             .is_ok_and(|ip| ip.is_loopback())
 }
-fn url_valid(u: &str) -> bool {
+pub(crate) fn url_valid(u: &str) -> bool {
     url::Url::parse(u).is_ok_and(|u| {
         u.username().is_empty()
             && u.password().is_none()
@@ -72,6 +78,11 @@ async fn send_inner(p: &Provider, d: &Dispatch) -> Outcome {
         d.alert.severity, state, d.alert.message, d.alert.key, d.alert.occurrence
     );
     match p {
+        Provider::Fcm {
+            project,
+            service_account,
+            base_url,
+        } => super::fcm::send(project, service_account, base_url, d).await,
         Provider::Smtp {
             host,
             port,

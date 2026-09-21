@@ -80,8 +80,8 @@ installation identity may also own dashboard assignments; it is distinct from th
 short-lived live-dashboard instance ID. A push token is not authentication.
 
 Email uses configurable SMTP transport with TLS and optional authentication; Telegram
-uses the Bot API. Android provider selection is pending the user's response (FCM or
-UnifiedPush); the shared delivery envelope and lifecycle do not depend on this choice.
+uses the Bot API. FCM is the implementation default for Android push; the shared delivery envelope
+and lifecycle remain independent of the provider adapter.
 Production credentials and designated recipients are deployment configuration, never
 committed test fixtures. Qualification uses local provider fixtures and an Android
 emulator, and must distinguish fixture evidence from real provider delivery.
@@ -121,3 +121,39 @@ HTTP overrides are restricted to loopback test fixtures. Redirects are disabled.
 Requests have time/response bounds, and provider error details never expose remote
 bodies, credentials or credential-bearing URLs. A provider's positive acceptance is
 recorded as `sent`; this does not prove that the human read the message.
+
+
+## Android push setup
+
+The server's FCM provider uses HTTP v1 and service-account OAuth (RS256). Add a
+provider such as `"android":{"kind":"fcm","project":"your-project-id",
+"service_account":"/run/secrets/talia-firebase.json"}` to the operator file. The
+service-account JSON is read asynchronously and never returned by the alert API.
+Configure Firebase project credentials in the Android build using Gradle properties
+`firebaseAppId`, `firebaseApiKey`, `firebaseProjectId`, and `firebaseSenderId`.
+Without these the APK still provides dashboards and alert controls, and explicitly
+reports that push is not configured. No Firebase project is created by this work.
+
+The app creates a stable installation UUID, keeps it across updates/restarts, and
+registers its renewable FCM token under the authenticated alert principal. It retries
+registration through an Android network-constrained JobScheduler job. Device groups
+are operator-assigned; registration cannot grant group membership. The alert access
+token is host configuration, separate from the push token and ViewModel state.
+Grant `alerts` family `register`, `read` and `acknowledge` permissions as needed;
+`configure`, `silence` and `audit` remain independently grantable.
+
+Enable notifications through the native Alerts screen to request Android's runtime
+notification permission. Tapping a push opens current server state. Direct
+acknowledgement uses the pushed occurrence and revision; stale or disconnected
+requests show an acknowledgement failure and never claim success. Expired payloads
+are ignored and displayed notifications expire automatically. Clearing application
+data or reinstalling produces a new installation UUID.
+
+The current development host still uses the existing loopback connection and ADB
+reverse port. Reachable authenticated production endpoints and operator provisioning
+belong to deployment preparation; do not treat fixture success as a production rollout.
+Debug APKs include a clearly isolated fixture Activity for injecting test payloads and
+exercising PendingIntent actions. It is absent from release sources/manifests.
+
+References: [FCM server authorization](https://firebase.google.com/docs/cloud-messaging/auth-server),
+[Android receipt](https://firebase.google.com/docs/cloud-messaging/android/receive-messages).

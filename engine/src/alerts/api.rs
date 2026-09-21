@@ -31,7 +31,7 @@ fn permission(op: &str) -> Result<Action> {
         "acknowledge" => Action::Acknowledge,
         "silence_save" => Action::Silence,
         "observe" => Action::Observe,
-        "device_register" => Action::Register,
+        "device_register" | "device_status" => Action::Register,
         _ => return Err("unknown alert operation".into()),
     })
 }
@@ -47,7 +47,7 @@ impl Store {
         self.alert_require(session, permission)
             .map_err(|e| format!("{e:?}").to_lowercase())?;
         let actor = session.principal();
-        if ["snapshot", "history", "audit", "config"].contains(&op) {
+        if ["snapshot", "history", "audit", "config", "device_status"].contains(&op) {
             return self.alert_api_inner(op, &args, actor, now);
         }
         let request = text(&args, "requestId")?;
@@ -157,6 +157,16 @@ impl Store {
                 self.alert_silence_save(&silence, integer(a, "expected")?, actor, now)?;
                 Ok(json!({"version":silence.version}))
             }
+            "device_status" => {
+                fields(a, &["id"])?;
+                let device = self.alert_get::<Device>("device", text(a, "id")?)?;
+                if device.as_ref().is_some_and(|d| d.owner != actor) {
+                    return Err("forbidden".into());
+                }
+                Ok(
+                    json!({"device":device.map(|d|json!({"id":d.id,"version":d.version,"enabled":d.enabled}))}),
+                )
+            }
             "device_register" => {
                 fields(a, &["requestId", "device", "expected"])?;
                 let d: Device = parsed(&a["device"])?;
@@ -194,6 +204,7 @@ pub fn tools() -> Vec<Value> {
  ("binding_save","Reference a policy with independent parameters, named engine inputs and stable alert key. Identity/policy reference are immutable; updates use expected version.",json!({"binding":{"type":"object","description":"{id,version,policy,key,params?,inputs?:{alias:variableId},labels?,every_ms?,enabled?}"},"expected":number}),vec!["binding","expected"],false),
  ("destination_save","Save a named email/telegram/push destination referencing an operator-owned provider. Push targets device:ID, user:OWNER or group:NAME.",json!({"destination":{"type":"object","description":"{id,version,channel,provider,target,enabled?}"},"expected":number}),vec!["destination","expected"],false),
  ("silence_save","Create/update an expiring key/label silence. Set until to current server time to end it. Actor comes from authentication.",json!({"silence":{"type":"object","description":"{id,version,key?,labels?,until,reason}"},"expected":number}),vec!["silence","expected"],false),
+ ("device_status","Read this principal's installation revision without exposing its token; requires register permission.",json!({"id":string}),vec!["id"],true),
  ("device_register","Register/rotate this principal's installation push address. Owner comes from authentication; groups cannot be self-assigned.",json!({"device":{"type":"object","description":"{id,version,owner,token,enabled?}"},"expected":number}),vec!["device","expected"],false),
  ("device_groups","Set device groups with configure permission and expected device revision.",json!({"id":string,"groups":{"type":"array","items":{"type":"string"},"maxItems":32},"expected":number}),vec!["id","groups","expected"],false)
  ] {let mut required=required;if !read {properties["requestId"]=string.clone();required.push("requestId");}tools.push(json!({"name":format!("alerts_{op}"),"description":description,"inputSchema":{"type":"object","properties":properties,"required":required,"additionalProperties":false},"annotations":{"readOnlyHint":read,"destructiveHint":!read,"idempotentHint":true,"openWorldHint":!read}}));}

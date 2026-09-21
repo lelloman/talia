@@ -11,7 +11,8 @@ def click(text):
     x1,y1,x2,y2=map(int,re.findall(r'\d+',n.get('bounds')));adb('shell','input','tap',str((x1+x2)//2),str((y1+y2)//2));return
   time.sleep(.2)
  raise AssertionError('control missing: '+text)
-assert not adb('shell','pm','path',pkg).strip(), 'Use a clean disposable emulator'
+assert adb('get-state').strip()==b'device', 'Emulator unavailable'
+assert not subprocess.run(['adb','-s',serial,'shell','pm','path',pkg],capture_output=True).stdout.strip(), 'Use a clean disposable emulator'
 try:
  policy={'principal':'operator','expectedVersion':0,'enabled':True,'grants':[{'family':'alerts','actions':['read','acknowledge','silence','configure','observe','register','audit'],'scope':{'kind':'all'}}]};(tmp/'policy.json').write_text(json.dumps(policy));subprocess.run([str(bin/'talia-agent'),str(tmp/'db'),str(tmp/'policy.json'),str(tmp/'credential')],check=True,capture_output=True);token=(tmp/'credential').read_text()
  e=subprocess.Popen([str(bin/'talia-engine'),str(tmp/'db'),'0','--seed'],stdout=subprocess.PIPE);processes.append(e);engineport=json.loads(e.stdout.readline())['port']
