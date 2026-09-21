@@ -357,6 +357,7 @@ async fn main() -> Result<()> {
     engine.store.borrow_mut().recover_runs(engine.now())?;
     engine.store.borrow_mut().agent_recover(engine.now()).map_err(|_| "agent recovery failed".to_string())?;
     engine.store.borrow_mut().alert_recover_policies(engine.now())?;
+    engine.store.borrow_mut().alert_recover_deliveries(engine.now())?;
     let pipelines = Pipelines::new(engine.clone())?;
     let watches = Watches::new(pipelines.clone());
     let agent_engine=talia_engine::mcp_engine::AgentEngine::new(engine.clone(),pipelines.clone(),watches.clone());
@@ -400,6 +401,7 @@ async fn main() -> Result<()> {
       if let Err(e)=scheduler.tick(){errors.push(e);}
       if let Err(e)=monitoring.watches.tick(){errors.push(e);}
       if let Err(e)=monitoring.alert_policies.tick(){errors.push(e);}
+      if let Err(e)=monitoring.engine.store.borrow_mut().alert_schedule(monitoring.engine.now()){errors.push(e);}
       *monitoring.monitoring_error.borrow_mut()=if errors.is_empty(){None}else{Some(errors.join("; "))};
       tokio::time::sleep(Duration::from_millis(50)).await;
     }
