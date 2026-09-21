@@ -1,0 +1,11 @@
+{
+  "principal": "operator",
+  "expectedVersion": 0,
+  "enabled": true,
+  "grants": [
+    {"family":"authoring","actions":["read","list","validate","save","assign","audit"],"scope":{"kind":"all"}},
+    {"family":"engine","actions":["read","history","subscribe","write","set","run","run_status","cancel_run","resume_watch","audit"],"scope":{"kind":"all"}},
+    {"family":"live","actions":["list","inspect","execute","reload","audit"],"scope":{"kind":"all"}},
+    {"family":"alerts","actions":["read","acknowledge","silence","configure","observe","register","audit"],"scope":{"kind":"all"}}
+  ]
+}

@@ -82,3 +82,5 @@ web and native Android expose alert controls independently of dashboard failures
 See [alert qualification](docs/alert-qualification.md) for test evidence and limits.
 Live provider credentials, deployment preparation and homelab migration remain next;
 Simple Agents and Crumbles integration follow migration.
+
+Network deployment packaging and access controls: [deployment guide](deploy/README.md).

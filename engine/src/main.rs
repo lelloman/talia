@@ -1,3 +1,4 @@
+mod deployment;
 use axum::{
     extract::{DefaultBodyLimit, State},
     routing::post,
@@ -284,6 +285,14 @@ impl Service {
         }
     }
 }
+async fn health(State(tx): State<mpsc::Sender<Request>>) -> axum::http::StatusCode {
+    let (reply, rx)=oneshot::channel();
+    if tx.try_send(Request {body:json!({"version":1,"client":"healthcheck","epoch":1,"op":"hello"}),reply,credential:None,agent:false,connection:String::new(),call:String::new()}).is_err(){return axum::http::StatusCode::SERVICE_UNAVAILABLE;}
+    match tokio::time::timeout(Duration::from_secs(3),rx).await {
+        Ok(Ok(v)) if v.get("error").is_none() => axum::http::StatusCode::OK,
+        _=>axum::http::StatusCode::SERVICE_UNAVAILABLE
+    }
+}
 async fn rpc(State(tx): State<mpsc::Sender<Request>>, Json(body): Json<Value>) -> Json<Value> {
     let (reply, rx) = oneshot::channel();
     if tx.try_send(Request { body, reply, credential: None, agent: false, connection:String::new(), call:String::new() }).is_err() {
@@ -385,15 +394,20 @@ async fn main() -> Result<()> {
         leases: Default::default(),
     };
     let (tx, mut rx) = mpsc::channel::<Request>(128);
-    let router = Router::new()
+    let deployment = deployment::Deployment::load()?;
+    let mut router = Router::new()
         .route("/engine", post(rpc))
         .route("/clients", post(client_rpc))
         .route("/agent", post(agent_rpc))
         .route("/alerts", post(alerts_rpc))
         .layer(DefaultBodyLimit::max(2_359_296))
+        .route("/healthz", axum::routing::get(health))
         .with_state(tx);
+    if let Some(d)=deployment {
+        router=router.merge(d.routes()).layer(axum::middleware::from_fn_with_state(d, deployment::Deployment::gate));
+    }
     let listener = tokio::net::TcpListener::bind((
-        "127.0.0.1",
+        std::env::var("TALIA_LISTEN").unwrap_or_else(|_|"127.0.0.1".into()),
         args.get(2)
             .and_then(|p| p.parse::<u16>().ok())
             .unwrap_or(18745),
