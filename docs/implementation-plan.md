@@ -11,8 +11,8 @@ subtasks belong in its Stories. This file is a navigation index, not a second pl
 | P2 — Durable, runtime-configurable server engine | [LLPR/TALIA-3](https://crumbles.lelloman.com/w/LLPR/TALIA/3) |
 | P3 — Collection Pipelines and stateful Watches | [LLPR/TALIA-4](https://crumbles.lelloman.com/w/LLPR/TALIA/4) |
 | P4 — MCP authoring and live dashboard control | [LLPR/TALIA-5](https://crumbles.lelloman.com/w/LLPR/TALIA/5) |
-| P5 — Complete development-release demonstration | [LLPR/TALIA-6](https://crumbles.lelloman.com/w/LLPR/TALIA/6) |
 | Configurable alerts and notification delivery | [LLPR/TALIA-47](https://crumbles.lelloman.com/w/LLPR/TALIA/47) |
+| P5 — Complete development-release demonstration | [LLPR/TALIA-6](https://crumbles.lelloman.com/w/LLPR/TALIA/6) |
 | Production qualification | [LLPR/TALIA-8](https://crumbles.lelloman.com/w/LLPR/TALIA/8) |
 | Homelab migration and cutover | [LLPR/TALIA-9](https://crumbles.lelloman.com/w/LLPR/TALIA/9) |
 | Simple Agents and Crumbles integration (after migration) | [LLPR/TALIA-7](https://crumbles.lelloman.com/w/LLPR/TALIA/7) |
@@ -28,9 +28,9 @@ normal implementation/review workflow apply to that resulting work.
 
 The Stories record existing work separately from remaining work. P0 includes the
 completed runtime/transport experiments and unresolved qualification gaps; it is
-not marked complete merely because those experiments passed. Alert implementation is the next
-functional increment after P4 qualification. Consult the tickets for current status rather than updating
-another checklist here.
+not marked complete merely because those experiments passed. Alert qualification
+follows P4; release preparation and production readiness lead into homelab migration.
+Consult the tickets for current status rather than updating another checklist here.
 
 ## Repository documents
 

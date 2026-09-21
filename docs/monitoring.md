@@ -83,8 +83,10 @@ SQLite schema 2 adds monitoring configuration and per-instance runtime state to 
 Existing values, timestamps, histories and action records survive migration. No
 SQLite transaction spans I/O. Later execution tables extend this schema monotonically.
 Web and native Android consume named engine resources with identical value semantics.
-Full MCP authoring, remote agent/ticket integrations, alert delivery, authentication
-and production deployment are later roadmap stages.
+P4 adds authenticated MCP authoring and operations. The alert workstream adds
+[staged policies and delivery](alerts.md) using independent scoped alert permissions.
+Remote agent/ticket integrations follow homelab migration. Production deployment
+and production access/operational qualification remain separate roadmap stages.
 
 ## Source adapter API
 

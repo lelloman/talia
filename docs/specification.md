@@ -76,7 +76,8 @@ can be submitted directly without creating a Crumbles ticket first.
 Delegation includes lifecycle tracking, not just submission. Talìa follows
 Simple Agents sessions and Crumbles tickets through progress and completion,
 consumes their results, and supports configurable outcome triggers. Crumbles
-integration is part of the product scope, not a deferred optional handoff.
+integration remains part of the product scope, with implementation scheduled after
+homelab migration. Alert delivery is implemented first.
 
 Illustrative triggers include notifying on a failed outcome, starting a
 follow-up investigation, or issuing another check or ticket based on a result.
@@ -93,9 +94,10 @@ status or outcomes.
 Configuration includes the condition, how long it must persist, and actions
 when it fires or recovers. Available action categories are:
 
-- Send a notification.
-- Start a structured task in Simple Agents.
-- Issue a Crumbles ticket and track its lifecycle and outcome.
+- Present alert state to dashboards and optionally deliver Android push, email,
+  or Telegram notifications using staged, reusable response policies.
+- Start a structured task in Simple Agents (post-migration integration).
+- Issue a Crumbles ticket and track its lifecycle and outcome (post-migration integration).
 
 Alerts and outcome triggers connect monitoring to follow-up work. For example,
 a metric condition can start an investigation, whose result can trigger a

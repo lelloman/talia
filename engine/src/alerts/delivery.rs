@@ -326,8 +326,10 @@ impl Store {
                     for destination in &action.destinations {
                         let Some(d) = s.alert_get::<Destination>("destination", destination)?
                         else {
-                            return Err(format!("destination missing: {destination}"));
+                            s.alert_put("delivery_error",&format!("{}:{destination}",b.id),&json!({"id":b.id,"error":format!("destination missing: {destination}")}))?;
+                            continue;
                         };
+                        s.conn.execute("DELETE FROM alert_entities WHERE kind='delivery_error' AND id=?",[format!("{}:{destination}",b.id)]).map_err(err)?;
                         if !d.enabled {
                             continue;
                         }
@@ -431,6 +433,12 @@ impl Store {
             } else {
                 d.target.clone()
             };
+            if let Some(repeat) = j.action.repeat_ms.filter(|_| j.active) {
+                if let Some(mut slot) = s.alert_get::<Slot>("delivery_slot", &j.slot)? {
+                    slot.next = slot.next.max(now.saturating_add(repeat as i64));
+                    s.alert_put("delivery_slot", &j.slot, &slot)?;
+                }
+            }
             j.status = "sending".into();
             j.attempts += 1;
             j.updated_at = now;
@@ -777,5 +785,37 @@ mod recovery_tests {
                 .status,
             "skipped"
         );
+    }
+}
+
+#[cfg(test)]
+mod qualification_tests {
+    use super::*;
+    #[test]
+    fn late_pending_delivery_resumes_from_dispatch_time_without_burst() {
+        let mut s = super::tests::fixture();
+        s.alert_schedule(0).unwrap();
+        let jobs = s.alert_deliveries().unwrap();
+        for j in jobs {
+            s.alert_claim_delivery(&j.id, 5000).unwrap().unwrap();
+            s.alert_finish_delivery(&j.id, Outcome::Sent, 5001).unwrap();
+        }
+        s.alert_schedule(5002).unwrap();
+        assert_eq!(s.alert_deliveries().unwrap().len(), 2);
+        s.alert_schedule(6000).unwrap();
+        assert_eq!(s.alert_deliveries().unwrap().len(), 4);
+    }
+    #[test]
+    fn missing_destination_does_not_block_other_destinations() {
+        let mut s = super::tests::fixture();
+        s.conn
+            .execute(
+                "DELETE FROM alert_entities WHERE kind='destination' AND id='mail'",
+                [],
+            )
+            .unwrap();
+        s.alert_schedule(0).unwrap();
+        assert_eq!(s.alert_deliveries().unwrap().len(), 1);
+        assert_eq!(s.alert_list::<Value>("delivery_error").unwrap().len(), 1);
     }
 }

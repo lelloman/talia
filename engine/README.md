@@ -5,7 +5,10 @@ Configurable JavaScript executes inside bounded QuickJS contexts. P3 adds Promet
 and HTTP adapters, durable Pipelines, schedules and stateful Watches. This is a
 loopback development service. Authenticated [MCP authoring](../docs/mcp-authoring.md),
 [engine operations](../docs/mcp-engine.md) and [live control](../docs/mcp-live.md)
-are available; alert delivery and production deployment follow later. See [monitoring](../docs/monitoring.md).
+are available. [Configurable alerts](../docs/alerts.md) add staged policies, durable
+SMTP/Telegram/FCM delivery and web/Android controls. See [qualification](../docs/alert-qualification.md)
+for fixture and emulator evidence; live provider setup and production deployment
+remain deployment work. See [monitoring](../docs/monitoring.md).
 
 ```sh
 cargo test --manifest-path engine/Cargo.toml --offline

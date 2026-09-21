@@ -157,3 +157,21 @@ exercising PendingIntent actions. It is absent from release sources/manifests.
 
 References: [FCM server authorization](https://firebase.google.com/docs/cloud-messaging/auth-server),
 [Android receipt](https://firebase.google.com/docs/cloud-messaging/android/receive-messages).
+
+
+## Initial implementation limits
+
+Policies have at most 32 stages and 32 actions per stage; actions reference at most
+32 named destinations. Evaluation uses the existing bounded QuickJS runtime, at most
+32 concurrently evaluating bindings, and independent per-binding state. At most eight
+provider dispatches run concurrently with a 15-second outer timeout. History/state
+entity categories and idempotency records have a 10,000-record capacity; reaching a
+capacity reports an error instead of silently dropping pending work. Audit history
+retains the latest 10,000 events. Production retention/archival and operational sizing
+remain part of production qualification.
+
+A binding's alert key and policy identity are fixed after creation; parameters, inputs,
+labels, schedule and enabled state can change at runtime. Shared policy edits update
+all referencing bindings. The provider file path is selected at service start, while
+its contents are reread for each delivery. See the qualification report for verified
+failure/recovery cases and the limits of fixture-only provider evidence.

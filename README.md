@@ -73,3 +73,12 @@ can render the same monitoring package. Production deployment remains a later st
 - [Brand identity](docs/branding.md): selected Wide gaze icon, assets and exploration.
 
 The [P2 durable engine](engine/README.md) provides SQLite-backed state, runtime definition updates, computed evaluation and restart-aware client integration. Its [qualification report](docs/p2-qualification.md) records the P2 baseline; P3 records current integration checks.
+
+
+The [configurable alert workstream](docs/alerts.md) adds server-owned occurrences,
+shared JS response policies, acknowledgement, silences, durable delivery and named
+destinations. SMTP email, Telegram and FCM Android push have provider adapters;
+web and native Android expose alert controls independently of dashboard failures.
+See [alert qualification](docs/alert-qualification.md) for test evidence and limits.
+Live provider credentials, deployment preparation and homelab migration remain next;
+Simple Agents and Crumbles integration follow migration.

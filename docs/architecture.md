@@ -205,3 +205,21 @@ See [configurable alerts](alerts.md) for the accepted staged-policy, acknowledge
 silence, destination and durable delivery model. Android push, email and Telegram
 alert delivery precede deployment and homelab migration; Simple Agents and Crumbles
 delegation follow migration. Current work is tracked in TALIA-47.
+
+
+## Implemented alert boundary
+
+The Rust engine now owns alert occurrences, policy/binding definitions, evaluation
+state, silences, destinations, installations, delivery slots and audits in SQLite.
+Bounded QuickJS policy evaluations receive named engine samples and request declared
+response actions; they cannot access provider credentials or perform network I/O.
+The provider worker pool claims durable jobs, releases the Store borrow, then awaits
+SMTP or HTTP I/O. Each destination has independent delivery/retry state.
+
+Authenticated MCP tools and the platform-host `/alerts` API share the same operation
+implementation and independent `alerts` permission family. Web/Android ViewModels
+use shared `ctx.alerts` operations or subscribe to `alerts`; platform hosts enforce
+package grants and keep credentials out of the JS context. Native notification
+handlers are host code, independent of a live dashboard. Current implementation and
+qualification limits are documented in [alerts](alerts.md) and its
+[qualification report](alert-qualification.md).

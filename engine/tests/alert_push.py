@@ -35,7 +35,11 @@ try:
  shell('am','force-stop',pkg);assert fixture('inspect')['installation']==identity
  adb('install','-r',str(root/'dashboard/android/app/build/outputs/apk/debug/app-debug.apk'));assert fixture('inspect')['installation']==identity
  a=observe('push-alert');assert fixture('deliver',data=data(a,1))['notifications']==[]
- shown=fixture('deliver',data=data(a));assert len(shown['notifications'])==1 and shown['notifications'][0]['actions']==1,shown
+ shown=fixture('deliver',data=data(a))
+ for _ in range(30):
+  if shown['notifications']:break
+  time.sleep(.1);shown=fixture('inspect')
+ assert len(shown['notifications'])==1 and shown['notifications'][0]['actions']==1,shown
  fixture('ack',key=a['key'])
  for _ in range(50):
   if next(x for x in rpc('snapshot')['alerts'] if x['key']==a['key'])['acknowledgement']:break
