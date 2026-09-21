@@ -24,7 +24,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
   if self.path=='/':self.path='/dashboard/web/index.html'
   super().do_GET()
  def do_POST(self):
-  if self.path not in ['/rpc','/engine','/clients']:self.send_error(404);return
+  if self.path not in ['/rpc','/engine','/clients','/alerts']:self.send_error(404);return
   size=int(self.headers.get('Content-Length','0'))
   if size>262144:self.send_error(413);return
   try:

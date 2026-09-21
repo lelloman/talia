@@ -39,6 +39,7 @@
       state(){check(task);const s={revision:cell.revision,value:copy(cell.value)};snapshots.set(s,cell.revision);return s;},
       commit(s,next){check(task);if(snapshots.get(s)!==cell.revision)throw Error('stale snapshot');const value=copy(next);check(task);if(snapshots.get(s)!==cell.revision)throw Error('stale snapshot');cell.value=value;cell.revision++;},
       read:key=>call(task,'read',key),write:(...args)=>call(task,'write',globalThis.TaliaValue?{...(args.length===2?{id:args[0]}:{}),wire:TaliaValue.encode(args.at(-1))}:args.at(-1)),run:id=>call(task,'run',id),
+      alerts:Object.freeze({snapshot:()=>call(task,'alerts',{op:'snapshot',args:{}}),history:key=>call(task,'alerts',{op:'history',args:{key}}),acknowledge:alert=>call(task,'alerts',{op:'acknowledge',args:{key:alert.key,occurrence:alert.occurrence,expected:alert.revision}}),silence:(silence,expected)=>call(task,'alerts',{op:'silence_save',args:{silence,expected}})}),
       async subscribe(key,handler){
         if(typeof cell.def.actions[handler]!=='function')throw Error('unknown subscription handler');
         const id=await call(task,'subscribe',key);check(task);

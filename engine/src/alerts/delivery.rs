@@ -19,6 +19,7 @@ pub struct Destination {
 pub struct Device {
     pub id: String,
     pub version: u64,
+    #[serde(default)]
     pub owner: String,
     pub token: String,
     #[serde(default)]

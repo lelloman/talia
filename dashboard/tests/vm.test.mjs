@@ -27,3 +27,11 @@ test('referenced ViewModels receive start and resume lifecycle independently',as
  g.run(`TaliaVM.dispatch('inspect',{target:'x',value:null})`);await flush();assert.deepEqual(g.state().state,{a:{n:11},b:{n:12}});
  g.run('TaliaVM.pause();TaliaVM.resume();TaliaVM.reconcile([]);');await flush();g.run(`TaliaVM.dispatch('inspect',{target:'x',value:null})`);await flush();assert.deepEqual(g.state().state,{a:{n:111},b:{n:112}});
 });
+
+test('alert operations share the VM bridge and cancellation without credentials',async()=>{
+ const g=guest(`defineVM({initial:()=>({ack:false}),actions:{async ack(c){const state=await c.alerts.snapshot();await c.alerts.acknowledge(state.alerts[0]);const s=c.state();c.commit(s,{ack:true})}}});`);
+ g.run(`TaliaVM.dispatch('ack',{target:'ack',value:null})`);await flush();assert.deepEqual(g.requests[0].value,{op:'snapshot',args:{}});
+ const a={key:'disk',occurrence:2,revision:7};g.run(`TaliaVM.receive('${JSON.stringify({id:1,value:{alerts:[a]}})}')`);await flush();
+ assert.deepEqual(g.requests[1].value,{op:'acknowledge',args:{key:'disk',occurrence:2,expected:7}});assert.equal(g.state().state.ack,false);
+ g.run(`TaliaVM.receive('${JSON.stringify({id:2,error:'disconnected'})}')`);await flush();assert.equal(g.state().state.ack,false);
+});

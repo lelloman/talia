@@ -73,6 +73,7 @@ impl Service {
         use talia_engine::authority::ErrorCode;
         let session=self.engine.store.borrow().agent_authenticate(credential)?;
         let r: talia_engine::mcp::Request=serde_json::from_value(body).map_err(|_|ErrorCode::InvalidInput)?;
+        if let Some(op)=r.name.strip_prefix("alerts_") {return Ok(self.engine.store.borrow_mut().alert_api(&session,op,r.arguments,self.engine.now()).unwrap_or_else(|error|json!({"error":error})));}
         if r.name=="_cancel_call"||r.name=="_session_close" {self.live.cancel(&session,connection,if r.name=="_cancel_call" {r.arguments["callId"].as_str()}else{None})?;}
         if r.name=="clients_list"||r.name.starts_with("live_"){return self.live.execute(&session,connection,call,r).await;}
         if r.name=="operation_status" {if r.arguments.as_object().is_none_or(|o|o.len()!=1||!o.contains_key("requestId")){return Err(ErrorCode::InvalidInput)}let result=self.live.outcome(&session,r.arguments["requestId"].as_str().unwrap_or(""))?;if result["outcome"].is_object(){let mut result=result;result.as_object_mut().unwrap().remove("error");return Ok(result)}}
@@ -306,6 +307,14 @@ async fn agent_rpc(State(tx): State<mpsc::Sender<Request>>, headers: HeaderMap, 
     if tx.try_send(Request { body, reply, credential: Some(credential), agent: true, connection:headers.get("x-talia-session").and_then(|v|v.to_str().ok()).unwrap_or("").into(), call:headers.get("x-talia-call").and_then(|v|v.to_str().ok()).unwrap_or("").into() }).is_err() { return Json(json!({"error":"limit_exceeded"})); }
     Json(rx.await.unwrap_or_else(|_|json!({"error":"internal_error"})))
 }
+async fn alerts_rpc(State(tx):State<mpsc::Sender<Request>>,headers:HeaderMap,Json(body):Json<Value>)->Json<Value>{
+    let credential=headers.get("authorization").and_then(|s|s.to_str().ok()).and_then(|s|s.strip_prefix("Bearer ")).unwrap_or("").to_string();
+    let (reply,rx)=oneshot::channel();
+    if body.as_object().is_none_or(|o|o.keys().any(|k|k!="op"&&k!="args")){return Json(json!({"error":"invalid_input"}));}
+    let body=json!({"name":format!("alerts_{}",body["op"].as_str().unwrap_or("")),"arguments":body.get("args").cloned().unwrap_or_else(||json!({}))});
+    if tx.try_send(Request{body,credential:Some(credential),agent:true,connection:String::new(),call:String::new(),reply}).is_err(){return Json(json!({"error":"limit_exceeded"}));}
+    Json(rx.await.unwrap_or_else(|_|json!({"error":"internal_error"})))
+}
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
     let args: Vec<_> = std::env::args().collect();
@@ -380,6 +389,7 @@ async fn main() -> Result<()> {
         .route("/engine", post(rpc))
         .route("/clients", post(client_rpc))
         .route("/agent", post(agent_rpc))
+        .route("/alerts", post(alerts_rpc))
         .layer(DefaultBodyLimit::max(2_359_296))
         .with_state(tx);
     let listener = tokio::net::TcpListener::bind((

@@ -265,7 +265,8 @@ impl Store {
     ) -> Result<()> {
         key(&v.id)?;
         if v.version != expected + 1
-            || v.until < now
+            || v.until < 0
+            || expected == 0 && v.until <= now
             || v.until.saturating_sub(now) > 31536000000
             || v.reason.is_empty()
             || v.reason.len() > 1024
