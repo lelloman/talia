@@ -2,10 +2,12 @@ import '../shared/ui.js';
 import '../../engine/shared/value.js';
 import {DurableBridge,client as engineClient} from './durable.js';
 import {ClientRegistry} from './registry.js';
+import {LiveControl} from './live.js';
 const durable=new URLSearchParams(location.search).get('engine')!=='legacy';
 import {Renderer} from './renderer.js';import {Guest,EngineBridge} from './host.js';
 const root=document.querySelector('#dashboard'),diagnostic=document.querySelector('#diagnostic');
 let uiRevision=0;
+let lastVmSnapshot=null;
 let guest,bridge,loaded,state,failure=null,refreshing=false,ready=false,generation=0,checking=false;
 const registry=await ClientRegistry.open(durable);
 let editRevision=0,assignmentRevision=null,cachedBaseline=false,loadRequest=0;
@@ -28,7 +30,7 @@ function fail(error){if(failure)return;failure=String(error);bridge?.close();gue
 async function command(source){uiRevision++;try{if(failure||document.hidden||!ready)return;await guest.eval(source);await refresh();}catch(e){fail(e);}}
 async function refresh(){
  if(!ready||refreshing||failure||document.hidden)return;refreshing=true;const stamp=generation,revision=uiRevision;
- try{const snapshot=TaliaValue.parse(await guest.eval('TaliaValue.stringify(TaliaVM.snapshot())'));if(stamp!==generation||revision!==uiRevision)return;if(snapshot.failure){fail(snapshot.failure);return;}state=snapshot.state;
+ try{const snapshot=TaliaValue.parse(await guest.eval('TaliaValue.stringify(TaliaVM.snapshot())'));if(stamp!==generation||revision!==uiRevision)return;if(snapshot.failure){fail(snapshot.failure);return;}state=snapshot.state;lastVmSnapshot=snapshot;
   renderer.render(TaliaUI.resolve(loaded.ui,state,{definitions:loaded.definitions,width:Math.max(0,root.clientWidth-24),scale:config.scale,params:{...loaded.params,...config.params}}),config.scale);
   dirty.hidden=!snapshot.dirty;window.dashboardReport={...snapshot,stateWire:TaliaValue.encode(snapshot.state),registration:registry.publicStatus(),editRevision,assignmentRevision,cachedBaseline,connection:durable?engineClient.state:null,revision:loaded.revision,client:structuredClone(config),width:root.clientWidth-24,subscriptions:bridge.subscriptions.size,actions:[...bridge.actions.values()],actionIds:[...bridge.actions.keys()],nextActionId:bridge.nextActionId,externalError:bridge.externalError??null};reportRegistry();
  }catch(e){if(stamp===generation)fail(e);}finally{refreshing=false;}
@@ -40,10 +42,10 @@ async function checkUpdates(){
  if(checking||!loaded||document.hidden)return;checking=true;
  try{if(durable){const latest=await registry.prepare();update.hidden=latest.assignment.revision===assignmentRevision&&latest.package.revision===loaded.revision;}else{const latest=await fetchPackage();if(latest.id===loaded.id)update.hidden=latest.revision===loaded.revision;}}catch(e){if(durable&&e.code)update.hidden=false;/* Keep the loaded dashboard intact. */}finally{checking=false;}
 }
-async function start(){
+async function start(pinned=null,beforeReplace=null){
  const request=++loadRequest;let delivery,pkg,usingCache=false;
- try{if(durable){delivery=await registry.prepare();pkg=TaliaUI.validatePackage(delivery.package);}else pkg=await fetchPackage();}
- catch(e){if(e.code)throw e;if(durable){delivery=registry.cached();if(!delivery)throw e;pkg=TaliaUI.validatePackage(delivery.package);}else{const saved=localStorage.getItem('talia.saved.'+config.dashboardId);if(!saved)throw e;pkg=TaliaUI.validatePackage(JSON.parse(saved));}usingCache=true;}
+ try{if(durable){delivery=pinned||await registry.prepare();pkg=TaliaUI.validatePackage(delivery.package);}else pkg=await fetchPackage();}
+ catch(e){if(pinned||e.code)throw e;if(durable){delivery=registry.cached();if(!delivery)throw e;pkg=TaliaUI.validatePackage(delivery.package);}else{const saved=localStorage.getItem('talia.saved.'+config.dashboardId);if(!saved)throw e;pkg=TaliaUI.validatePackage(JSON.parse(saved));}usingCache=true;}
  if(durable&&pkg.id!==delivery.assignment.dashboardId)throw Error('dashboard assignment mismatch');
  if(!durable&&pkg.id!==config.dashboardId)throw Error('dashboard assignment mismatch');
  const r=await fetch('/dashboard/shared/vm.js');if(!r.ok)throw Error('VM support unavailable');const library=await r.text();
@@ -51,6 +53,7 @@ async function start(){
  if(request!==loadRequest)return;
  if(durable&&!usingCache)await registry.confirm(delivery.assignment.revision);
  if(request!==loadRequest)return;
+ if(beforeReplace)await beforeReplace();
  const stamp=++generation;ready=false;bridge?.close();guest?.close();failure=null;diagnostic.hidden=true;root.inert=false;document.querySelector('#restart').hidden=true;
  if(durable){assignmentRevision=delivery.assignment.revision;config.dashboardId=pkg.id;config.params=structuredClone(pkg.params);if(delivery.assignment.presentation.scale!==undefined)config.scale=delivery.assignment.presentation.scale;registry.saveConfig(config);scaleInput.value=config.scale;sidebarInput.checked=config.params.sidebar===true;}
  cachedBaseline=usingCache;loaded=structuredClone(pkg);state=null;update.hidden=true;editRevision=0;if(window.dashboardReport)window.dashboardReport.dirty=false;
@@ -72,3 +75,13 @@ document.addEventListener('visibilitychange',async()=>{
 });
 window.talia={renameClient:name=>registry.rename(name),registration:()=>registry.publicStatus(),renderer,refresh,command,checkUpdates,reload:start,async selectDashboard(id,params={},presentation={}){if(!/^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(id))throw Error('invalid dashboard ID');if(durable)await registry.select(id,params,presentation);else{config.dashboardId=id;registry.saveConfig(config);}try{await start();}catch(e){loadError(e);throw e;}},async live(source){if(failure||document.hidden||!ready)return;editRevision++;reportRegistry();await command('TaliaVM.markDirty();\n'+source+"\n;'ok';");},get state(){return state;}};
 setInterval(()=>{reportRegistry();},500);setInterval(refresh,100);setInterval(checkUpdates,2000);start().catch(fail);
+
+if(durable)new LiveControl(registry,{
+ report:()=>({editRevision,foreground:!document.hidden,lifecycle:failure?'failed':ready?'active':'paused',dirty:editRevision>0||window.dashboardReport?.dirty===true}),
+ grants:()=>loaded?.grants||{reads:['value'],writes:['value'],runs:[]},
+ metadata:()=>({liveInstanceId:registry.slot.live,packageRevision:loaded?.revision,editRevision}),
+ async inspect(){if(failure)return {state:TaliaValue.encode(state),revision:lastVmSnapshot?.revision??0,failure:'dashboard_failed'};const s=TaliaValue.parse(await guest.eval('TaliaValue.stringify(TaliaVM.snapshot())'));return {...s,state:TaliaValue.encode(s.state)};},
+ dirty(){editRevision++;reportRegistry();},markDirty:()=>guest.eval("TaliaVM.markDirty();'ok';"),
+ async commit(revision,value){if(!ready||failure||document.hidden)throw Error('cancelled');const n=Number(await guest.eval('String(TaliaVM.liveCommit('+JSON.stringify(revision)+',TaliaValue.decode('+JSON.stringify(value)+')))'));await refresh();return n;},
+ async reload(delivery,guard){const previous=registry.slot.live;await start(delivery,guard);if(previous===registry.slot.live)throw Error("cancelled");},fail
+});

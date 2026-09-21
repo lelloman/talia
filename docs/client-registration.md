@@ -91,11 +91,10 @@ Failed guests reject execution, while a connected foreground failed host can pas
 the inspect/reload availability check. Old instance IDs always fail, even after the
 slot reconnects. There is no deferred command queue.
 
-This gate supplies availability, not agent authorization. The future MCP adapter must
-also apply [agent permissions](agent-authority.md), revisions and dirty acknowledgement,
+This gate supplies availability, not agent authorization. The [live MCP adapter](mcp-live.md) also applies [agent permissions](agent-authority.md), revisions and dirty acknowledgement,
 and the receiving host must recheck availability/identity immediately before execution.
 A heartbeat can race with pause/disconnect, so registry admission alone cannot authorize
-later execution. This ticket adds neither command delivery nor guest execution routes.
+later execution. TALIA-45 adds bounded command delivery and isolated guest execution routes.
 Unrestricted Rust discovery is for trusted server code; agent listings must be scoped.
 The legacy `/engine` transport remains a loopback development interface.
 

@@ -34,6 +34,7 @@ struct Service {
     engine: Engine,
     pipelines: Pipelines,
     watches: Watches,
+    live: talia_engine::mcp_live::Live,
     agent_engine: talia_engine::mcp_engine::AgentEngine,
     monitoring_error: Rc<RefCell<Option<String>>>,
     incarnation: String,
@@ -70,6 +71,9 @@ impl Service {
         use talia_engine::authority::ErrorCode;
         let session=self.engine.store.borrow().agent_authenticate(credential)?;
         let r: talia_engine::mcp::Request=serde_json::from_value(body).map_err(|_|ErrorCode::InvalidInput)?;
+        if r.name=="_cancel_call"||r.name=="_session_close" {self.live.cancel(&session,connection,if r.name=="_cancel_call" {r.arguments["callId"].as_str()}else{None})?;}
+        if r.name=="clients_list"||r.name.starts_with("live_"){return self.live.execute(&session,connection,call,r).await;}
+        if r.name=="operation_status" {if r.arguments.as_object().is_none_or(|o|o.len()!=1||!o.contains_key("requestId")){return Err(ErrorCode::InvalidInput)}let result=self.live.outcome(&session,r.arguments["requestId"].as_str().unwrap_or(""))?;if result["outcome"].is_object(){let mut result=result;result.as_object_mut().unwrap().remove("error");return Ok(result)}}
         if r.name.starts_with("engine_") || r.name.starts_with('_') || r.name=="operation_status" {
             return self.agent_engine.execute(&session,connection,call,r).await;
         }
@@ -355,6 +359,7 @@ async fn main() -> Result<()> {
     let watches = Watches::new(pipelines.clone());
     let agent_engine=talia_engine::mcp_engine::AgentEngine::new(engine.clone(),pipelines.clone(),watches.clone());
     let service = Service {
+        live: talia_engine::mcp_live::Live::new(engine.clone(),agent_engine.clone()),
         agent_engine,
         engine,
         pipelines,
@@ -403,7 +408,7 @@ async fn main() -> Result<()> {
     let response=result.unwrap_or_else(|error|json!({"error":error}));
     let _=request.reply.send(response);active.set(active.get()-1);return;
   }if let Some(credential)=request.credential {
-    let result=serde_json::from_value::<talia_engine::clients::Request>(request.body).map_err(|_|talia_engine::authority::ErrorCode::InvalidInput).and_then(|r|s.engine.store.borrow_mut().client_request(&credential,r,s.engine.now()));
+    let result=if request.body["op"].as_str().is_some_and(|op|op.starts_with("live")){s.live.host(&credential,request.body).await}else{serde_json::from_value::<talia_engine::clients::Request>(request.body).map_err(|_|talia_engine::authority::ErrorCode::InvalidInput).and_then(|r|s.engine.store.borrow_mut().client_request(&credential,r,s.engine.now()))};
     let response=match result {Ok(value)=>json!({"value":value,"incarnation":s.incarnation}),Err(error)=>json!({"error":error,"incarnation":s.incarnation})};let _=request.reply.send(response);active.set(active.get()-1);return;
   }let result=s.execute(&request.body).await;let response=match result{Ok(value)=>json!({"version":1,"incarnation":s.incarnation,"epoch":request.body["epoch"],"value":value}),Err(error)=>json!({"version":1,"incarnation":s.incarnation,"epoch":request.body["epoch"],"error":error})};let _=request.reply.send(response);active.set(active.get()-1);});}});
   axum::serve(listener,router).await.map_err(|e|e.to_string())

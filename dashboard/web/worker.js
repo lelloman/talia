@@ -17,7 +17,7 @@ async function handle({data:{id,source,init}}){
    const send=ctx.newFunction('__send',raw=>{
     try{
      if(ctx.typeof(raw)!=='string')throw Error('wire type');const text=ctx.getString(raw);if(text.length>32768||out.length>=64)throw Error('bridge budget');const r=JSON.parse(text);
-     if(Object.keys(r).length!==3||!Number.isSafeInteger(r.id)||r.id<1||!['read','write','subscribe','unsubscribe','run'].includes(r.op))throw Error('capability');
+     if(Object.keys(r).length!==3||!Number.isSafeInteger(r.id)||r.id<1||!['read','write','subscribe','unsubscribe','run','commit'].includes(r.op))throw Error('capability');
      out.push(r);
     }catch(e){poisoned=true;throw e;}
    });ctx.setProp(ctx.global,'__send',send);send.dispose();until=performance.now()+500;

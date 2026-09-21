@@ -168,6 +168,12 @@ Client reload does not reset server Watches, Variables or running monitoring.
 
 ## MCP capabilities
 
+The [implemented live API](mcp-live.md) executes bounded invocation-local JavaScript
+against root ViewModel state and authorized engine operations. It cannot install
+persistent callbacks or replace loaded handlers; reusable behavior changes use saved
+authoring. Temporary state edits remain dirty until reload.
+
+
 | Capability | Scope | Persistence |
 |---|---|---|
 | Engine access | Invoke engine reads, writes and subscriptions directly | Depends on the engine operation; writes can have persistent effects |

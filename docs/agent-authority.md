@@ -7,7 +7,7 @@ this boundary for MCP tools and the authenticated private `/agent` bridge.
 [Engine tools](mcp-engine.md) enforce resource permissions, connection-owned leases
 and guarded asynchronous setter effects through the same boundary.
 The legacy `/engine` loopback development transport remains unauthenticated.
-Upcoming engine and live-control adapters must also use this boundary.
+[Live control](mcp-live.md) also uses this boundary for host-routed commands and engine effects.
 
 ## Credentials and permissions
 
@@ -41,8 +41,8 @@ continuations, so revocation applies to existing Sessions.
 Live script engine access requires both the agent's current engine permission and
 the loaded dashboard package's host grant. `agent_live_effect` also requires an
 active live-execution Permit. Host grants must come from trusted loaded-package
-state, never injected code or caller arguments. The future runtime adapter must
-carry this opaque authority through asynchronous work and retire it on completion,
+state, never injected code or caller arguments. The live runtime adapter carries this opaque authority outside its isolated invocation
+guest through asynchronous work and retires it on completion,
 cancellation, timeout, reload or disconnect. It must not place it in guest state.
 
 ## Durable admission and outcomes
@@ -65,7 +65,7 @@ operation-specific inputs, and use this sequence:
 An adapter must resolve an action/run ID to its actual owning resource before
 authorizing it. Caller-supplied permission targets are not authoritative. Likewise,
 client instance freshness, dirty acknowledgements and connection/lifecycle checks
-belong to the upcoming routing adapters, alongside these permission checks.
+are enforced by the live routing adapter alongside these permission checks.
 
 Completion is terminal and cannot grant another dispatch. A known outcome can be
 recorded after credential revocation, but revocation prohibits new effects. Effects

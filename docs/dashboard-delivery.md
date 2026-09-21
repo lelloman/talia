@@ -5,6 +5,9 @@ to web and native Android. Durable clients fetch coherent server packages throug
 the authenticated host API. Generated example packages remain only for the legacy
 fixture mode; the durable development host rejects `/dashboard/package.json`.
 
+[MCP live reload](mcp-live.md) now pins a prepared delivery, checks dirty/edit and
+assignment revisions, and replaces only its exact target instance.
+
 ## Desired versus loaded
 
 SQLite schema 8 adds a revisioned default assignment for each initialized client

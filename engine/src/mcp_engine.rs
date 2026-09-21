@@ -269,7 +269,7 @@ impl AgentEngine {
         }
         Ok(())
     }
-    fn current(&self, id: &str) -> Result<Value> {
+    pub(crate) fn current(&self, id: &str) -> Result<Value> {
         if let Some(monitor) = id.strip_prefix("monitor.") {
             let store = self.engine.store.borrow();
             let state = store.monitor_state(monitor).map_err(code)?;

@@ -3,7 +3,7 @@
 P1 renders the same restricted UI and JavaScript ViewModel on the web and native
 Android. It uses the existing loopback Rust engine fixture. This is a development
 client, not the production monitoring service. Durable engine storage and
-[MCP authoring](../docs/mcp-authoring.md) are now available in durable mode;
+[MCP authoring](../docs/mcp-authoring.md) and [live control](../docs/mcp-live.md) are now available in durable mode;
 production authentication and deployment remain later roadmap work.
 
 ## Build and run

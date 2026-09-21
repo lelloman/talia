@@ -3,9 +3,9 @@
 Rust/Axum owns SQLite definitions, variables, computed state and action records.
 Configurable JavaScript executes inside bounded QuickJS contexts. P3 adds Prometheus
 and HTTP adapters, durable Pipelines, schedules and stateful Watches. This is a
-loopback development service. Authenticated [MCP authoring](../docs/mcp-authoring.md)
-and [MCP engine operations](../docs/mcp-engine.md) are available; live-control MCP tools, alert delivery and production deployment
-follow later. See [monitoring](../docs/monitoring.md).
+loopback development service. Authenticated [MCP authoring](../docs/mcp-authoring.md),
+[engine operations](../docs/mcp-engine.md) and [live control](../docs/mcp-live.md)
+are available; alert delivery and production deployment follow later. See [monitoring](../docs/monitoring.md).
 
 ```sh
 cargo test --manifest-path engine/Cargo.toml --offline

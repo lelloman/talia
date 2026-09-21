@@ -33,7 +33,7 @@ impl Guest {
                                 && v["id"]
                                     .as_u64()
                                     .is_some_and(|i| i > 0 && i <= 9_007_199_254_740_991)
-                                && ["read", "write", "subscribe", "unsubscribe", "run"]
+                                && ["read", "write", "subscribe", "unsubscribe", "run", "commit"]
                                     .contains(&v["op"].as_str().unwrap_or(""))
                         });
                     if valid && !*p.borrow() {
@@ -93,9 +93,15 @@ impl Guest {
         Ok(json!({"value":value,"out":messages}))
     }
 }
-thread_local! {static VM:RefCell<Option<Guest>>=const{RefCell::new(None)};static UI:RefCell<Option<Guest>>=const{RefCell::new(None)};}
+thread_local! {static VM:RefCell<Option<Guest>>=const{RefCell::new(None)};static UI:RefCell<Option<Guest>>=const{RefCell::new(None)};static LIVE:RefCell<Option<Guest>>=const{RefCell::new(None)};}
 pub fn command(source: &str, ui: bool, reset: bool) -> String {
-    let slot = if ui { &UI } else { &VM };
+    command_slot(source, if ui { &UI } else { &VM }, reset)
+}
+fn command_slot(
+    source: &str,
+    slot: &'static std::thread::LocalKey<RefCell<Option<Guest>>>,
+    reset: bool,
+) -> String {
     slot.with(|s| {
         let mut slot = s.borrow_mut();
         if reset || slot.is_none() {
@@ -181,4 +187,32 @@ pub extern "system" fn Java_com_lelloman_talia_dashboard_MainActivity_retire(
 ) {
     VM.with(|s| *s.borrow_mut() = None);
     UI.with(|s| *s.borrow_mut() = None);
+}
+
+#[no_mangle]
+pub extern "system" fn Java_com_lelloman_talia_dashboard_MainActivity_evaluateLive(
+    mut env: jni::JNIEnv,
+    _class: jni::objects::JClass,
+    source: jni::objects::JString,
+    reset: jni::sys::jboolean,
+) -> jni::sys::jstring {
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let source: String = env.get_string(&source).map_err(|e| e.to_string())?.into();
+        Ok::<_, String>(command_slot(&source, &LIVE, reset != 0))
+    }));
+    let text = match result {
+        Ok(Ok(v)) => v,
+        Ok(Err(e)) => json!({"error":e}).to_string(),
+        Err(_) => json!({"error":"native runtime failure"}).to_string(),
+    };
+    env.new_string(text)
+        .map(|s| s.into_raw())
+        .unwrap_or(std::ptr::null_mut())
+}
+#[no_mangle]
+pub extern "system" fn Java_com_lelloman_talia_dashboard_MainActivity_retireLive(
+    _env: jni::JNIEnv,
+    _class: jni::objects::JClass,
+) {
+    LIVE.with(|s| *s.borrow_mut() = None);
 }

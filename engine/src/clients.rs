@@ -148,7 +148,7 @@ impl Store {
         )?;
         Ok(())
     }
-    fn client_slot(&self, host: &Host, slot: &str, owner: &str) -> Result<Slot> {
+    pub(crate) fn client_slot(&self, host: &Host, slot: &str, owner: &str) -> Result<Slot> {
         id(slot)?;
         let owner = secret(owner)?;
         let row: Option<(String, String)> = self

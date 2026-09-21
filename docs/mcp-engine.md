@@ -2,8 +2,8 @@
 
 [TALIA-44](https://crumbles.lelloman.com/w/LLPR/TALIA/44) exposes the durable server
 engine through the same authenticated stdio adapter as [saved authoring](mcp-authoring.md).
-These tools operate independently of a loaded dashboard. Client discovery and live
-ViewModel execution/reload remain TALIA-45 work.
+These tools operate independently of a loaded dashboard. [Client discovery and live
+ViewModel execution/reload](mcp-live.md) are available on both clients.
 
 ## Tools and values
 
@@ -50,7 +50,7 @@ Engine grants are separate from saved authoring and live permissions. For exampl
 {"family":"engine","actions":["read","subscribe"],"scope":{"kind":"resource","id":"value"}}
 ```
 
-History uses read permission. Subscription polling requires current subscribe
+History requires its separate history permission. Subscription polling requires current subscribe
 permission. Writes, setters, run admission, run status, cancellation and Watch resume
 have distinct actions defined in [agent authority](agent-authority.md). Run status
 and cancellation resolve the owning Pipeline on the server before checking scope.

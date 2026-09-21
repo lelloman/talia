@@ -87,6 +87,6 @@
     defineVMReference:{value:(name,def)=>{if(root||definitions.has(name))throw Error('definition registry closed/duplicate');definitions.set(name,def);}},
     defineFunction:{value:(name,fn)=>{if(root||functions.has(name)||typeof fn!=='function')throw Error('function registry closed/duplicate');functions.set(name,fn);}},
     TaliaVM:{value:Object.freeze({start,dispatch,receive,pause,resume,snapshot,stop,reconcile(outcomes){const visit=cell=>{if(cell.def.resume)invoke(cell,'@resume',{target:cell.path,value:outcomes}).catch(()=>{});for(const child of cell.children.values())visit(child);};visit(root);},
-      markDirty(){dirty=true;},replaceAction(name,fn){if(!root||typeof fn!=='function')throw Error('action');root.def.actions[name]=fn;dirty=true;}})}
+      liveCommit(revision,value){if(paused||failure)throw Error("dashboard unavailable");if(root.revision!==revision)throw Error("stale snapshot");root.value=copy(value);root.revision++;return root.revision;},markDirty(){dirty=true;},replaceAction(name,fn){if(!root||typeof fn!=='function')throw Error('action');root.def.actions[name]=fn;dirty=true;}})}
   });
 })();

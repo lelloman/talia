@@ -84,7 +84,7 @@ def main():
    assert m.tool('definitions_list',{'principal':'author'},False)['error']=='invalid_input'
    first=m.tool('definitions_list',{'limit':1});cursor=first['nextCursor'];assert m.tool('definitions_list',{'cursor':cursor,'limit':1})['records']!=first['records']
    assert m.tool('definitions_list',{'limit':0},False)['error']=='invalid_input'
-   assert 'error' in m.rpc('tools/call',{'name':'live_execute','arguments':{}})
+   assert 'error' in m.rpc('tools/call',{'name':'not_a_talia_tool','arguments':{}})
    for token,origin,code in [('',None,'unauthenticated'),(credential.read_text(),'http://evil.invalid','forbidden')]:
     headers={'Content-Type':'application/json','Authorization':'Bearer '+token}
     if origin:headers['Origin']=origin

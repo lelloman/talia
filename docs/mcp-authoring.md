@@ -9,8 +9,8 @@ without restarting it. Both web and native Android consume the same compiled
 packages. No client-side authoring implementation or embedded chat is introduced.
 
 This implements the authoring portion of the [MCP contract](mcp-contract.md).
-[Engine-operation tools](mcp-engine.md) are also available. Client discovery and live
-inspection/execution/reload remain TALIA-45 work. Production network exposure and SSO remain later work.
+[Engine-operation tools](mcp-engine.md) are also available. [Client discovery and live
+inspection/execution/reload](mcp-live.md) are available on both clients. Production network exposure and SSO remain later work.
 
 ## Operator setup
 
