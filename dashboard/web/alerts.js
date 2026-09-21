@@ -1,8 +1,8 @@
 // Trusted host transport. No credentials are passed to the dashboard worker.
 export async function alertRequest(op,args={}){
- const token=sessionStorage.getItem('talia.alertCredential');if(!token)throw Error('Alert access is not configured');
+ const token=sessionStorage.getItem('talia.alertCredential');if(!window.taliaOidc&&!token)throw Error('Alert access is not configured');
  if(!['snapshot','history','config','audit'].includes(op)&&!args.requestId)args={...args,requestId:crypto.randomUUID()};
- const response=await fetch('/alerts',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({op,args}),signal:AbortSignal.timeout(5000)});
+ const response=await fetch('/alerts',{method:'POST',headers:{'Content-Type':'application/json',...(!window.taliaOidc?{Authorization:'Bearer '+token}:{})},body:JSON.stringify({op,args}),signal:AbortSignal.timeout(5000)});
  if(!response.ok)throw Error('Alert connection failed');const result=await response.json();if(result.error)throw Error(result.error);return result;
 }
 const panel=document.querySelector('#alerts-panel');

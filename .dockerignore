@@ -5,3 +5,5 @@
 **/results
 **/.gradle
 **/dist
+
+.local/

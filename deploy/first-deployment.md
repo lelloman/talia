@@ -1,5 +1,8 @@
 # First homelab deployment — 2026-09-21
 
+> Historical record. The shared-key login below was rejected and removed by
+> TALIA-59. Current authentication is [LelloAuth OIDC](README.md).
+
 Talìa is running at **https://talia.lan.lelloman.com** on private LAN/VPN access.
 The service follows homelab's Compose/private-registry/Caddy pattern. Publicly
 trusted TLS uses the existing Cloudflare DNS-01 issuer. No public address or VPS

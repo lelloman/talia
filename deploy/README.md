@@ -1,59 +1,70 @@
-# First network deployment
+# Network deployment with LelloAuth OIDC
 
-Build from a clean source commit using `deploy/Dockerfile`. Homelab owns Compose,
-Caddy, private DNS, image tagging and deployment. The image contains the Rust
-engine and an explicit selection of web assets; it does not run `dashboard/serve.py`.
+Talìa uses a confidential LelloAuth client with authorization-code flow and S256
+PKCE. Sign in with a LelloAuth account granted access to the `talia` app.
+There is no shared deployment key, token-entry form or key-header fallback.
 
-Required configuration:
+## Configuration
 
-- `TALIA_ACCESS_TOKEN_FILE`: mounted private file containing 32 cryptographically
-  random bytes encoded as 64 hexadecimal characters. Generate once and retain
-  across updates. Never include it in an image, URL or deployment record.
-- `TALIA_PUBLIC_ORIGIN`: exact HTTPS origin, without a trailing slash.
-- `TALIA_WEB_ROOT`: packaged assets (`/opt/talia/web` in the image).
-- `TALIA_LISTEN`: container bind address (`0.0.0.0` in the image).
-- Arguments: persistent SQLite path and port, normally `/data/talia.sqlite3 8080`.
+Homelab owns Compose, Caddy, private DNS and registry builds. Required settings:
 
-Missing network authentication configuration fails startup. Without deployment
-configuration, existing development tools remain loopback-only. The proxy must
-terminate TLS; the container listener must not be published to an untrusted network.
+- `TALIA_OIDC_ISSUER=https://auth.lelloman.com`
+- `TALIA_OIDC_CLIENT_ID=talia`
+- `TALIA_OIDC_SECRET_FILE=/run/talia/oidc-client.secret`
+- `TALIA_AUTH_DB=/data/auth.sqlite3`
+- `TALIA_PUBLIC_ORIGIN=https://talia.lan.lelloman.com`
+- `TALIA_WEB_ROOT=/opt/talia/web` and `TALIA_LISTEN=0.0.0.0`
 
-The first release has an operator access key, not multi-user browser sign-in.
-It grants trusted dashboard access to the engine, including writes and runs;
-it does not provide per-user engine resource authorization. Browser sign-in sets
-an eight-hour Secure, HttpOnly, SameSite=Strict cookie. Host integrations may use
-`X-Talia-Access`; never expose the key to guest JavaScript. Rotate the file and
-restart to invalidate all sessions. Cross-origin browser writes are rejected.
+Register the exact redirect URI
+`https://talia.lan.lelloman.com/auth/callback` in LelloAuth. Keep the client secret
+private, mode 0600, owned by container UID 65532. No provider credential enters
+JavaScript or the dashboard VM. Missing OIDC configuration fails startup for
+network deployments; the removed `TALIA_ACCESS_TOKEN_FILE` is explicitly rejected.
+Loopback development without deployment configuration remains available.
 
-Agent and alert APIs retain their own independent principal permissions; the
-operator access key cannot replace their Bearer credentials. Use the offline
-`talia-agent` binary with `operator-policy.json` to provision an initial operator
-credential while the engine is stopped. The output must be a new private file.
-Prefer narrower principals for integrations. Client registration retains its
-installation identity but now also requires deployment access.
+Discovery and signing keys are validated with bounded HTTP requests, no redirects,
+RS256 signature/issuer/audience/time checks, nonce and browser-bound one-use state.
+The implementation adapts the existing Simple Agents OIDC validator and its tests.
+Protocol reference: [OpenID Connect Core](https://openid.net/specs/openid-connect-core-1_0.html).
 
-`/healthz` is public and checks the running request queue and database snapshot,
-returning no application data. The deployment root only contains selected static
-assets. Data, configuration, source files and build outputs are not web content.
+## Sessions and permissions
 
-The optional `--seed` argument installs the existing example dashboard for smoke
-checks. It is sample data, not homelab monitoring. Do not interpret it as migrated
-coverage. Run `talia-bootstrap DATABASE` once while stopped to create a welcome dashboard
-with no fabricated metrics. It refuses to overwrite an initialized catalog. Android's current host configuration
-still uses its development loopback endpoint; remote Android onboarding and live
-push-provider setup are separate from bringing up this server/web service.
+Opaque individual sessions use Secure/HttpOnly/SameSite cookies. Only session
+hashes are stored. Provider access tokens are encrypted at rest with a key derived
+from the confidential-client secret. Browser sessions survive service restart;
+changing issuer/client/secret/origin invalidates them. Session lifetime is bounded
+by ID-token expiry and eight hours. Sign out invalidates the Talìa session;
+LelloAuth's SSO session and other applications are unaffected.
 
-SQLite state includes definitions, observations, registrations, policies and
-alert delivery state. Preserve the database and its WAL together. Stop the service
-before a cold copy, or use SQLite's backup API for a consistent online snapshot.
-Verify `PRAGMA integrity_check` on a restored copy. Never overwrite a live database
-or rewind accepted side effects. Before upgrades retain a consistent backup and
-the current image digest; old binaries may not support a newer schema. First
-installation rollback is stopping the new service and removing its route while
-retaining its data. Subsequent image rollback requires schema compatibility.
+LelloAuth introspection verifies current user/app/token access on sign-in and at
+most every 30 seconds during use. Revocation fails closed; provider outages return
+service unavailable when revalidation is due. Unsafe browser requests require
+the exact configured Origin, including logout. Cross-user browser installation
+credentials are scoped by OIDC subject, with separate client registrations.
 
-Verification: build the web assets and Rust binaries, then run
-`python3 deploy/test-service.py`. It exercises the access boundary, origin checks,
-static isolation, registration, health, restart and a real Chromium dashboard.
+All users granted Talìa app access share its monitoring engine. Browser alert
+read/acknowledge/silence operations use an auditable OIDC subject principal.
+Alert configuration and agent operations keep their independent machine grants.
+MCP uses the existing operator credential, provisioned using `talia-agent` and
+`operator-policy.json`; it does not use browser cookies or the OIDC client secret.
 
-First installation: [deployment record](first-deployment.md).
+## Installation and recovery
+
+The packaged Rust service serves only selected web assets. `/healthz` checks its
+request queue and engine database without exposing data. Run `talia-bootstrap
+DATABASE` once while stopped to create a welcome dashboard; it refuses to
+replace an initialized catalog. Do not seed fabricated metrics in deployment.
+
+Preserve both `talia.sqlite3` and `auth.sqlite3`. Use SQLite's backup API or stop
+the writer for consistent copies; verify restored copies with `integrity_check`.
+Keep the confidential-client secret and machine credentials in a separate private
+recovery set. Removing auth.sqlite3 signs everyone out; it does not delete engine
+state. Never roll back to the rejected deployment-key image.
+
+The original [first-install record](first-deployment.md) is historical. OIDC
+supersedes its login instructions. Native Android remote onboarding and live
+notification-provider configuration are separate work.
+
+Run `python3 deploy/test-service.py` for protocol/session regression tests. Live
+OIDC browser qualification uses `deploy/verify-oidc.mjs` with a temporary account
+that has access only to Talìa; remove that account after verification.
