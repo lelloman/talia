@@ -1,0 +1,4 @@
+CREATE TABLE alert_entities(kind TEXT NOT NULL, id TEXT NOT NULL, body TEXT NOT NULL, PRIMARY KEY(kind,id));
+CREATE TABLE alert_audit(seq INTEGER PRIMARY KEY AUTOINCREMENT, at INTEGER NOT NULL, actor TEXT NOT NULL, operation TEXT NOT NULL, entity TEXT NOT NULL, body TEXT NOT NULL);
+CREATE TABLE alert_requests(id TEXT PRIMARY KEY, signature TEXT NOT NULL, result TEXT NOT NULL);
+PRAGMA user_version=10;

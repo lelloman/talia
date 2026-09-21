@@ -13,6 +13,7 @@ use std::collections::BTreeSet;
 #[serde(rename_all = "snake_case")]
 pub enum Family {
     Authoring,
+    Alerts,
     Engine,
     Live,
 }
@@ -20,6 +21,11 @@ pub enum Family {
 #[serde(rename_all = "snake_case")]
 pub enum Action {
     Read,
+    Acknowledge,
+    Silence,
+    Configure,
+    Observe,
+    Register,
     List,
     Validate,
     Save,
@@ -142,7 +148,7 @@ impl Operation {
             }
             _ => match self.permission().0 {
                 Family::Authoring => matches!(t, Target::Definition { .. }),
-                Family::Engine => matches!(t, Target::Resource { .. }),
+                Family::Engine | Family::Alerts => matches!(t, Target::Resource { .. }),
                 Family::Live => false,
             },
         }
@@ -370,6 +376,7 @@ fn validate_grants(grants: &[Grant]) -> Result<()> {
             return Err(ErrorCode::InvalidInput);
         }
         let valid = match g.family {
+            Family::Alerts => &[Action::Read, Action::Acknowledge, Action::Silence, Action::Configure, Action::Observe, Action::Register, Action::Audit][..],
             Family::Authoring => &[
                 Action::Read,
                 Action::List,
@@ -415,7 +422,7 @@ fn validate_grants(grants: &[Grant]) -> Result<()> {
                 })?;
             }
             Scope::Resource { id } => {
-                if g.family != Family::Engine {
+                if !matches!(g.family, Family::Engine | Family::Alerts) {
                     return Err(ErrorCode::InvalidInput);
                 }
                 valid_id(id)?;
@@ -425,7 +432,7 @@ fn validate_grants(grants: &[Grant]) -> Result<()> {
                 slot_id,
                 instance_id,
             } => {
-                if g.family == Family::Engine
+                if matches!(g.family, Family::Engine | Family::Alerts)
                     || instance_id.is_some() && g.family == Family::Authoring
                     || instance_id.is_some() && slot_id.is_none()
                 {
@@ -570,3 +577,10 @@ mod tests;
 mod discovery;
 mod assignment;
 pub use assignment::AssignmentRequest;
+
+impl Store {
+    /// Alert authority uses its own permission family; legacy engine grants confer none.
+    pub fn alert_require(&self, session: &Session, action: Action) -> Result<()> {
+        if allows(&self.agent_grants(session)?, Family::Alerts, action, &Target::Resource{id:"alerts".into()}) {Ok(())} else {Err(ErrorCode::Forbidden)}
+    }
+}

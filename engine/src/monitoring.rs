@@ -532,7 +532,7 @@ pub(crate) mod tests {
         let original = crate::store::tests::seed(&mut s);
         s.conn
             .execute_batch(
-                "DROP TABLE monitoring_config; DROP TABLE monitoring_state; DROP TABLE monitoring_runs; DROP TABLE monitoring_requests; DROP TABLE monitoring_events; DELETE FROM metadata WHERE key='run_sequence'; PRAGMA user_version=1;",
+                "DROP TABLE monitoring_config; DROP TABLE monitoring_state; DROP TABLE monitoring_runs; DROP TABLE monitoring_requests; DROP TABLE monitoring_events; DELETE FROM metadata WHERE key='run_sequence'; DROP TABLE alert_entities; DROP TABLE alert_audit; DROP TABLE alert_requests; PRAGMA user_version=1;",
             )
             .unwrap();
         drop(s);
