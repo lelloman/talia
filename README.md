@@ -42,6 +42,7 @@ implement the UI/VM contract on web and native Android. The Rust engine now
 collects Prometheus/HTTP data and runs durable Pipelines and Watches. Both clients
 can render the same monitoring package. Production deployment remains a later stage.
 
+- [MCP authoring adapter](docs/mcp-authoring.md): authenticated saved authoring, assignment tools and operator setup.
 - [P4 MCP contract](docs/mcp-contract.md): agent authoring, client identity, permissions and live control; implementation tracked in Crumbles.
 - [P3 monitoring qualification](docs/p3-qualification.md): collection, Watches, both clients and current evidence.
 - [Monitoring contract](docs/monitoring.md): accepted source, execution, scheduling and recovery rules.

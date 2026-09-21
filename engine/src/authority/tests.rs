@@ -745,3 +745,62 @@ fn outstanding_dispatch_is_bounded_and_cancelled_permits_stay_retired() {
         .permit
         .is_some());
 }
+
+#[test]
+fn discovery_scopes_and_cursors_do_not_grant_source_access() {
+    let mut s=Store::open(":memory:").unwrap();
+    let (_,full)=agent(&mut s,"full",&[author()]);
+    let set=catalog::ChangeSet{expected_catalog_revision:0,changes:["a","b","hidden"].into_iter().map(|id|catalog::Change::Put{key:catalog::Key::new("ui",id),document:json!({"source":"<Text id=\"Text\" text=\"private\"/>"}),migration:None,initial:None}).collect()};
+    s.agent_catalog_save(&full,"seed",&set,1).unwrap();
+    let grants:Vec<_>=["a","b"].into_iter().map(|id|grant(Family::Authoring,&[Action::List],Scope::Definition{definition_kind:"ui".into(),id:Some(id.into())})).collect();
+    let (_,limited)=agent(&mut s,"list-only",&grants);
+    let first=s.agent_catalog_list(&limited,None,None,1).unwrap();
+    assert_eq!(first["records"][0]["key"]["id"],"a");
+    assert!(!first.to_string().contains("private"));
+    let cursor=first["nextCursor"].as_str().unwrap();
+    assert_eq!(s.agent_catalog_list(&limited,None,Some(cursor),1).unwrap()["records"][0]["key"]["id"],"b");
+    assert!(matches!(s.agent_catalog_read(&limited,&[catalog::Key::new("ui","a")]),Err(ErrorCode::Forbidden)));
+    assert_eq!(s.agent_catalog_list(&full,None,Some(cursor),1),Err(ErrorCode::Conflict));
+    assert_eq!(s.agent_catalog_list(&limited,Some("ui"),Some(cursor),1),Err(ErrorCode::Conflict));
+    s.agent_policy_set("list-only",1,true,&[grant(Family::Authoring,&[Action::List],Scope::All)]).unwrap();
+    assert_eq!(s.agent_catalog_list(&limited,None,Some(cursor),1),Err(ErrorCode::Conflict));
+    let page=s.agent_catalog_list(&full,None,None,1).unwrap();
+    s.catalog_save(&catalog::ChangeSet{expected_catalog_revision:s.catalog_revision().unwrap(),changes:vec![catalog::Change::Delete{key:catalog::Key::new("ui","hidden")}]}).unwrap();
+    assert_eq!(s.agent_catalog_list(&full,None,page["nextCursor"].as_str(),1),Err(ErrorCode::Conflict));
+}
+
+#[test]
+fn source_diagnostics_are_actionable_and_save_rejections_are_audited() {
+    let mut s=Store::open(":memory:").unwrap();let (_,session)=agent(&mut s,"writer",&[author()]);
+    let set=catalog::ChangeSet{expected_catalog_revision:0,changes:vec![catalog::Change::Put{key:catalog::Key::new("ui","bad"),document:json!({"source":"<Text id=\"Bad\" text=\"unclosed\">"}),migration:None,initial:None}]};
+    let validation=s.agent_catalog_validate(&session,&set).unwrap();
+    assert!(!validation.valid);let d=&validation.diagnostics[0];assert!(d.line.is_some());assert!(d.message.len()>10);assert!(!d.message.contains("Check the definition"));
+    let saved=s.agent_catalog_save(&session,"bad",&set,1).unwrap();assert_eq!(saved.audit.status,Status::Failed);assert_eq!(saved.diagnostics[0].message,d.message);assert_eq!(s.catalog_revision().unwrap(),0);
+    let duplicate=s.agent_catalog_save(&session,"bad",&set,2).unwrap();assert_eq!(duplicate.audit.id,saved.audit.id);assert!(duplicate.diagnostics.is_empty());
+}
+
+#[test]
+fn operator_provision_rolls_back_policy_when_ceiling_is_invalid() {
+    let mut s=Store::open(":memory:").unwrap();
+    assert_eq!(s.agent_provision("test",0,true,&[author()],Some(&[author()]),true),Err(ErrorCode::InvalidInput));
+    assert!(s.agent_provision("test",0,true,&[author()],None,true).unwrap().is_some());
+}
+
+#[test]
+fn assignments_require_exact_scope_and_commit_audit_atomically() {
+    let mut s=Store::open(":memory:").unwrap();s.seed_dashboards().unwrap();
+    let host_token="c".repeat(64);s.client_register(&host_token,"test","web").unwrap();let host=s.client_authenticate(&host_token).unwrap();let owner="d".repeat(64);
+    let original=s.delivery_open(&host,"one",&owner).unwrap();s.delivery_open(&host,"two",&owner).unwrap();
+    let (_,session)=agent(&mut s,"assigner",&[author(),grant(Family::Authoring,&[Action::Assign],Scope::Client{client_id:host.id().into(),slot_id:Some("one".into()),instance_id:None})]);
+    let mut r=AssignmentRequest{request_id:"assign-denied".into(),client_id:host.id().into(),slot_id:Some("two".into()),client_default:false,expected_revision:1,assignment:original.assignment.clone()};
+    r.assignment.params=json!({"from":"agent"});
+    assert_eq!(s.agent_assignment_set(&session,&r,1).unwrap()["error"],"forbidden");
+    r.slot_id=Some("one".into());r.request_id="assign-atomic".into();
+    s.conn.execute_batch("CREATE TRIGGER fail_assignment_audit BEFORE UPDATE ON agent_audit WHEN NEW.status='\"complete\"' BEGIN SELECT RAISE(FAIL,'fixture'); END;").unwrap();
+    assert_eq!(s.agent_assignment_set(&session,&r,2).unwrap()["error"],"storage_error");
+    assert_eq!(s.assignment_get(host.id(),Some("one")).unwrap(),original);
+    s.conn.execute_batch("DROP TRIGGER fail_assignment_audit").unwrap();r.request_id="assign-ok".into();
+    assert_eq!(s.agent_assignment_set(&session,&r,3).unwrap()["assignment"]["params"]["from"],"agent");
+    assert_eq!(s.assignment_get(host.id(),Some("two")).unwrap(),original);
+    r.slot_id=None;r.client_default=true;r.request_id="default-denied".into();assert_eq!(s.agent_assignment_set(&session,&r,4).unwrap()["error"],"forbidden");
+}

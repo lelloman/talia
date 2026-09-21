@@ -2,10 +2,11 @@
 
 [TALIA-39](https://crumbles.lelloman.com/w/LLPR/TALIA/39) implements the storage and
 compiler foundation of the [MCP contract](mcp-contract.md). It is a trusted Rust
-library API, not an exposed MCP or HTTP authoring endpoint. The
+library API. The [MCP authoring adapter](mcp-authoring.md) now exposes authenticated
+authoring through that foundation. The
 [agent authority layer](agent-authority.md) adds authenticated wrappers and audits;
 [client assignments and package delivery](dashboard-delivery.md) connect the saved
-packages to both hosts. MCP exposure remains separate.
+packages to both hosts.
 
 ## Storage and revisions
 

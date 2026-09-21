@@ -80,6 +80,8 @@ pub struct Receipt {
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Diagnostic {
+    #[serde(skip)]
+    pub(crate) source_diagnostic: bool,
     pub code: String,
     pub message: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -96,6 +98,7 @@ pub struct Diagnostic {
 impl Diagnostic {
     fn new(code: &str, message: impl ToString) -> Self {
         Self {
+            source_diagnostic: false,
             code: code.into(),
             message: message.to_string(),
             key: None,
@@ -189,7 +192,11 @@ fn known(kind: &str) -> bool {
         )
 }
 fn parse<T: serde::de::DeserializeOwned>(key: &Key, v: &Value) -> Result<T> {
-    serde_json::from_value(v.clone()).map_err(|e| Diagnostic::from(e).at(key, "document"))
+    serde_json::from_value(v.clone()).map_err(|e| {
+        let mut diagnostic = Diagnostic::from(e).at(key, "document");
+        diagnostic.source_diagnostic = true; // Schema parsing reads only this document, never runtime state.
+        diagnostic
+    })
 }
 fn check_key(k: &Key) -> Result<()> {
     definitions::identifier(&k.id)?;

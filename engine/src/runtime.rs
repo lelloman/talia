@@ -110,6 +110,12 @@ impl Engine {
         self.changed(id);
         Ok(())
     }
+    /// Catalog activation already increments the durable revision/generation; only notify here.
+    pub fn catalog_changed(&self, id: &str) {
+        self.evaluation.borrow_mut().entry(id.into()).or_default().invalidated = true;
+        self.refresh_subscribed(id);
+        self.changed(id);
+    }
     fn refresh_subscribed(&self, id: &str) {
         if self.subscribers.borrow().contains_key(id) {
             let e = self.clone();

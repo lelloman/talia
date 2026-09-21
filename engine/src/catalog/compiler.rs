@@ -184,6 +184,7 @@ pub(super) fn compile_packages(
 fn trusted(s: &Script, key: &Key, path: &str, code: &str) -> Result<()> {
     s.eval(code).map_err(|e| {
         let mut d = Diagnostic::from(e.clone()).at(key, path);
+        d.source_diagnostic = true;
         let parts: Vec<_> = e.splitn(3, ':').collect();
         if parts.len() == 3 {
             d.line = parts[0].parse().ok();
@@ -234,6 +235,7 @@ fn syntax(key: &Key, source: &str) -> Result<()> {
                     .unwrap_or_else(|| error.to_string());
                 let mut diagnostic =
                     Diagnostic::new("validation_failed", message).at(key, "source");
+                diagnostic.source_diagnostic = true;
                 diagnostic.line = object.and_then(|o| o.get::<_, u64>("lineNumber").ok());
                 diagnostic.column = object.and_then(|o| o.get::<_, u64>("columnNumber").ok());
                 if let Some(stack) = object.and_then(|o| o.get::<_, String>("stack").ok()) {

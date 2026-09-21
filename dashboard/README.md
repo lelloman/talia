@@ -2,8 +2,9 @@
 
 P1 renders the same restricted UI and JavaScript ViewModel on the web and native
 Android. It uses the existing loopback Rust engine fixture. This is a development
-client, not the production monitoring service: durable engine storage, production
-authentication, MCP authoring and deployment remain later roadmap stories.
+client, not the production monitoring service. Durable engine storage and
+[MCP authoring](../docs/mcp-authoring.md) are now available in durable mode;
+production authentication and deployment remain later roadmap work.
 
 ## Build and run
 
@@ -45,8 +46,9 @@ Each client retains its own saved-dashboard ID. The web host exposes
 `dashboard` launch extra and persists it alongside its engine port. The development
 server serves `dashboard/generated/ID.json` for the selected ID, while all IDs use
 the same engine. Cached baselines are scoped by dashboard ID. The default is
-`monitor`. This local selection is distinct from future server-managed assignment
-and authenticated MCP configuration.
+`monitor` in this legacy fixture mode. Durable mode instead uses
+[server-managed assignments](../docs/dashboard-delivery.md) and supports
+[authenticated MCP configuration](../docs/mcp-authoring.md).
 
 The web client's display settings persist its manual dp scale (0.25–8 CSS px per
 dp) and navigation placement. Android uses native density and keeps its navigation

@@ -20,7 +20,8 @@ dashboard, otherwise the first saved dashboard ID. Existing slots preserve their
 server assignment across reload, page refresh and native process recreation.
 
 Saving an assignment requires its expected revision. `assignment_set` is a trusted
-Store API for subsequent authorized/audited MCP integration. The authenticated host
+Store API wrapped by the authorized/audited
+[`client_assignment_set` MCP tool](mcp-authoring.md). The authenticated host
 `select` operation can modify only its own slot, with the slot ownership token.
 No authoring sources, guest credentials or engine permissions are exposed by delivery.
 Changing desired assignment does not reload any runtime.
@@ -99,5 +100,5 @@ The fixture editor refuses a database owned by a running engine. Integration tes
 stop the fixture engine to edit its saved catalog, then verify surviving clients
 show updates and explicitly adopt them. Rust tests separately exercise catalog saves
 and package reads without a service restart. These tests do not claim MCP authoring
-coverage, which belongs to the next subtasks. Android scripts reject physical devices
+coverage; [MCP authoring qualification](mcp-authoring.md) now covers that path. Android scripts reject physical devices
 and clean up their app and reverse mapping.

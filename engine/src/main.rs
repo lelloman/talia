@@ -24,6 +24,7 @@ use tokio::sync::{mpsc, oneshot};
 struct Request {
     body: Value,
     credential: Option<String>,
+    agent: bool,
     reply: oneshot::Sender<Value>,
 }
 #[derive(Clone)]
@@ -259,7 +260,7 @@ impl Service {
 }
 async fn rpc(State(tx): State<mpsc::Sender<Request>>, Json(body): Json<Value>) -> Json<Value> {
     let (reply, rx) = oneshot::channel();
-    if tx.try_send(Request { body, reply, credential: None }).is_err() {
+    if tx.try_send(Request { body, reply, credential: None, agent: false }).is_err() {
         return Json(json!({"error":"server busy"}));
     }
     Json(
@@ -270,7 +271,14 @@ async fn rpc(State(tx): State<mpsc::Sender<Request>>, Json(body): Json<Value>) -
 async fn client_rpc(State(tx): State<mpsc::Sender<Request>>, headers: HeaderMap, Json(body): Json<Value>) -> Json<Value> {
     let credential = headers.get("authorization").and_then(|s|s.to_str().ok()).and_then(|s|s.strip_prefix("Bearer ")).unwrap_or("").to_string();
     let (reply, rx) = oneshot::channel();
-    if tx.try_send(Request { body, reply, credential: Some(credential) }).is_err() { return Json(json!({"error":"limit_exceeded"})); }
+    if tx.try_send(Request { body, reply, credential: Some(credential), agent: false }).is_err() { return Json(json!({"error":"limit_exceeded"})); }
+    Json(rx.await.unwrap_or_else(|_|json!({"error":"internal_error"})))
+}
+async fn agent_rpc(State(tx): State<mpsc::Sender<Request>>, headers: HeaderMap, Json(body): Json<Value>) -> Json<Value> {
+    if headers.contains_key("origin") { return Json(json!({"error":"forbidden"})); }
+    let credential = headers.get("authorization").and_then(|s|s.to_str().ok()).and_then(|s|s.strip_prefix("Bearer ")).unwrap_or("").to_string();
+    let (reply, rx) = oneshot::channel();
+    if tx.try_send(Request { body, reply, credential: Some(credential), agent: true }).is_err() { return Json(json!({"error":"limit_exceeded"})); }
     Json(rx.await.unwrap_or_else(|_|json!({"error":"internal_error"})))
 }
 #[tokio::main(flavor = "current_thread")]
@@ -339,6 +347,7 @@ async fn main() -> Result<()> {
     let router = Router::new()
         .route("/engine", post(rpc))
         .route("/clients", post(client_rpc))
+        .route("/agent", post(agent_rpc))
         .layer(DefaultBodyLimit::max(2_359_296))
         .with_state(tx);
     let listener = tokio::net::TcpListener::bind((
@@ -366,7 +375,32 @@ async fn main() -> Result<()> {
     }
   });
   let leases=service.clone();tokio::task::spawn_local(async move{loop{tokio::time::sleep(Duration::from_secs(10)).await;let expired:Vec<_>=leases.leases.borrow().iter().filter(|(_,(_,t))|leases.engine.now()-*t>60000).map(|(k,_)|k.clone()).collect();for key in expired{if let Some((id,_))=leases.leases.borrow_mut().remove(&key){leases.engine.unsubscribe(&id);}}}});
-  tokio::task::spawn_local(async move{let active=Rc::new(Cell::new(0usize));while let Some(request)=rx.recv().await{if active.get()>=128{let _=request.reply.send(json!({"error":"server busy"}));continue;}let active=active.clone();active.set(active.get()+1);let s=service.clone();tokio::task::spawn_local(async move{if let Some(credential)=request.credential {
+  tokio::task::spawn_local(async move{let active=Rc::new(Cell::new(0usize));while let Some(request)=rx.recv().await{if active.get()>=128{let _=request.reply.send(json!({"error":if request.agent {"limit_exceeded"}else{"server busy"}}));continue;}let active=active.clone();active.set(active.get()+1);let s=service.clone();tokio::task::spawn_local(async move{if request.agent {
+    use talia_engine::authority::ErrorCode;
+    // A cancelled queued request has no effects. Once admitted, the synchronous transaction finishes.
+    if request.reply.is_closed() {active.set(active.get()-1);return;}
+    let mut before=vec![];
+    let result=(|| {
+        let mut store=s.engine.store.borrow_mut();
+        let session=store.agent_authenticate(request.credential.as_deref().unwrap_or(""))?;
+        let r=serde_json::from_value::<talia_engine::mcp::Request>(request.body).map_err(|_|ErrorCode::InvalidInput)?;
+        if r.name=="definitions_save" { before=store.instances().map_err(|_|ErrorCode::StorageError)?; }
+        talia_engine::mcp::dispatch(&mut store,&session,r,s.engine.now())
+    })();
+    if result.as_ref().is_ok_and(|v|!v["receipt"].is_null()) {
+        // Catalog commits already fence in-flight computations by revision/generation.
+        // Notify subscribed values/dependents only after releasing the Store borrow.
+        let after=s.engine.store.borrow().instances().unwrap_or_default();
+        for i in &after {
+            if !before.iter().any(|b|b.id==i.id && b.revision==i.revision && b.generation==i.generation) {
+                s.engine.catalog_changed(&i.id);
+            }
+        }
+        for i in &before {if !after.iter().any(|a|a.id==i.id) {s.engine.changed(&i.id);}}
+    }
+    let response=result.unwrap_or_else(|error|json!({"error":error}));
+    let _=request.reply.send(response);active.set(active.get()-1);return;
+  }if let Some(credential)=request.credential {
     let result=serde_json::from_value::<talia_engine::clients::Request>(request.body).map_err(|_|talia_engine::authority::ErrorCode::InvalidInput).and_then(|r|s.engine.store.borrow_mut().client_request(&credential,r,s.engine.now()));
     let response=match result {Ok(value)=>json!({"value":value,"incarnation":s.incarnation}),Err(error)=>json!({"error":error,"incarnation":s.incarnation})};let _=request.reply.send(response);active.set(active.get()-1);return;
   }let result=s.execute(&request.body).await;let response=match result{Ok(value)=>json!({"version":1,"incarnation":s.incarnation,"epoch":request.body["epoch"],"value":value}),Err(error)=>json!({"version":1,"incarnation":s.incarnation,"epoch":request.body["epoch"],"error":error})};let _=request.reply.send(response);active.set(active.get()-1);});}});

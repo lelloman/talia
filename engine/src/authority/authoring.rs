@@ -3,6 +3,7 @@ use super::*;
 pub struct Saved {
     pub audit: AuditRecord,
     pub receipt: Option<catalog::Receipt>,
+    pub diagnostics: Vec<catalog::Diagnostic>,
 }
 fn error_code(d: &catalog::Diagnostic) -> ErrorCode {
     match d.code.as_str() {
@@ -57,28 +58,8 @@ impl Store {
         }
         self.authoring_references(session, set)?;
         let mut result = self.catalog_validate(set);
-        // Exception messages can contain data from engine migration state. Do not forward them.
         for diagnostic in &mut result.diagnostics {
-            diagnostic.message = match error_code(diagnostic) {
-                ErrorCode::Conflict => "catalog revision conflict",
-                ErrorCode::StorageError => "storage unavailable",
-                ErrorCode::LimitExceeded => "authoring limit exceeded",
-                _ => "definition validation failed",
-            }
-            .into();
-            if diagnostic.key.as_ref().is_some_and(|key| {
-                self.agent_require(
-                    session,
-                    Operation::DefinitionsRead,
-                    &Target::Definition { key: key.clone() },
-                )
-                .is_err()
-            }) {
-                diagnostic.key = None;
-                diagnostic.path = None;
-                diagnostic.line = None;
-                diagnostic.column = None;
-            }
+            self.agent_diagnostic(session, diagnostic);
         }
         if result.valid {
             // Ceiling validation requires linked packages; stage and roll back exactly as a save.
@@ -127,14 +108,21 @@ impl Store {
             return Ok(Saved {
                 audit: admission.record,
                 receipt: None,
+                diagnostics: vec![],
             });
         };
         self.agent_start(&permit, now)?;
         self.conn.execute_batch("SAVEPOINT agent_catalog_effect")?;
+        let mut diagnostics = vec![];
         let result = (|| {
             self.agent_check_permit(&permit)?;
             self.authoring_references(session, set)?;
-            let mut receipt = self.catalog_save(set).map_err(|d| error_code(&d))?;
+            let mut receipt = self.catalog_save(set).map_err(|mut d| {
+                let code = error_code(&d);
+                self.agent_diagnostic(session, &mut d);
+                diagnostics.push(d);
+                code
+            })?;
             self.authoring_ceiling(&receipt)?;
             let after: Vec<_> = targets
                 .iter()
@@ -158,6 +146,7 @@ impl Store {
             Ok(Saved {
                 audit,
                 receipt: Some(receipt),
+                diagnostics: vec![],
             })
         })();
         match result {
@@ -173,8 +162,42 @@ impl Store {
                 Ok(Saved {
                     audit,
                     receipt: None,
+                    diagnostics,
                 })
             }
+        }
+    }
+    fn agent_diagnostic(&self, session: &Session, d: &mut catalog::Diagnostic) {
+        let readable = d.key.as_ref().is_some_and(|key| {
+            self.agent_require(
+                session,
+                Operation::DefinitionsRead,
+                &Target::Definition { key: key.clone() },
+            )
+            .is_ok()
+        });
+        // Only compiler diagnostics from source parsing can carry verbatim messages.
+        // Migration exceptions may include private state, even for a definition reader.
+        if !(readable && d.source_diagnostic) {
+            d.message = match error_code(d) {
+                ErrorCode::Conflict => "Reread the catalog and reconcile against current_revision before saving.",
+                ErrorCode::StorageError => "Storage unavailable; check operation_status before retrying a save.",
+                ErrorCode::LimitExceeded => "Reduce source/bundle size, reference depth or record count; see authoring limits.",
+                ErrorCode::NotFound => "Read the target again; it may have been removed.",
+                _ => match d.path.as_deref() {
+                    Some("migration") => "Repair the bounded migration function and ensure its result matches the state schema.",
+                    Some("references") => "Check that referenced keys exist in the final bundle, have compatible kinds, and form no cycles.",
+                    Some("key") | Some("key.id") | Some("key.kind") => "Use unique valid catalog keys; document IDs must match their keys.",
+                    _ => "Check the definition schema, source syntax, references and required migrations at the reported location.",
+                },
+            }.into();
+        }
+        d.message = d.message.chars().take(1024).collect();
+        if !readable {
+            d.key = None;
+            d.path = None;
+            d.line = None;
+            d.column = None;
         }
     }
     fn authoring_references(&self, session: &Session, set: &catalog::ChangeSet) -> Result<()> {

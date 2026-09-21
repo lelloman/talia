@@ -2,9 +2,10 @@
 
 [TALIA-40](https://crumbles.lelloman.com/w/LLPR/TALIA/40) implements the trusted Rust
 authority layer in `engine/src/authority.rs`. It supports the
-[MCP contract](mcp-contract.md); it does not yet expose MCP tools or authenticated
-HTTP routes. The existing loopback development transport remains unchanged.
-Upcoming authoring, engine and live-control adapters must use this boundary.
+[MCP contract](mcp-contract.md). The [authoring adapter](mcp-authoring.md) now uses
+this boundary for MCP tools and the authenticated private `/agent` bridge.
+The legacy `/engine` loopback development transport remains unauthenticated.
+Upcoming engine and live-control adapters must also use this boundary.
 
 ## Credentials and permissions
 
@@ -87,9 +88,10 @@ here. Protect and back up the SQLite database as server-private data.
 
 ## Authored catalog integration
 
-Agent-facing adapters use `agent_catalog_snapshot`, `agent_catalog_validate` and
-`agent_catalog_save`, rather than the unrestricted Store APIs. Snapshots filter
-records by authoring-read scope. Saves require save permission for every changed
+Agent-facing adapters use `agent_catalog_list`, `agent_catalog_read`,
+`agent_catalog_validate` and `agent_catalog_save`, rather than unrestricted Store
+APIs. Metadata listings require list scope; source reads require read scope.
+The older `agent_catalog_snapshot` helper filters records by read scope. Saves require save permission for every changed
 key and read permission for explicitly referenced sources. Validation requires
 validate permission and sanitizes diagnostics that could contain migration state.
 
@@ -100,8 +102,9 @@ server behavior through engine definitions; allocate that authority accordingly.
 
 Save admission is durable first. Catalog activation and the successful audit record
 then commit in one transaction. A failed audit write rolls back the catalog change.
-Failure diagnostics are reduced to predefined codes; package revision receipts are
-filtered by discovery permission. Retries return the original audit outcome without
+Audit failures use predefined codes. Agent responses also return safe located
+compiler diagnostics and repair hints; migration exception text remains private.
+Package revision receipts are filtered by read permission. Retries return the original audit outcome without
 rerunning migrations or compilation. Validation remains rollback-only.
 
 SQLite schema 6 adds private policy, credential, security-key, request-deduplication

@@ -3,8 +3,9 @@
 Rust/Axum owns SQLite definitions, variables, computed state and action records.
 Configurable JavaScript executes inside bounded QuickJS contexts. P3 adds Prometheus
 and HTTP adapters, durable Pipelines, schedules and stateful Watches. This is a
-loopback development service; authentication, complete MCP tools, alert delivery
-and production deployment follow later. See [monitoring](../docs/monitoring.md).
+loopback development service. Authenticated [MCP authoring](../docs/mcp-authoring.md)
+is available; engine/live-control MCP tools, alert delivery and production deployment
+follow later. See [monitoring](../docs/monitoring.md).
 
 ```sh
 cargo test --manifest-path engine/Cargo.toml --offline
@@ -57,7 +58,9 @@ P4 now includes a trusted [authored catalog and package compiler](../docs/author
 through the Rust Store API. Atomic source bundles reuse canonical engine records
 and compile version-1 packages with the shared UI compiler. The
 [agent authority layer](../docs/agent-authority.md) adds credentials, scoped permissions
-and durable audits around trusted operations. MCP exposure remains separate integration work; the development HTTP routes are not authenticated.
+and durable audits around trusted operations. [MCP authoring](../docs/mcp-authoring.md) now exposes these operations over stdio,
+with operator credential setup and an authenticated private backend bridge. The
+legacy `/engine` development HTTP route remains unauthenticated.
 
 P4 also includes [client registration](../docs/client-registration.md): persistent
 named clients, independent slots, fresh live IDs on replacement, authenticated host

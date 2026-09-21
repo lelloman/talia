@@ -564,3 +564,6 @@ mod audit;
 mod authoring;
 #[cfg(test)]
 mod tests;
+mod discovery;
+mod assignment;
+pub use assignment::AssignmentRequest;

@@ -19,3 +19,5 @@ pub mod authority;
 pub mod clients;
 
 pub mod delivery;
+
+pub mod mcp;
