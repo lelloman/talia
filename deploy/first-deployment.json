@@ -1,0 +1,25 @@
+{
+  "origin": "https://talia.lan.lelloman.com",
+  "checks": [
+    "MCP stdio adapter connects over verified private HTTPS",
+    "authenticated definition creation and persisted diagnostic write",
+    "browser sign-in and welcome UI with trusted TLS",
+    "service restart and retained browser registration",
+    "MCP reconnect and diagnostic value retained after restart",
+    "unauthenticated engine and registration denied",
+    "consistent SQLite backup copied to independent workstation and integrity checked",
+    "homelab health monitor container, endpoint and SQLite checks pass",
+    "Caddy rejects a source outside LAN/VPN allowlist with 403",
+    "MCP rejects remote plaintext and URL credentials, paths and queries"
+  ],
+  "passed": true,
+  "sourceRevision": "dee6dd2dc5ab229f9dbc2902ce38823acee3e168",
+  "imageDigest": "sha256:6ae1f36e696a4e34b0b38bd1f6421b0f3d3cdf92dc717d02542e27d83d24ba7d",
+  "homelabCommit": "1989f1d",
+  "providerDeliveryTested": false,
+  "androidDeviceUsed": false,
+  "backupSha256": "38763f2844690b322e3f34266141b9789518004a97016ff7a13ea4d4405f2b3f",
+  "verifiedAt": "2026-09-21T13:26:08.191696+00:00",
+  "ongoingNasBackupVerified": false,
+  "rollback": "First-install stop/remove-route procedure documented; restart recovery exercised"
+}

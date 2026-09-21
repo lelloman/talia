@@ -55,3 +55,5 @@ retaining its data. Subsequent image rollback requires schema compatibility.
 Verification: build the web assets and Rust binaries, then run
 `python3 deploy/test-service.py`. It exercises the access boundary, origin checks,
 static isolation, registration, health, restart and a real Chromium dashboard.
+
+First installation: [deployment record](first-deployment.md).

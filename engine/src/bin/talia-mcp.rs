@@ -138,18 +138,18 @@ impl ServerHandler for Adapter {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<_> = std::env::args().collect();
     if args.len() != 3 {
-        return Err("usage: talia-mcp http://127.0.0.1:PORT /path/to/credential".into());
+        return Err("usage: talia-mcp ENGINE_ORIGIN /path/to/credential".into());
     }
     let mut endpoint = url::Url::parse(&args[1]).map_err(|_| "invalid engine URL")?;
-    if endpoint.scheme() != "http"
-        || endpoint.host_str() != Some("127.0.0.1")
+    if !(endpoint.scheme() == "https" && endpoint.host_str().is_some()
+        || endpoint.scheme() == "http" && endpoint.host_str() == Some("127.0.0.1"))
         || !endpoint.username().is_empty()
         || endpoint.password().is_some()
         || endpoint.path() != "/"
         || endpoint.query().is_some()
         || endpoint.fragment().is_some()
     {
-        return Err("engine URL must be an IPv4 loopback HTTP origin".into());
+        return Err("engine URL must be an HTTPS origin or IPv4 loopback HTTP origin".into());
     }
     endpoint.set_path("/agent");
     let token = std::fs::read_to_string(&args[2]).map_err(|_| "cannot read credential file")?;
