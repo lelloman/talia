@@ -9,7 +9,8 @@ now supplies persistent host identity and lifecycle reporting, and
 [authoring storage implementation](authoring-storage.md) supplies the first persistence/compilation layer. Crumbles owns the
 execution plan and status. The [agent authority implementation](agent-authority.md)
 supplies permission checks, authenticated catalog wrappers and durable audit admission
-for adapters. Engine and live-control exposure remain subsequent subtasks. P1–P3 qualification remains historical evidence.
+for adapters. [Engine tools](mcp-engine.md) now expose reads, subscriptions, guarded
+mutations and Pipeline actions. Live-control exposure remains a subsequent subtask. P1–P3 qualification remains historical evidence.
 
 External MCP agents author Talìa. Embedded chat, production deployment and actual
 Crumbles/Simple Agents task execution are outside P4. Web and native Android use

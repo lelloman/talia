@@ -25,6 +25,8 @@ struct Request {
     body: Value,
     credential: Option<String>,
     agent: bool,
+    connection: String,
+    call: String,
     reply: oneshot::Sender<Value>,
 }
 #[derive(Clone)]
@@ -32,6 +34,7 @@ struct Service {
     engine: Engine,
     pipelines: Pipelines,
     watches: Watches,
+    agent_engine: talia_engine::mcp_engine::AgentEngine,
     monitoring_error: Rc<RefCell<Option<String>>>,
     incarnation: String,
     clients: Rc<RefCell<HashMap<String, u64>>>,
@@ -62,6 +65,22 @@ impl Service {
             }
             None => json!({"actionId":id,"status":"unknown"}),
         })
+    }
+    async fn agent_execute(&self, credential:&str, connection:&str, call:&str, body:Value)->talia_engine::authority::Result<Value> {
+        use talia_engine::authority::ErrorCode;
+        let session=self.engine.store.borrow().agent_authenticate(credential)?;
+        let r: talia_engine::mcp::Request=serde_json::from_value(body).map_err(|_|ErrorCode::InvalidInput)?;
+        if r.name.starts_with("engine_") || r.name.starts_with('_') || r.name=="operation_status" {
+            return self.agent_engine.execute(&session,connection,call,r).await;
+        }
+        let before=if r.name=="definitions_save" {self.engine.store.borrow().instances().map_err(|_|ErrorCode::StorageError)?}else{vec![]};
+        let value=talia_engine::mcp::dispatch(&mut self.engine.store.borrow_mut(),&session,r,self.engine.now())?;
+        if !value["receipt"].is_null() {
+            let after=self.engine.store.borrow().instances().map_err(|_|ErrorCode::StorageError)?;
+            for i in &after {if !before.iter().any(|b|b.id==i.id && b.revision==i.revision && b.generation==i.generation){self.engine.catalog_changed(&i.id);}}
+            for i in &before {if !after.iter().any(|a|a.id==i.id){self.engine.changed(&i.id);}}
+        }
+        Ok(value)
     }
     async fn execute(&self, r: &Value) -> Result<Value> {
         if r["version"] != 1 {
@@ -260,7 +279,7 @@ impl Service {
 }
 async fn rpc(State(tx): State<mpsc::Sender<Request>>, Json(body): Json<Value>) -> Json<Value> {
     let (reply, rx) = oneshot::channel();
-    if tx.try_send(Request { body, reply, credential: None, agent: false }).is_err() {
+    if tx.try_send(Request { body, reply, credential: None, agent: false, connection:String::new(), call:String::new() }).is_err() {
         return Json(json!({"error":"server busy"}));
     }
     Json(
@@ -271,14 +290,14 @@ async fn rpc(State(tx): State<mpsc::Sender<Request>>, Json(body): Json<Value>) -
 async fn client_rpc(State(tx): State<mpsc::Sender<Request>>, headers: HeaderMap, Json(body): Json<Value>) -> Json<Value> {
     let credential = headers.get("authorization").and_then(|s|s.to_str().ok()).and_then(|s|s.strip_prefix("Bearer ")).unwrap_or("").to_string();
     let (reply, rx) = oneshot::channel();
-    if tx.try_send(Request { body, reply, credential: Some(credential), agent: false }).is_err() { return Json(json!({"error":"limit_exceeded"})); }
+    if tx.try_send(Request { body, reply, credential: Some(credential), agent: false, connection:String::new(), call:String::new() }).is_err() { return Json(json!({"error":"limit_exceeded"})); }
     Json(rx.await.unwrap_or_else(|_|json!({"error":"internal_error"})))
 }
 async fn agent_rpc(State(tx): State<mpsc::Sender<Request>>, headers: HeaderMap, Json(body): Json<Value>) -> Json<Value> {
     if headers.contains_key("origin") { return Json(json!({"error":"forbidden"})); }
     let credential = headers.get("authorization").and_then(|s|s.to_str().ok()).and_then(|s|s.strip_prefix("Bearer ")).unwrap_or("").to_string();
     let (reply, rx) = oneshot::channel();
-    if tx.try_send(Request { body, reply, credential: Some(credential), agent: true }).is_err() { return Json(json!({"error":"limit_exceeded"})); }
+    if tx.try_send(Request { body, reply, credential: Some(credential), agent: true, connection:headers.get("x-talia-session").and_then(|v|v.to_str().ok()).unwrap_or("").into(), call:headers.get("x-talia-call").and_then(|v|v.to_str().ok()).unwrap_or("").into() }).is_err() { return Json(json!({"error":"limit_exceeded"})); }
     Json(rx.await.unwrap_or_else(|_|json!({"error":"internal_error"})))
 }
 #[tokio::main(flavor = "current_thread")]
@@ -334,7 +353,9 @@ async fn main() -> Result<()> {
     engine.store.borrow_mut().agent_recover(engine.now()).map_err(|_| "agent recovery failed".to_string())?;
     let pipelines = Pipelines::new(engine.clone())?;
     let watches = Watches::new(pipelines.clone());
+    let agent_engine=talia_engine::mcp_engine::AgentEngine::new(engine.clone(),pipelines.clone(),watches.clone());
     let service = Service {
+        agent_engine,
         engine,
         pipelines,
         watches,
@@ -374,30 +395,11 @@ async fn main() -> Result<()> {
       tokio::time::sleep(Duration::from_millis(50)).await;
     }
   });
+  let agent_leases=service.agent_engine.clone();tokio::task::spawn_local(async move{loop{tokio::time::sleep(Duration::from_secs(1)).await;agent_leases.sweep();}});
   let leases=service.clone();tokio::task::spawn_local(async move{loop{tokio::time::sleep(Duration::from_secs(10)).await;let expired:Vec<_>=leases.leases.borrow().iter().filter(|(_,(_,t))|leases.engine.now()-*t>60000).map(|(k,_)|k.clone()).collect();for key in expired{if let Some((id,_))=leases.leases.borrow_mut().remove(&key){leases.engine.unsubscribe(&id);}}}});
   tokio::task::spawn_local(async move{let active=Rc::new(Cell::new(0usize));while let Some(request)=rx.recv().await{if active.get()>=128{let _=request.reply.send(json!({"error":if request.agent {"limit_exceeded"}else{"server busy"}}));continue;}let active=active.clone();active.set(active.get()+1);let s=service.clone();tokio::task::spawn_local(async move{if request.agent {
-    use talia_engine::authority::ErrorCode;
-    // A cancelled queued request has no effects. Once admitted, the synchronous transaction finishes.
     if request.reply.is_closed() {active.set(active.get()-1);return;}
-    let mut before=vec![];
-    let result=(|| {
-        let mut store=s.engine.store.borrow_mut();
-        let session=store.agent_authenticate(request.credential.as_deref().unwrap_or(""))?;
-        let r=serde_json::from_value::<talia_engine::mcp::Request>(request.body).map_err(|_|ErrorCode::InvalidInput)?;
-        if r.name=="definitions_save" { before=store.instances().map_err(|_|ErrorCode::StorageError)?; }
-        talia_engine::mcp::dispatch(&mut store,&session,r,s.engine.now())
-    })();
-    if result.as_ref().is_ok_and(|v|!v["receipt"].is_null()) {
-        // Catalog commits already fence in-flight computations by revision/generation.
-        // Notify subscribed values/dependents only after releasing the Store borrow.
-        let after=s.engine.store.borrow().instances().unwrap_or_default();
-        for i in &after {
-            if !before.iter().any(|b|b.id==i.id && b.revision==i.revision && b.generation==i.generation) {
-                s.engine.catalog_changed(&i.id);
-            }
-        }
-        for i in &before {if !after.iter().any(|a|a.id==i.id) {s.engine.changed(&i.id);}}
-    }
+    let result=s.agent_execute(request.credential.as_deref().unwrap_or(""),&request.connection,&request.call,request.body).await;
     let response=result.unwrap_or_else(|error|json!({"error":error}));
     let _=request.reply.send(response);active.set(active.get()-1);return;
   }if let Some(credential)=request.credential {

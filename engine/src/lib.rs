@@ -21,3 +21,5 @@ pub mod clients;
 pub mod delivery;
 
 pub mod mcp;
+
+pub mod mcp_engine;

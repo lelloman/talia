@@ -4,6 +4,8 @@
 authority layer in `engine/src/authority.rs`. It supports the
 [MCP contract](mcp-contract.md). The [authoring adapter](mcp-authoring.md) now uses
 this boundary for MCP tools and the authenticated private `/agent` bridge.
+[Engine tools](mcp-engine.md) enforce resource permissions, connection-owned leases
+and guarded asynchronous setter effects through the same boundary.
 The legacy `/engine` loopback development transport remains unauthenticated.
 Upcoming engine and live-control adapters must also use this boundary.
 

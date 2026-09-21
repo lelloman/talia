@@ -51,7 +51,7 @@ def main():
   limited=provision(db,temp,'limited',[grant(['list'],{'kind':'definition','definition_kind':'ui','id':'notice'})])
   try:
    e.start();m=MCP(e.port,credential);clients.append(m)
-   names={t['name'] for t in m.rpc('tools/list',{})['result']['tools']};assert names=={'definitions_list','definitions_read','definitions_validate','definitions_save','client_assignment_set','operation_status','audit_list'}
+   names={t['name'] for t in m.rpc('tools/list',{})['result']['tools']};assert names>={'definitions_list','definitions_read','definitions_validate','definitions_save','client_assignment_set','operation_status','audit_list'}
    modern=MCP(e.port,credential,'2026-07-28');modern.tool('definitions_list',{});modern.close()
    checks.append('MCP initialization, both protocol generations and tool discovery')
    def revision():return m.tool('definitions_list',{})['catalogRevision']
@@ -84,7 +84,7 @@ def main():
    assert m.tool('definitions_list',{'principal':'author'},False)['error']=='invalid_input'
    first=m.tool('definitions_list',{'limit':1});cursor=first['nextCursor'];assert m.tool('definitions_list',{'cursor':cursor,'limit':1})['records']!=first['records']
    assert m.tool('definitions_list',{'limit':0},False)['error']=='invalid_input'
-   assert 'error' in m.rpc('tools/call',{'name':'engine_write','arguments':{}})
+   assert 'error' in m.rpc('tools/call',{'name':'live_execute','arguments':{}})
    for token,origin,code in [('',None,'unauthenticated'),(credential.read_text(),'http://evil.invalid','forbidden')]:
     headers={'Content-Type':'application/json','Authorization':'Bearer '+token}
     if origin:headers['Origin']=origin

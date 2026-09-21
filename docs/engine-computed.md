@@ -31,3 +31,9 @@ Latest value/age/quality and evaluation running/error/invalidated metadata are
 separate, leaving presentation to widgets. Successful undefined/NaN are values.
 
 Explicit invalidation advances the instance revision without changing private cache fields or measurement age, fencing in-flight cache publication. Recovered computed instances begin invalidated until reevaluated. Definition migration batches have a combined 100ms script budget; v1 bounds configuration at 256 definitions and 1024 instances.
+
+Authenticated [MCP setters](mcp-engine.md) add a trusted host guard to this lifecycle.
+They recheck primary setter authority before continuations, commits and effects,
+and nested resource read/write authority before dispatch (and after awaited reads).
+Cancellation fences subsequent effects without undoing earlier commits. The guard
+is never supplied by guest code and does not serialize I/O across instances.

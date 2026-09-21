@@ -23,6 +23,8 @@ pub struct Evaluation {
     pub invalidated: bool,
     pub changed: HashSet<String>,
 }
+/// Host-only authorization checked before each setter continuation and effect.
+pub type EffectGuard = Rc<dyn Fn(&str, &str) -> Result<()>>;
 #[derive(Clone)]
 pub struct Engine {
     pub store: Rc<RefCell<Store>>,
@@ -112,7 +114,11 @@ impl Engine {
     }
     /// Catalog activation already increments the durable revision/generation; only notify here.
     pub fn catalog_changed(&self, id: &str) {
-        self.evaluation.borrow_mut().entry(id.into()).or_default().invalidated = true;
+        self.evaluation
+            .borrow_mut()
+            .entry(id.into())
+            .or_default()
+            .invalidated = true;
         self.refresh_subscribed(id);
         self.changed(id);
     }
@@ -261,6 +267,15 @@ impl Engine {
             .await
             .map_err(|_| "setter timeout".to_string())?
     }
+    pub async fn set_guarded(&self, id: &str, arg: Value, guard: EffectGuard) -> Result<Instance> {
+        value::validate(&arg)?;
+        tokio::time::timeout(
+            Duration::from_secs(5),
+            self.evaluate_guarded(id, "set", arg, Some(guard)),
+        )
+        .await
+        .map_err(|_| "setter timeout".to_string())?
+    }
     fn fence(&self, start: &Instance, deps: &HashMap<String, u64>) -> Result<()> {
         let i = self
             .store
@@ -281,6 +296,23 @@ impl Engine {
         Ok(())
     }
     async fn evaluate(&self, id: &str, mode: &str, argument: Value) -> Result<Instance> {
+        self.evaluate_guarded(id, mode, argument, None).await
+    }
+    async fn evaluate_guarded(
+        &self,
+        id: &str,
+        mode: &str,
+        argument: Value,
+        guard: Option<EffectGuard>,
+    ) -> Result<Instance> {
+        let authorize = |op: &str, target: &str| -> Result<()> {
+            if let Some(guard) = &guard {
+                guard(mode, id)?;
+                guard(op, target)?;
+            }
+            Ok(())
+        };
+        authorize(mode, id)?;
         self.runs.set(self.runs.get() + 1);
         let mut start = self.store.borrow().instance(id)?;
         let definition = self.store.borrow().definition(&start.definition)?;
@@ -298,6 +330,7 @@ impl Engine {
         guest.eval(&format!("globalThis.definition=({});globalThis.input={};",definition.source,json!({"state":start.state,"params":start.params,"argument":argument,"mode":mode,"changed":changed,"now":self.now()})))?;
         guest.eval(include_str!("../shared/computed.js"))?;
         loop {
+            authorize(mode, id)?;
             self.fence(&start, &deps)?;
             guest.drain()?;
             let result: Value =
@@ -317,6 +350,7 @@ impl Engine {
                 next.timestamp = self.now();
                 next.quality = "good".into();
                 next.revision += 1;
+                authorize(mode, id)?;
                 self.fence(&start, &deps)?;
                 self.store
                     .borrow_mut()
@@ -343,6 +377,7 @@ impl Engine {
                     if !definition.dependencies.contains(&target) {
                         return Err("undeclared read dependency".into());
                     }
+                    authorize("read", &target)?;
                     let e = self.clone();
                     let key = call["id"].to_string();
                     reads.insert(
@@ -354,6 +389,7 @@ impl Engine {
                 }
             }
             for call in calls {
+                authorize(mode, id)?;
                 self.fence(&start, &deps)?;
                 let arg = &call["arg"];
                 value::validate(arg)?;
@@ -381,6 +417,7 @@ impl Engine {
                             .ok_or("read dispatch")?
                             .await
                             .map_err(|_| "read task failed")??;
+                        authorize("read", target)?;
                         deps.insert(target.into(), v.revision);
                         Ok(v.value)
                     }
@@ -389,6 +426,7 @@ impl Engine {
                         if mode != "set" || !definition.dependencies.iter().any(|d| d == target) {
                             return Err("write capability denied".into());
                         }
+                        authorize("write", target)?;
                         let wire: Value = serde_json::from_str(&guest.string(&format!(
                             "TaliaValue.stringify(TaliaValue.decode({arg}).value)"
                         ))?)
@@ -410,6 +448,7 @@ impl Engine {
                     }
                     _ => Err("unknown host operation".into()),
                 };
+                authorize(mode, id)?;
                 self.fence(&start, &deps)?;
                 let response = match answer {
                     Ok(v) => json!({"id":call["id"],"value":v}),

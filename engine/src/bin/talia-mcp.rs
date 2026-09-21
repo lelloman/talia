@@ -43,15 +43,29 @@ struct Adapter {
     endpoint: url::Url,
     token: String,
     active: tokio::sync::Semaphore,
+    connection: String,
+    sequence: std::sync::atomic::AtomicU64,
 }
 fn tool_result(value: Value) -> CallToolResponse {
     let failed = !value["error"].is_null() || value.get("valid") == Some(&Value::Bool(false));
     serde_json::from_value::<CallToolResult>(json!({"content":[{"type":"text","text":value.to_string()}],"structuredContent":value,"isError":failed})).expect("tool response shape").into()
 }
+impl Adapter {
+    async fn control(&self, name: &str, arguments: Value) {
+        let request = self
+            .client
+            .post(self.endpoint.clone())
+            .bearer_auth(&self.token)
+            .header("x-talia-session", &self.connection)
+            .json(&json!({"name":name,"arguments":arguments}))
+            .send();
+        let _ = tokio::time::timeout(Duration::from_secs(2), request).await;
+    }
+}
 impl ServerHandler for Adapter {
     fn get_info(&self) -> ServerInfo {
         let mut info = ServerInfo::new(ServerCapabilities::builder().enable_tools().build());
-        info.server_info.name = "talia-authoring".into();
+        info.server_info.name = "talia".into();
         info.server_info.version = env!("CARGO_PKG_VERSION").into();
         info.instructions = Some(mcp::INSTRUCTIONS.into());
         info
@@ -87,11 +101,18 @@ impl ServerHandler for Adapter {
         if body.to_string().len() > 2_097_152 {
             return Ok(tool_result(json!({"error":"limit_exceeded"})));
         }
+        let call = format!(
+            "call-{}",
+            self.sequence
+                .fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+        );
         let work = async {
             let mut response = self
                 .client
                 .post(self.endpoint.clone())
                 .bearer_auth(&self.token)
+                .header("x-talia-session", &self.connection)
+                .header("x-talia-call", &call)
                 .json(&body)
                 .send()
                 .await
@@ -109,7 +130,7 @@ impl ServerHandler for Adapter {
             serde_json::from_slice::<Value>(&bytes).map_err(|_| "internal_error")
         };
         // Cancelling the wait never undoes an admitted mutation. Query its requestId afterwards.
-        let result = tokio::select! { biased; _=context.ct.cancelled()=>Err("cancelled"), result=work=>result };
+        let result = tokio::select! { biased; _=context.ct.cancelled()=>{self.control("_cancel_call",json!({"callId":call})).await;Err("cancelled")}, result=work=>result };
         Ok(tool_result(result.unwrap_or_else(|code|json!({"error":code,"recovery":"If a mutation was submitted, use operation_status with its requestId; do not assume effects were undone."}))))
     }
 }
@@ -145,9 +166,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         endpoint,
         token,
         active: tokio::sync::Semaphore::new(16),
+        connection: talia_engine::mcp_engine::random_id()
+            .map_err(|_| "session randomness unavailable")?,
+        sequence: std::sync::atomic::AtomicU64::new(1),
     };
     let (input, output) = rmcp::transport::stdio();
-    let service = Arc::new(adapter)
+    let adapter = Arc::new(adapter);
+    let service = adapter
+        .clone()
         .serve((
             BoundedLines {
                 inner: input,
@@ -156,7 +182,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             output,
         ))
         .await?;
-    service.waiting().await?;
+    let result = service.waiting().await;
+    adapter.control("_session_close", json!({})).await;
+    result?;
     Ok(())
 }
 

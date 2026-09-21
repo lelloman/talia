@@ -9,8 +9,8 @@ without restarting it. Both web and native Android consume the same compiled
 packages. No client-side authoring implementation or embedded chat is introduced.
 
 This implements the authoring portion of the [MCP contract](mcp-contract.md).
-Engine-operation tools, client discovery and live inspection/execution/reload
-remain TALIA-44/45 work. Production network exposure and SSO remain later work.
+[Engine-operation tools](mcp-engine.md) are also available. Client discovery and live
+inspection/execution/reload remain TALIA-45 work. Production network exposure and SSO remain later work.
 
 ## Operator setup
 
@@ -180,6 +180,8 @@ losing/cancelling the wait does not establish whether it committed, and never un
 effects. Query `operation_status` using the original request ID. Accepted synchronous
 authoring finishes its transaction; no SQLite transaction spans I/O. Restart recovery
 uses the existing pending/running audit rules and never automatically replays work.
+Async engine setters additionally fence later effects on cancellation; see
+[engine operation lifecycle](mcp-engine.md).
 Malformed/unroutable requests are rejected before admission; valid mutation requests
 record permission denials, conflicts, validation failures and committed outcomes.
 

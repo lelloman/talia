@@ -222,6 +222,9 @@ pub struct Session {
     credential_digest: String,
 }
 impl Session {
+    pub(crate) fn same_credential(&self, other: &Session) -> bool {
+        self.principal == other.principal && self.credential_digest == other.credential_digest
+    }
     pub fn principal(&self) -> &str {
         &self.principal
     }
