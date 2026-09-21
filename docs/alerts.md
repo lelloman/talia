@@ -98,3 +98,26 @@ to their shared JS layer; no bearer token enters a dashboard definition or ViewM
 Reference provider documentation: [Telegram Bot API](https://core.telegram.org/bots/api),
 [SMTP transport](https://docs.rs/lettre/latest/lettre/transport/smtp/index.html),
 [Android FCM setup](https://firebase.google.com/docs/cloud-messaging/android/get-started).
+
+## Provider configuration
+
+Set `TALIA_ALERT_PROVIDERS` to a private operator-owned JSON file mapping provider
+names to configurations. It is read asynchronously for each dispatch; replace the
+file atomically to rotate credentials without restart. The authored destination
+contains only the provider name. Do not put this file in source control.
+
+```json
+{
+  "mail": {"kind":"smtp","host":"smtp.example.test","port":587,
+           "tls":"starttls","from":"talia@example.test",
+           "username":"operator-supplied","password":"operator-supplied"},
+  "chat": {"kind":"telegram","token":"operator-supplied"}
+}
+```
+
+SMTP supports required STARTTLS or implicit TLS (`tls`); plaintext `none_loopback`
+is restricted to loopback fixtures/relays. Telegram defaults to its HTTPS Bot API;
+HTTP overrides are restricted to loopback test fixtures. Redirects are disabled.
+Requests have time/response bounds, and provider error details never expose remote
+bodies, credentials or credential-bearing URLs. A provider's positive acceptance is
+recorded as `sent`; this does not prove that the human read the message.

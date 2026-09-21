@@ -33,6 +33,7 @@ struct Request {
 struct Service {
     engine: Engine,
     alert_policies: talia_engine::alerts::policy::Policies,
+    alert_sender: talia_engine::alerts::providers::Sender,
     pipelines: Pipelines,
     watches: Watches,
     live: talia_engine::mcp_live::Live,
@@ -365,6 +366,7 @@ async fn main() -> Result<()> {
         live: talia_engine::mcp_live::Live::new(engine.clone(),agent_engine.clone()),
         agent_engine,
         alert_policies: talia_engine::alerts::policy::Policies::new(engine.clone()),
+        alert_sender: talia_engine::alerts::providers::Sender::new(engine.clone()),
         engine,
         pipelines,
         watches,
@@ -402,6 +404,7 @@ async fn main() -> Result<()> {
       if let Err(e)=monitoring.watches.tick(){errors.push(e);}
       if let Err(e)=monitoring.alert_policies.tick(){errors.push(e);}
       if let Err(e)=monitoring.engine.store.borrow_mut().alert_schedule(monitoring.engine.now()){errors.push(e);}
+      if let Err(e)=monitoring.alert_sender.tick(){errors.push(e);}
       *monitoring.monitoring_error.borrow_mut()=if errors.is_empty(){None}else{Some(errors.join("; "))};
       tokio::time::sleep(Duration::from_millis(50)).await;
     }

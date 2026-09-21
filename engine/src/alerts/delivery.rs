@@ -65,6 +65,7 @@ pub struct Dispatch {
 pub enum Outcome {
     Sent,
     Retry(String),
+    RetryAfter(String, u64),
     Failed(String),
     Unknown(String),
 }
@@ -460,21 +461,26 @@ impl Store {
                     j.error = Some(e.clone());
                     false
                 }
-                Outcome::Retry(e) | Outcome::Unknown(e) => {
+                Outcome::Retry(e) | Outcome::RetryAfter(e, _) | Outcome::Unknown(e) => {
                     j.error = Some(e.clone());
                     true
                 }
             };
             if retry {
+                let delay = match outcome {
+                    Outcome::RetryAfter(_, ms) => ms.max(j.action.retry_ms),
+                    _ => j.action.retry_ms,
+                }
+                .min(i64::MAX as u64) as i64;
                 j.status = if j.attempts < j.action.max_attempts
-                    && now.saturating_add(j.action.retry_ms as i64) < j.expires
+                    && now.saturating_add(delay) < j.expires
                 {
                     "pending"
                 } else {
                     "failed"
                 }
                 .into();
-                j.due = now.saturating_add(j.action.retry_ms as i64);
+                j.due = now.saturating_add(delay);
             }
             j.updated_at = now;
             j.error = j.error.map(|s| s.chars().take(256).collect());
@@ -509,7 +515,7 @@ impl Store {
     }
 }
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     pub fn fixture() -> Store {
         let mut s = Store::open(":memory:").unwrap();

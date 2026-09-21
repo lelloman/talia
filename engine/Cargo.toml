@@ -8,7 +8,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 rquickjs = { version = "=0.13.0", features = ["bindgen"] }
 rusqlite = { version = "=0.32.1", features = ["bundled", "backup"] }
-tokio = { version = "1", features = ["macros", "rt", "rt-multi-thread", "net", "sync", "time", "test-util"] }
+tokio = { version = "1", features = ["macros", "rt", "rt-multi-thread", "net", "sync", "time", "test-util", "fs", "io-util"] }
 futures-util = "0.3"
 axum = "=0.8.9"
 chrono = "=0.4.45"
@@ -19,3 +19,5 @@ reqwest = { version = "=0.12.28", default-features = false, features = ["rustls-
 ring = "=0.17.14"
 
 rmcp = { version = "=3.1.4", default-features = false, features = ["server", "transport-io"] }
+
+lettre = { version = "=0.11.23", default-features = false, features = ["builder", "smtp-transport", "tokio1-rustls-tls"] }
