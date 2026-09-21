@@ -14,6 +14,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
  def do_GET(self):
   parsed=urllib.parse.urlparse(self.path)
   if parsed.path=='/dashboard/package.json':
+   if durable:self.send_error(404,'Use authenticated client delivery');return
    dashboard=urllib.parse.parse_qs(parsed.query).get('dashboard',['monitor'])[0]
    if not re.fullmatch(r'[A-Za-z][A-Za-z0-9_-]{0,63}',dashboard):self.send_error(400);return
    try:body=pathlib.Path(sys.argv[2] if len(sys.argv)>2 else ROOT/f'dashboard/generated/{dashboard}.json').read_bytes()

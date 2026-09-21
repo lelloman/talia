@@ -17,3 +17,5 @@ pub mod catalog;
 pub mod authority;
 
 pub mod clients;
+
+pub mod delivery;

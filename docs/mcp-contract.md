@@ -3,7 +3,8 @@
 This is the implementation contract for [TALIA-38](https://crumbles.lelloman.com/w/LLPR/TALIA/38),
 following the approved P4 refinement. It specifies behavior to implement; it does
 not claim that the MCP tools already exist. The [client registry](client-registration.md)
-now supplies persistent host identity and lifecycle reporting. The
+now supplies persistent host identity and lifecycle reporting, and
+[saved delivery](dashboard-delivery.md) supplies assignments and explicit adoption. The
 [authoring storage implementation](authoring-storage.md) supplies the first persistence/compilation layer. Crumbles owns the
 execution plan and status. The [agent authority implementation](agent-authority.md)
 supplies permission checks, authenticated catalog wrappers and durable audit admission

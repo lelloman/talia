@@ -4,7 +4,8 @@
 compiler foundation of the [MCP contract](mcp-contract.md). It is a trusted Rust
 library API, not an exposed MCP or HTTP authoring endpoint. The
 [agent authority layer](agent-authority.md) adds authenticated wrappers and audits;
-client assignment and package delivery are separate P4 subtasks.
+[client assignments and package delivery](dashboard-delivery.md) connect the saved
+packages to both hosts. MCP exposure remains separate.
 
 ## Storage and revisions
 
@@ -140,8 +141,8 @@ deduplication, permissions/audits and scoped discovery.
 After a committed engine configuration change, the service integration must notify
 computed evaluation/subscribers using the existing engine invalidation/change hooks,
 as the legacy transport does. Storage generation checks already fence old work.
-Package delivery and client update notifications are implemented by the delivery
-subtask; saving here never reloads a client.
+The delivery layer serves coherent packages and clients poll for changed revisions;
+saving here never reloads a client.
 
 ## Verification
 

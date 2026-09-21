@@ -104,3 +104,8 @@ The durable mode now uses [persistent client registration](../docs/client-regist
 Browser tabs share registration but keep separate slots and selections; Android
 preserves registration across process recreation. Reload replaces the live instance
 while network reconnect preserves it. Registry credentials remain in the host.
+
+Durable clients now use [saved dashboard delivery](../docs/dashboard-delivery.md).
+Updates leave the loaded runtime intact until explicit reload; cached baselines
+include per-slot parameters and loaded assignment revision. Generated package files
+remain available for the legacy fixture mode.

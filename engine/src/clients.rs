@@ -23,6 +23,10 @@ pub struct Report {
     pub dirty: bool,
     pub edit_revision: u64,
     pub update_available: bool,
+    #[serde(default)]
+    pub assignment_revision: Option<u64>,
+    #[serde(default)]
+    pub cached: bool,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -48,7 +52,7 @@ impl Host {
 fn id(s: &str) -> Result<()> {
     identifier(s).map_err(|_| Error::InvalidInput)
 }
-fn secret(s: &str) -> Result<String> {
+pub(crate) fn secret(s: &str) -> Result<String> {
     if s.len() != 64 || !s.bytes().all(|c| c.is_ascii_hexdigit()) {
         return Err(Error::Unauthenticated);
     }
@@ -186,6 +190,17 @@ impl Store {
             id(p)?;
         }
         let owner_digest = secret(owner)?;
+        let assigned_owner: Option<String> = self
+            .conn
+            .query_row(
+                "SELECT owner FROM dashboard_assignments WHERE client=? AND slot=?",
+                params![host.id, slot],
+                |r| r.get(0),
+            )
+            .optional()?;
+        if assigned_owner.is_some_and(|o| o != owner_digest) {
+            return Err(Error::Forbidden);
+        }
         report_valid(&report)?;
         if epoch == 0 || epoch > MAX_COUNTER {
             return Err(Error::InvalidInput);
@@ -204,6 +219,8 @@ impl Store {
                     || old.report.dirty && !report.dirty
                     || report.dashboard_id != old.report.dashboard_id
                     || report.package_revision != old.report.package_revision
+                    || report.assignment_revision != old.report.assignment_revision
+                    || report.cached != old.report.cached
                 {
                     return Err(Error::Conflict);
                 } else if epoch == old.epoch {
@@ -294,6 +311,8 @@ impl Store {
                 || s.report.dirty && !r.dirty
                 || r.dashboard_id != s.report.dashboard_id
                 || r.package_revision != s.report.package_revision
+                || r.assignment_revision != s.report.assignment_revision
+                || r.cached != s.report.cached
             {
                 return Err(Error::Conflict);
             }
@@ -342,9 +361,23 @@ impl Store {
             let rows = q.query_map([&id], |r| r.get::<_, String>(0))?;
             let mut slots = vec![];
             for row in rows {
-                slots.push(Self::client_observed(serde_json::from_str(&row?)?, now));
+                let s = Self::client_observed(serde_json::from_str(&row?)?, now);
+                let desired = self.assignment_get(&id, Some(&s.slot_id)).ok();
+                let latest = desired
+                    .as_ref()
+                    .and_then(|a| self.dashboard_package(&a.assignment.dashboard_id).ok());
+                let available = desired.as_ref().is_some_and(|a| {
+                    Some(a.revision) != s.report.assignment_revision
+                        || latest
+                            .as_ref()
+                            .is_none_or(|p| p["revision"] != s.report.package_revision)
+                });
+                let mut value = serde_json::to_value(s)?;
+                value["desiredAssignment"] = serde_json::to_value(desired)?;
+                value["updateAvailable"] = json!(available);
+                slots.push(value);
             }
-            out.push(json!({"clientId":id,"name":name,"platform":platform,"slots":slots}));
+            out.push(json!({"clientId":id,"name":name,"platform":platform,"defaultAssignment":self.assignment_get(&id,None).ok(),"slots":slots}));
         }
         Ok(out)
     }
@@ -399,6 +432,25 @@ pub enum Request {
         name: String,
     },
     Status {},
+    OpenSlot {
+        slot: String,
+        owner: String,
+    },
+    Delivery {
+        slot: String,
+        owner: String,
+    },
+    Select {
+        slot: String,
+        owner: String,
+        expected: u64,
+        assignment: crate::delivery::Assignment,
+    },
+    ConfirmDelivery {
+        slot: String,
+        owner: String,
+        revision: u64,
+    },
     Connect {
         slot: String,
         owner: String,
@@ -440,6 +492,32 @@ impl Store {
                 self.client_own_status(&host, now)
             }
             Request::Status {} => self.client_own_status(&host, now),
+            Request::OpenSlot { slot, owner } => Ok(serde_json::to_value(
+                self.delivery_open(&host, &slot, &owner)?,
+            )?),
+            Request::Delivery { slot, owner } => Ok(serde_json::to_value(
+                self.delivery_prepare(&host, &slot, &owner)?,
+            )?),
+            Request::Select {
+                slot,
+                owner,
+                expected,
+                assignment,
+            } => Ok(serde_json::to_value(self.delivery_select(
+                &host,
+                &slot,
+                &owner,
+                expected,
+                &assignment,
+            )?)?),
+            Request::ConfirmDelivery {
+                slot,
+                owner,
+                revision,
+            } => {
+                self.delivery_confirm(&host, &slot, &owner, revision)?;
+                Ok(Value::Null)
+            }
             Request::Connect {
                 slot,
                 owner,

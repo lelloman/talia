@@ -25,7 +25,7 @@ export class ClientRegistry {
  saveConfig(config){this.slot.config=config;this.persist();}
  replace(report){this.previous=this.slot.live||null;this.slot.live=uuid();this.report=report;this.connected=false;this.sequence=0;this.slot.epoch++;this.persist();this.last=0;}
  setReport(report){this.report=report;}
- async send(body,keepalive=false){const r=await fetch('/clients',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+this.registration.credential},body:JSON.stringify(body),signal:AbortSignal.timeout(5000),keepalive});if(!r.ok)throw Error('HTTP '+r.status);const reply=await r.json();if(reply.error)throw Error(reply.error);return reply;}
+ async send(body,keepalive=false){const r=await fetch('/clients',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+this.registration.credential},body:JSON.stringify(body),signal:AbortSignal.timeout(5000),keepalive});if(!r.ok)throw Error('HTTP '+r.status);const reply=await r.json();if(reply.error)throw Object.assign(Error(reply.error),{code:reply.error});return reply;}
  address(){return {slot:this.slot.id,owner:this.slot.owner,live:this.slot.live,epoch:this.slot.epoch};}
  async tick(force=false){
   if(!this.enabled||!this.report||this.busy||(!force&&Date.now()-this.last<3000))return;
@@ -39,6 +39,14 @@ export class ClientRegistry {
   }catch(e){if(live===this.slot.live){this.connected=false;this.error=String(e);}}finally{this.busy=false;}
  }
  disconnect(){if(!this.enabled||!this.report)return;this.send({op:'disconnect',...this.address(),sequence:++this.sequence},true).catch(()=>{});this.connected=false;}
+ async enroll(){const r=await this.send({op:'register',name:this.registration.name,platform:'web'});this.registration.clientId=r.value.clientId;this.registration.name=r.value.name;localStorage.setItem(key,JSON.stringify(this.registration));}
+ async assignment(){await this.enroll();return (await this.send({op:'openSlot',slot:this.slot.id,owner:this.slot.owner})).value;}
+ async prepare(){await this.assignment();return (await this.send({op:'delivery',slot:this.slot.id,owner:this.slot.owner})).value;}
+ async confirm(revision){await this.send({op:'confirmDelivery',slot:this.slot.id,owner:this.slot.owner,revision});}
+ async select(dashboardId,params={},presentation={}){const current=await this.assignment();return (await this.send({op:'select',slot:this.slot.id,owner:this.slot.owner,expected:current.revision,assignment:{dashboardId,params,presentation}})).value;}
+ cacheKey(){return 'talia.baseline.'+this.registration.clientId+'.'+this.slot.id;}
+ cached(){return read(localStorage,this.cacheKey());}
+ cache(delivery){localStorage.setItem(this.cacheKey(),JSON.stringify(delivery));}
  async rename(name){await this.send({op:'rename',name});this.registration.name=name;localStorage.setItem(key,JSON.stringify(this.registration));}
  publicStatus(){return {clientId:this.registration.clientId??null,name:this.registration.name,slotId:this.slot.id,liveInstanceId:this.slot.live??null,connected:this.connected,error:this.error};}
 }

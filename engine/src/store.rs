@@ -59,7 +59,7 @@ impl Store {
         let version: i64 = conn
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .map_err(err)?;
-        if version > 7 {
+        if version > 8 {
             return Err("database schema newer than engine".into());
         }
         if version == 0 {
@@ -109,6 +109,11 @@ PRAGMA user_version=3;").map_err(err)?;
         if version < 7 {
             let tx = conn.transaction().map_err(err)?;
             tx.execute_batch(include_str!("../migrations/007_clients.sql")).map_err(err)?;
+            tx.commit().map_err(err)?;
+        }
+        if version < 8 {
+            let tx = conn.transaction().map_err(err)?;
+            tx.execute_batch(include_str!("../migrations/008_delivery.sql")).map_err(err)?;
             tx.commit().map_err(err)?;
         }
         Ok(Self { conn })

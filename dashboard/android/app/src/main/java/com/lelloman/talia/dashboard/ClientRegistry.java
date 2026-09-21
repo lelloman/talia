@@ -14,7 +14,7 @@ import java.util.concurrent.ExecutorService;
 final class ClientRegistry {
  final SharedPreferences prefs; final Handler worker; final ExecutorService io; final int port;
  final String credential,slot,owner; String clientId,name,live,previous; long epoch,sequence,last;
- boolean busy,connected,closed; JSONObject report; String error;
+ boolean busy,connected;volatile boolean closed; JSONObject report; String error;
  ClientRegistry(SharedPreferences prefs,Handler worker,ExecutorService io,int port){
   this.prefs=prefs;this.worker=worker;this.io=io;this.port=port;
   credential=prefs.getString("credential",secret());slot=prefs.getString("slot",UUID.randomUUID().toString());owner=prefs.getString("owner",secret());
@@ -29,9 +29,16 @@ final class ClientRegistry {
   HttpURLConnection c=(HttpURLConnection)new URL("http://127.0.0.1:"+port+"/clients").openConnection();
   try {c.setRequestMethod("POST");c.setDoOutput(true);c.setConnectTimeout(5000);c.setReadTimeout(5000);c.setRequestProperty("Content-Type","application/json");c.setRequestProperty("Authorization","Bearer "+credential);
    try(OutputStream out=c.getOutputStream()){out.write(body.toString().getBytes(StandardCharsets.UTF_8));}
-   try(InputStream in=c.getInputStream()){JSONObject reply=new JSONObject(new String(MainActivity.readLimited(in,262144),StandardCharsets.UTF_8));if(reply.has("error"))throw new IOException(reply.getString("error"));return reply;}
+   try(InputStream in=c.getInputStream()){JSONObject reply=new JSONObject(new String(MainActivity.readLimited(in,300000),StandardCharsets.UTF_8));if(reply.has("error"))throw new ServerError(reply.getString("error"));return reply;}
   }finally{c.disconnect();}
  }
+ static final class ServerError extends IOException {ServerError(String code){super(code);}}
+ JSONObject slotRequest(String op)throws JSONException{return new JSONObject().put("op",op).put("slot",slot).put("owner",owner);}
+ JSONObject assignment()throws Exception{JSONObject r=send(new JSONObject().put("op","register").put("name",name).put("platform","android")).getJSONObject("value");clientId=r.getString("clientId");name=r.getString("name");prefs.edit().putString("clientId",clientId).putString("name",name).commit();return send(slotRequest("openSlot")).getJSONObject("value");}
+ JSONObject prepare()throws Exception{assignment();return send(slotRequest("delivery")).getJSONObject("value");}
+ void confirm(long revision)throws Exception{send(slotRequest("confirmDelivery").put("revision",revision));}
+ void select(String dashboard,JSONObject params)throws Exception{JSONObject a=assignment();send(slotRequest("select").put("expected",a.getLong("revision")).put("assignment",new JSONObject().put("dashboardId",dashboard).put("params",params).put("presentation",new JSONObject())));}
+ String cacheName(){return "baseline-"+clientId+"-"+slot+".json";}
  void tick(boolean force){
   long now=android.os.SystemClock.elapsedRealtime();if(closed||report==null||busy||!force&&now-last<3000)return;busy=true;last=now;
   final String stamp=live;final boolean connect=!connected;final JSONObject payload,enroll;

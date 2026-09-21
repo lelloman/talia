@@ -23,8 +23,8 @@ def tap(label):
  raise AssertionError('Missing '+label)
 with tempfile.TemporaryDirectory(prefix='talia-p4-native-') as temp:
  db=str(pathlib.Path(temp)/'engine.db');env={**os.environ,'TALIA_ENGINE_DB':db,'TALIA_ENGINE_BIN':os.environ.get('TALIA_ENGINE_BIN','/tmp/talia-p3-target/debug/talia-engine')}
- definition=pathlib.Path(temp)/'package.json';pkg=json.loads(pathlib.Path('dashboard/generated/monitor.json').read_text());definition.write_text(json.dumps(pkg))
- server=subprocess.Popen(['python3','dashboard/serve.py','0',str(definition)],env=env,stdout=subprocess.PIPE,text=True);port=json.loads(server.stdout.readline())['port']
+ subprocess.run([os.environ.get('TALIA_DELIVERY_FIXTURE','/tmp/talia-p3-target/debug/examples/delivery_fixture'),db,'second'],check=True)
+ server=subprocess.Popen(['python3','dashboard/serve.py','0'],env=env,stdout=subprocess.PIPE,text=True);port=json.loads(server.stdout.readline())['port']
  def slot():
   with sqlite3.connect(db) as conn:
    row=conn.execute('SELECT body FROM dashboard_slots').fetchone()
@@ -43,7 +43,7 @@ with tempfile.TemporaryDirectory(prefix='talia-p4-native-') as temp:
   adb('shell','input','keyevent','KEYCODE_HOME');wait(lambda:not slot()['report']['foreground']);start();wait(lambda:slot()['report']['foreground']);tap('Restart dashboard');wait(lambda:slot()['liveInstanceId']!=clean['liveInstanceId'] and slot()['report']['lifecycle']=='active')
   before=slot();adb('shell','am','force-stop',package);start();wait(lambda:slot()['liveInstanceId']!=before['liveInstanceId'] and slot()['report']['lifecycle']=='active');after=slot();assert after['clientId']==before['clientId'] and after['slotId']==before['slotId']
   # Persisted selection survives process recreation, separately from live instance identity.
-  pkg['id']='secondary';definition.write_text(json.dumps(pkg));adb('shell','am','force-stop',package);start('--es','dashboard','secondary');wait(lambda:slot()['report']['dashboardId']=='secondary' and slot()['report']['lifecycle']=='active');adb('shell','am','force-stop',package);last=slot()['liveInstanceId'];start();wait(lambda:slot()['liveInstanceId']!=last and slot()['report']['dashboardId']=='secondary' and slot()['report']['lifecycle']=='active')
+  adb('shell','am','force-stop',package);start('--es','dashboard','secondary');wait(lambda:slot()['report']['dashboardId']=='secondary' and slot()['report']['lifecycle']=='active');adb('shell','am','force-stop',package);last=slot()['liveInstanceId'];start();wait(lambda:slot()['liveInstanceId']!=last and slot()['report']['dashboardId']=='secondary' and slot()['report']['lifecycle']=='active')
   public=json.dumps(report());assert 'credential' not in public and 'owner' not in public
   print(json.dumps({'passed':True,'checks':['persistent client and slot','dirty/edit reporting','background pause','foreground resume retains live ID','reload creates clean new instance','failure remains visible in registry','failed host background/foreground','process recreation replaces instance','selection survives process recreation','credentials absent from guest report']}))
  finally:

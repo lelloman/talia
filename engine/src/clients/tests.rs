@@ -8,6 +8,8 @@ fn report() -> Report {
         dirty: false,
         edit_revision: 0,
         update_available: false,
+        assignment_revision: None,
+        cached: false,
     }
 }
 fn setup() -> (Store, Host, String) {

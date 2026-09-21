@@ -3,7 +3,8 @@
 [TALIA-41](https://crumbles.lelloman.com/w/LLPR/TALIA/41) adds durable client and
 live-instance registration to the engine, web host and native Android host.
 It implements the identity/lifecycle portion of the [MCP contract](mcp-contract.md).
-Saved desired assignments and package delivery follow in TALIA-42; agent discovery
+[Saved assignments and package delivery](dashboard-delivery.md) are implemented by
+TALIA-42; agent discovery
 and live-command delivery follow in the MCP adapter subtasks. Registration itself
 provides no engine or agent permissions.
 
@@ -20,8 +21,8 @@ serializes first registration setup across tabs. Each tab persists its slot,
 selection and display configuration in session storage. A lifetime Web Lock detects
 cloned session storage: a duplicate tab receives a fresh slot and default local
 configuration instead of impersonating its opener. Reload retains the tab's slot
-and selection. A newly opened slot starts from the local default (`monitor`, or
-legacy client settings during migration). Changes in one tab do not change another.
+and selection. A newly opened durable slot copies its server-side client default; legacy slots
+use local defaults. Changes in one tab do not change another.
 Web Locks and secure-context browser APIs are required; localhost development meets
 that requirement. Clearing site storage creates a new client on its next load.
 
@@ -34,9 +35,9 @@ Neither client puts credentials or slot ownership tokens into the guest JS conte
 compiled package or public diagnostic report.
 
 The selected dashboard and loaded package revision are reported independently of
-instance identity. This step retains existing local/file-based selection and cached
-packages. It does not implement revisioned server desired assignments or claim that
-reported local selection is a server assignment. Those are the delivery step.
+instance identity. The [delivery layer](dashboard-delivery.md) now supplies revisioned server desired
+assignments and per-slot cached baselines. File-based selection remains for legacy
+fixtures; durable hosts report the assignment revision they actually loaded.
 
 ## Host API and persistence
 

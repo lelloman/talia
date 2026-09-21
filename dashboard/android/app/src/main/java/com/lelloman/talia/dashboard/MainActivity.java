@@ -20,10 +20,10 @@ public final class MainActivity extends Activity {
  final ExecutorService io=new ThreadPoolExecutor(4,4,0L,TimeUnit.MILLISECONDS,new ArrayBlockingQueue<>(64));
  final Map<String,String> subscriptionResources=new LinkedHashMap<>(),sampleKeys=new LinkedHashMap<>();
  final Map<String,Long> subscriptions=new LinkedHashMap<>();final Map<String,JSONObject> actions=new LinkedHashMap<>();
- NativeRenderer renderer;LinearLayout root,body;TextView status,update,dirty,connectionStatus;DurableConnection connection;ClientRegistry registry;long editRevision=0;boolean registryDirty;boolean durable;String lastSampleKey="";Button restart;
+ NativeRenderer renderer;LinearLayout root,body;TextView status,update,dirty,connectionStatus;DurableConnection connection;ClientRegistry registry;long editRevision=0,assignmentRevision=0,loadRequest=0;boolean cachedBaseline,loadingSaved;String requestedDashboard;JSONObject selectedDelivery;boolean registryDirty;boolean durable;String lastSampleKey="";Button restart;
  volatile boolean visible,destroyed,sidebar;boolean started,polling;volatile boolean failed;volatile long epoch=1;long next=0,lastRequest=0;int port;volatile int width=1000;String externalError=null;String dashboardId="monitor";String nextActionId="a-"+UUID.randomUUID();final JSONArray failureSignals=new JSONArray();JSONObject loaded,pendingPackage;boolean checking,updateAvailable;long lastUpdateCheck=0;
  final Runnable tick=new Runnable(){public void run(){if(destroyed)return;if(connection!=null)connection.tick();reportRegistry(false);if(started&&visible&&!failed){try{refresh();poll();checkUpdates();}catch(Exception e){fail(e);}}worker.postDelayed(this,150);}};
- @Override public void onCreate(Bundle state){super.onCreate(state);durable=getIntent().getBooleanExtra("durable",getPreferences(0).getBoolean("durable",false));getPreferences(0).edit().putBoolean("durable",durable).apply();port=getIntent().getIntExtra("port",getPreferences(0).getInt("port",18744));getPreferences(0).edit().putInt("port",port).apply();dashboardId=getIntent().getStringExtra("dashboard");if(dashboardId==null)dashboardId=getPreferences(0).getString("dashboard","monitor");if(!dashboardId.matches("[A-Za-z][A-Za-z0-9_-]{0,63}"))throw new IllegalArgumentException("dashboard ID");getPreferences(0).edit().putString("dashboard",dashboardId).apply();
+ @Override public void onCreate(Bundle state){super.onCreate(state);durable=getIntent().getBooleanExtra("durable",getPreferences(0).getBoolean("durable",false));getPreferences(0).edit().putBoolean("durable",durable).apply();port=getIntent().getIntExtra("port",getPreferences(0).getInt("port",18744));getPreferences(0).edit().putInt("port",port).apply();requestedDashboard=getIntent().getStringExtra("dashboard");dashboardId=requestedDashboard;if(dashboardId==null)dashboardId=getPreferences(0).getString("dashboard","monitor");if(!dashboardId.matches("[A-Za-z][A-Za-z0-9_-]{0,63}"))throw new IllegalArgumentException("dashboard ID");getPreferences(0).edit().putString("dashboard",dashboardId).apply();
   root=new LinearLayout(this);root.setOrientation(1);root.setPadding(16,16,16,16);root.setBackgroundColor(0xfff5f8ff);
   if(Build.VERSION.SDK_INT>=30)root.setOnApplyWindowInsetsListener((v,insets)->{android.graphics.Insets i=insets.getInsets(WindowInsets.Type.systemBars());v.setPadding(i.left+16,i.top+16,i.right+16,i.bottom+16);return insets;});
   ImageView brand=new ImageView(this);brand.setImageResource(com.lelloman.talia.dashboard.R.drawable.ic_brand);brand.setContentDescription("Talìa");root.addView(brand,new LinearLayout.LayoutParams(80,80));
@@ -54,10 +54,33 @@ public final class MainActivity extends Activity {
   });
  }
  void start(){
+  if(durable){startSaved();return;}
   long stamp=++epoch;started=false;failed=false;subscriptions.clear();subscriptionResources.clear();sampleKeys.clear();lastRequest=0;polling=false;
   fetchPackage(pkg->{if(stamp!=epoch)return;if(pkg==null){File cache=new File(getFilesDir(),"saved-"+dashboardId+".json");pkg=new JSONObject(cache.exists()?new String(Files.readAllBytes(cache.toPath()),StandardCharsets.UTF_8):asset("monitor.json"));}
    if(!visible){pendingPackage=pkg;return;}installPackage(pkg);
   });
+ }
+ void startSaved(){
+  if(loadingSaved)return;loadingSaved=true;
+  final long request=++loadRequest;final String selection=requestedDashboard;
+  io.execute(()->{JSONObject delivery=null;Exception problem=null;
+   try{if(selection!=null)registry.select(selection,new JSONObject(getIntent().getStringExtra("dashboard_params")==null?"{}":getIntent().getStringExtra("dashboard_params")));delivery=registry.prepare();delivery.put("cached",false);}
+   catch(Exception e){problem=e;if(!(e instanceof ClientRegistry.ServerError)&&selection==null){try{File cache=new File(getFilesDir(),registry.cacheName());if(cache.exists()){delivery=new JSONObject(new String(Files.readAllBytes(cache.toPath()),StandardCharsets.UTF_8));delivery.put("cached",true);problem=null;}}catch(Exception ignored){}}}
+   JSONObject result=delivery;Exception failure=problem;worker.post(()->{loadingSaved=false;if(destroyed||request!=loadRequest)return;if(failure!=null||result==null){loadFailed(failure==null?new IOException("No saved dashboard"):failure);return;}if(!visible)return;
+    try{JSONObject pkg=result.getJSONObject("package");if(!pkg.getString("id").equals(result.getJSONObject("assignment").getString("dashboardId")))throw new IOException("dashboard assignment mismatch");
+     // Validate before retiring the existing runtime; this context contains no guest state.
+     if(loaded!=null&&!failed)eval("TaliaUI.validatePackage("+pkg+");'ok';",true,false);
+     if(result.optBoolean("cached")){installSaved(result);return;}
+     io.execute(()->{Exception rejected=null;try{registry.confirm(result.getJSONObject("assignment").getLong("revision"));}catch(Exception e){rejected=e;}Exception err=rejected;worker.post(()->{if(destroyed||request!=loadRequest||!visible)return;if(err!=null){loadFailed(err);return;}try{installSaved(result);}catch(Exception e){fail(e);}});});
+    }catch(Exception e){loadFailed(e);}
+   });
+  });
+ }
+ void loadFailed(Exception e){if(started&&!failed){main.post(()->{status.setText("Reload failed — "+e);status.setVisibility(View.VISIBLE);});}else fail(e);}
+ void installSaved(JSONObject delivery)throws Exception{
+  JSONObject pkg=delivery.getJSONObject("package");assignmentRevision=delivery.getJSONObject("assignment").getLong("revision");cachedBaseline=delivery.optBoolean("cached");selectedDelivery=delivery;requestedDashboard=null;dashboardId=pkg.getString("id");getPreferences(0).edit().putString("dashboard",dashboardId).apply();sidebar=pkg.getJSONObject("params").optBoolean("sidebar",false);
+  epoch++;started=false;failed=false;subscriptions.clear();subscriptionResources.clear();sampleKeys.clear();lastRequest=0;polling=false;if(connection!=null){connection.resources(Collections.emptyList());connection.active(false);}
+  installPackage(pkg);Files.write(new File(getFilesDir(),registry.cacheName()).toPath(),delivery.toString().getBytes(StandardCharsets.UTF_8));
  }
  void installPackage(JSONObject pkg)throws Exception{
   if(!pkg.getString("id").equals(dashboardId))throw new IllegalArgumentException("dashboard assignment mismatch");loaded=pkg;pendingPackage=null;updateAvailable=false;
@@ -69,13 +92,14 @@ public final class MainActivity extends Activity {
  }
  void checkUpdates(){
   if(checking||loaded==null||SystemClock.elapsedRealtime()-lastUpdateCheck<2000)return;checking=true;lastUpdateCheck=SystemClock.elapsedRealtime();long stamp=epoch;
+  if(durable){io.execute(()->{JSONObject next=null;String problem=null;try{next=registry.prepare();}catch(Exception e){problem=e instanceof ClientRegistry.ServerError?e.getMessage():null;}JSONObject result=next;String error=problem;worker.post(()->{checking=false;if(stamp!=epoch||destroyed)return;try{if(result!=null){updateAvailable=!result.getJSONObject("package").getString("revision").equals(loaded.getString("revision"))||result.getJSONObject("assignment").getLong("revision")!=assignmentRevision;}else if(error!=null)updateAvailable=true;main.post(()->update.setVisibility(updateAvailable?View.VISIBLE:View.GONE));}catch(Exception ignored){}});});return;}
   fetchPackage(pkg->{checking=false;if(pkg!=null&&stamp==epoch&&visible){boolean changed=!pkg.getString("revision").equals(loaded.getString("revision"));updateAvailable=changed;main.post(()->update.setVisibility(changed?View.VISIBLE:View.GONE));}});
  }
  void refresh()throws Exception{
   long stamp=epoch;
   JSONObject report=new JSONObject(eval("JSON.stringify({...TaliaVM.snapshot(),stateWire:TaliaValue.encode(TaliaVM.snapshot().state)})",false,false));if(!report.isNull("failure")){fail(new IllegalStateException(report.getString("failure")));return;}
   String resolved=eval("JSON.stringify(TaliaUI.resolve(savedPackage.ui,TaliaValue.decode("+report.getJSONObject("stateWire")+"),{definitions:savedPackage.definitions,width:"+Math.max(0,width)+",scale:"+getResources().getDisplayMetrics().density+",params:{...savedPackage.params,sidebar:"+sidebar+"}}))",true,false);
-  JSONObject node=new JSONObject(resolved);registryDirty=report.getBoolean("dirty");reportRegistry(false);report.put("registration",registry==null?JSONObject.NULL:registry.publicStatus());report.put("editRevision",editRevision);report.put("connection",connection==null?JSONObject.NULL:connection.state);report.put("monitoringError",connection==null||connection.monitoringError==null?JSONObject.NULL:connection.monitoringError);report.put("dashboardId",dashboardId);report.put("definitionRevision",loaded.getString("revision"));report.put("updateAvailable",updateAvailable);boolean isDirty=report.getBoolean("dirty");report.put("width",width);report.put("scale",getResources().getDisplayMetrics().density);report.put("sidebar",sidebar);report.put("subscriptions",subscriptions.size());report.put("signals",failureSignals);report.put("actions",new JSONArray(actions.values()));report.put("actionIds",new JSONArray(actions.keySet()));report.put("nextActionId",nextActionId);report.put("externalError",externalError==null?JSONObject.NULL:externalError);
+  JSONObject node=new JSONObject(resolved);registryDirty=report.getBoolean("dirty");reportRegistry(false);report.put("registration",registry==null?JSONObject.NULL:registry.publicStatus());report.put("assignmentRevision",assignmentRevision).put("cachedBaseline",cachedBaseline);report.put("editRevision",editRevision);report.put("connection",connection==null?JSONObject.NULL:connection.state);report.put("monitoringError",connection==null||connection.monitoringError==null?JSONObject.NULL:connection.monitoringError);report.put("dashboardId",dashboardId);report.put("definitionRevision",loaded.getString("revision"));report.put("updateAvailable",updateAvailable);boolean isDirty=report.getBoolean("dirty");report.put("width",width);report.put("scale",getResources().getDisplayMetrics().density);report.put("sidebar",sidebar);report.put("subscriptions",subscriptions.size());report.put("signals",failureSignals);report.put("actions",new JSONArray(actions.values()));report.put("actionIds",new JSONArray(actions.keySet()));report.put("nextActionId",nextActionId);report.put("externalError",externalError==null?JSONObject.NULL:externalError);
   Files.write(new File(getFilesDir(),"report.json").toPath(),report.toString().getBytes(StandardCharsets.UTF_8));
   main.post(()->{if(destroyed||failed||stamp!=epoch)return;try{dirty.setVisibility(isDirty?View.VISIBLE:View.GONE);renderer.render(node);}catch(Exception e){worker.post(()->fail(e));}});
  }
@@ -133,7 +157,7 @@ public final class MainActivity extends Activity {
   JSONObject wire=new JSONObject(eval("TaliaValue.stringify({..."+value+",hasValue:"+value.optBoolean("hasValue",value.optBoolean("has_value"))+",value:TaliaValue.decode("+value.getJSONObject("value")+")})",true,false));
   for(String id:new ArrayList<>(subscriptions.keySet()))if(resource.equals(subscriptionResources.get(id)))deliver(new JSONObject().put("event",id).put("valueWire",wire));
  }
- JSONObject registryReport(String lifecycle)throws JSONException{return new JSONObject().put("dashboardId",loaded.optString("id",dashboardId)).put("packageRevision",loaded.optString("revision","loading")).put("lifecycle",lifecycle).put("foreground",visible).put("dirty",registryDirty||editRevision>0).put("editRevision",editRevision).put("updateAvailable",updateAvailable);}
+ JSONObject registryReport(String lifecycle)throws JSONException{return new JSONObject().put("dashboardId",loaded.optString("id",dashboardId)).put("packageRevision",loaded.optString("revision","loading")).put("lifecycle",lifecycle).put("foreground",visible).put("dirty",registryDirty||editRevision>0).put("editRevision",editRevision).put("updateAvailable",updateAvailable).put("assignmentRevision",assignmentRevision==0?JSONObject.NULL:assignmentRevision).put("cached",cachedBaseline);}
  void reportRegistry(boolean force){if(registry==null||loaded==null)return;try{registry.update(registryReport(failed?"failed":!visible||!started?"paused":"active"));registry.tick(force);}catch(Exception ignored){}}
  @Override public void onStart(){super.onStart();visible=true;if(worker!=null)worker.post(()->{reportRegistry(true);if(failed)return;try{if(pendingPackage!=null){installPackage(pendingPackage);return;}if(!started){start();return;}epoch++;polling=false;eval("TaliaVM.resume();'ok';",false,false);if(connection!=null){lastSampleKey="";sampleKeys.clear();syncResources();}subscriptions.replaceAll((k,v)->-1L);reconcileOutcomes();}catch(Exception e){fail(e);}});}
  void finishResume()throws Exception{eval("TaliaVM.reconcile("+new JSONArray(actions.values())+");'ok';",false,false);refresh();poll();}

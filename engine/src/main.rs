@@ -316,6 +316,7 @@ async fn main() -> Result<()> {
             history_age_ms: 86400000,
         })?;
     }
+    if args.iter().any(|s|s == "--seed") { store.seed_dashboards()?; }
     let incarnation = std::fs::read_to_string("/proc/sys/kernel/random/uuid")
         .map_err(|e| e.to_string())?
         .trim()
