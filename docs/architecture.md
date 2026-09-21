@@ -198,3 +198,10 @@ which concrete builds and platforms have been exercised.
 The [engine implementation](../engine/README.md) separates persistent definitions, instance data and action records from disposable JS execution contexts. Configuration activation and state migrations commit atomically; I/O waits release the executor. Shared computed reads retain producer lifetime independently of callers. Tagged values preserve JavaScript exceptional numbers and undefined through SQLite and both renderers.
 
 Client-owned connection state survives dashboard failure. A new server incarnation triggers snapshot replacement, subscription restoration and action reconciliation before the brief back-online indicator. The loopback service and sample client grants are development scope; authentication, remote deployment, source adapters and full MCP integration remain later stories.
+
+## Alert delivery contract
+
+See [configurable alerts](alerts.md) for the accepted staged-policy, acknowledgement,
+silence, destination and durable delivery model. Android push, email and Telegram
+alert delivery precede deployment and homelab migration; Simple Agents and Crumbles
+delegation follow migration. Current work is tracked in TALIA-47.

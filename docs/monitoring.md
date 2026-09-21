@@ -157,3 +157,10 @@ explicit resume or a configuration update. No action from its failed evaluation 
 admitted. Configuration replacement cuts over to a fresh input snapshot and fences
 the old evaluation; disabled instances do not retain a journal backlog. A trigger
 chain is bounded to depth 16; each evaluation can request at most 32 action aliases.
+
+## Alert delivery contract
+
+See [configurable alerts](alerts.md) for the accepted staged-policy, acknowledgement,
+silence, destination and durable delivery model. Android push, email and Telegram
+alert delivery precede deployment and homelab migration; Simple Agents and Crumbles
+delegation follow migration. Current work is tracked in TALIA-47.

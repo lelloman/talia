@@ -227,3 +227,10 @@ clients as they are introduced. The [implementation plan](implementation-plan.md
 drafts the end-to-end slice, runtime prototypes and validation gates. Its proposed
 technical choices remain subject to prototype evidence; the detailed product
 questions above are not silently resolved by the plan.
+
+## Alert delivery contract
+
+See [configurable alerts](alerts.md) for the accepted staged-policy, acknowledgement,
+silence, destination and durable delivery model. Android push, email and Telegram
+alert delivery precede deployment and homelab migration; Simple Agents and Crumbles
+delegation follow migration. Current work is tracked in TALIA-47.
