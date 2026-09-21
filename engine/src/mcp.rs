@@ -73,6 +73,8 @@ fn encode<T: serde::Serialize>(v: T) -> Result<Value> {
 pub fn dispatch(store: &mut Store, session: &Session, request: Request, now: i64) -> Result<Value> {
     let a = request.arguments;
     match request.name.as_str() {
+        "dashboard_access_set"=>{store.agent_require_dashboard_admin(session)?;let access:crate::users::Access=serde_json::from_value(a)?;store.dashboard_access_set(session.principal(),&access)},
+        "dashboard_access_list"=>{store.agent_require_dashboard_admin(session)?;if a!=json!({}){return Err(ErrorCode::InvalidInput)}store.dashboard_access_list()},
         "definitions_list" => {
             let r: List = serde_json::from_value(a)?;
             if r.kind.as_deref().is_some_and(|k| !KINDS.contains(&k)) {
@@ -161,6 +163,8 @@ pub fn tools() -> Vec<Value> {
         ("operation_status","Read the recorded outcome of this principal's request without replaying effects.",obj(json!({"requestId":text_schema()}),&["requestId"]),true),
         ("audit_list","Page sanitized audit records allowed by current audit grants. No tokens, source bodies, migration state or external responses.",obj(page,&[]),true),
     ].into_iter().map(|(name,description,input,read)|json!({"name":name,"description":description,"inputSchema":input,"annotations":{"readOnlyHint":read,"destructiveHint":!read,"idempotentHint":true,"openWorldHint":false}})).collect();
+    tools.push(json!({"name":"dashboard_access_set","description":"Admin/operator sharing policy. Owner must be a Talìa admin OIDC subject. Public means all authenticated users; viewers are exact OIDC subjects. expectedRevision=0 creates private-by-default metadata; changes are versioned and requestId-idempotent. Grants access to all dashboard read resources. Requires global authoring save permission.","inputSchema":obj(json!({"dashboardId":text_schema(),"owner":text_schema(),"public":{"type":"boolean"},"viewers":{"type":"array","items":{"type":"string"},"maxItems":256},"expectedRevision":{"type":"integer","minimum":0},"requestId":text_schema()}),&["dashboardId","owner","public","viewers","expectedRevision","requestId"])}));
+    tools.push(json!({"name":"dashboard_access_list","description":"List saved dashboard sharing policies and known user roles for trusted dashboard administration. Requires global authoring save permission.","inputSchema":obj(json!({}),&[])}));
     tools.extend(crate::mcp_engine::tools());
     tools.extend(crate::mcp_live::tools());
     tools.extend(crate::alerts::api::tools());

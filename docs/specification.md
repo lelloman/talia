@@ -14,6 +14,10 @@ Planning, open-decision tracking and execution status live in the
 [Crumbles Stories](implementation-plan.md). This document is technical reference;
 its open questions are inputs to Story refinement.
 
+The [user access contract](user-access.md) defines admin-only authoring/sharing,
+read-only dashboard-scoped viewer access, account defaults and client overrides.
+It supersedes earlier open questions about dashboard ownership and user permissions.
+
 ## 1. Dashboards for humans
 
 Talìa is LLM-driven: users ask agents to define and modify dashboards through

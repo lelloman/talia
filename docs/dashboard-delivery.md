@@ -8,6 +8,10 @@ fixture mode; the durable development host rejects `/dashboard/package.json`.
 [MCP live reload](mcp-live.md) now pins a prepared delivery, checks dirty/edit and
 assignment revisions, and replaces only its exact target instance.
 
+The [user access contract](user-access.md) defines admin-only authoring/sharing,
+read-only dashboard-scoped viewer access, account defaults and client overrides.
+It supersedes earlier open questions about dashboard ownership and user permissions.
+
 ## Desired versus loaded
 
 SQLite schema 8 adds a revisioned default assignment for each initialized client

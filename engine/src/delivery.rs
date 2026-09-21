@@ -53,7 +53,7 @@ impl Assignment {
     }
 }
 impl Store {
-    fn saved_package(&self, id: &str) -> Result<Value> {
+    pub(crate) fn saved_package(&self, id: &str) -> Result<Value> {
         let body: Option<String> = self
             .conn
             .query_row(
@@ -272,7 +272,7 @@ impl Store {
             },
             Change::Put {
                 key: Key::new("dashboard", "monitor"),
-                document: json!({"ui":include_str!("../../dashboard/examples/monitor.ui"),"view_model":include_str!("../../dashboard/examples/monitor.vm.js"),"references":[{"kind":"ui","id":"notice"}],"params":{"sidebar":false}}),
+                document: json!({"ui":include_str!("../../dashboard/examples/monitor.ui"),"view_model":include_str!("../../dashboard/examples/monitor.vm.js"),"references":[{"kind":"ui","id":"notice"}],"params":{"sidebar":false},"grants":{"reads":["value"],"writes":["value"],"runs":[]}}),
                 migration: None,
                 initial: None,
             },

@@ -106,7 +106,7 @@ impl Deployment {
         .to_owned();
         let client = OidcClient::confidential(&issuer, &client_id, secret.clone())
             .await
-            .map_err(|_| "cannot initialize OIDC provider")?;
+            .map_err(|e| { #[cfg(test)] eprintln!("OIDC fixture initialization: {e}"); let _=e; "cannot initialize OIDC provider" })?;
         let root = PathBuf::from(std::env::var("TALIA_WEB_ROOT").map_err(|_| "web root required")?)
             .canonicalize()
             .map_err(|_| "web root unavailable")?;
@@ -250,7 +250,7 @@ impl Deployment {
         let browser_alert = path == "/alerts" && !r.headers().contains_key(header::AUTHORIZATION);
         let protected = matches!(
             path,
-            "/engine" | "/clients" | "/auth/session" | "/auth/logout"
+            "/engine" | "/clients" | "/account" | "/auth/session" | "/auth/logout"
         ) || browser_alert;
         if r.method() != axum::http::Method::GET
             && (r

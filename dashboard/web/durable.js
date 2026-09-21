@@ -2,7 +2,8 @@ import {alertRequest} from './alerts.js';
 import '../../engine/shared/value.js';import '../../engine/shared/client.js';
 const status=document.querySelector('#connection');
 const client=new TaliaConnection({client:'web-'+crypto.randomUUID(),send:async body=>{
- const r=await fetch('/engine',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(5000)});if(!r.ok)throw Error('HTTP '+r.status);return r.json();
+ const context=window.taliaDashboard;if(window.taliaViewer&&!context)throw Error('Dashboard not loaded');
+ const r=await fetch('/engine',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...body,...(window.taliaOidc?{dashboard:context}: {})}),signal:AbortSignal.timeout(5000)});if(!r.ok)throw Error('HTTP '+r.status);const reply=await r.json();if(window.taliaOidc&&context!==window.taliaDashboard)throw Error('Dashboard replaced');if(window.taliaViewer&&['forbidden','dashboard_changed'].includes(reply.error))window.talia?.revoke(reply.error);return reply;
 },status:s=>{status.textContent=s;status.hidden=!s;}});
 setInterval(()=>client.tick(),500);client.tick();
 export class DurableBridge {

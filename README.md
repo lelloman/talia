@@ -46,6 +46,7 @@ can render the same monitoring package. Production deployment remains a later st
 - [MCP engine operations](docs/mcp-engine.md): reads, subscriptions, guarded writes and durable Pipeline actions.
 - [MCP live control](docs/mcp-live.md): exact-instance discovery, inspection, temporary execution and guarded reload on both clients.
 - [P4 qualification](docs/p4-qualification.md): reproducible MCP, web and emulator acceptance evidence.
+- [Users and dashboard sharing](docs/user-access.md): admin/viewer roles, server-enforced dashboard access and account defaults.
 - [P4 MCP contract](docs/mcp-contract.md): agent authoring, client identity, permissions and live control; implementation tracked in Crumbles.
 - [P3 monitoring qualification](docs/p3-qualification.md): collection, Watches, both clients and current evidence.
 - [Monitoring contract](docs/monitoring.md): accepted source, execution, scheduling and recovery rules.

@@ -9,6 +9,10 @@ and guarded asynchronous setter effects through the same boundary.
 The legacy `/engine` loopback development transport remains unauthenticated.
 [Live control](mcp-live.md) also uses this boundary for host-routed commands and engine effects.
 
+The [user access contract](user-access.md) defines admin-only authoring/sharing,
+read-only dashboard-scoped viewer access, account defaults and client overrides.
+It supersedes earlier open questions about dashboard ownership and user permissions.
+
 ## Credentials and permissions
 
 Trusted operator code creates or updates versioned principal policies with

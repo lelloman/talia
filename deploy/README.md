@@ -42,8 +42,13 @@ service unavailable when revalidation is due. Unsafe browser requests require
 the exact configured Origin, including logout. Cross-user browser installation
 credentials are scoped by OIDC subject, with separate client registrations.
 
-All users granted Talìa app access share its monitoring engine. Browser alert
-read/acknowledge/silence operations use an auditable OIDC subject principal.
+New Talìa accounts are read-only viewers. Configure `TALIA_BOOTSTRAP_ADMINS` with
+explicit `issuer#subject` identities for initial administrators; this only inserts
+missing users and never reverses later role changes. Admins share dashboards through
+the web shell or MCP. Viewers can read only the resources of permitted dashboards;
+whole-engine access and all server-data mutations are denied. Browser alerts require
+the dashboard's `alerts` read grant, and only admins can acknowledge or silence.
+See [user access](../docs/user-access.md) for ownership, sharing and account defaults.
 Alert configuration and agent operations keep their independent machine grants.
 MCP uses the existing operator credential, provisioned using `talia-agent` and
 `operator-policy.json`; it does not use browser cookies or the OIDC client secret.
@@ -66,5 +71,11 @@ supersedes its login instructions. Native Android remote onboarding and live
 notification-provider configuration are separate work.
 
 Run `python3 deploy/test-service.py` for protocol/session regression tests. Live
-OIDC browser qualification uses `deploy/verify-oidc.mjs` with a temporary account
+Historical OIDC-only browser qualification uses `deploy/verify-oidc.mjs` with a temporary account
 that has access only to Talìa; remove that account after verification.
+
+Dashboard access qualification: `deploy/verify-access.mjs` uses a temporary viewer,
+MCP sharing, denied direct-engine operations, a second browser installation and
+share revocation. Its private fixture credentials are outside Git; delete the
+temporary identity after the run. Local reproducible coverage is in
+`dashboard/tests/access.mjs` and does not require real provider accounts.

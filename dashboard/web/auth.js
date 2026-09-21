@@ -1,4 +1,4 @@
-// Trusted host authentication. OIDC/provider/session credentials never enter the VM.
+// Trusted shell: server decisions are authoritative; no provider tokens enter the VM.
 const response=await fetch('/auth/session',{cache:'no-store'});
 if(response.status===404){await import('./app.js');}
 else if(!response.ok){location.replace('/');}
@@ -10,11 +10,10 @@ else {
   sessionStorage.removeItem('talia.slot.v1');sessionStorage.removeItem('talia.alertCredential');
   localStorage.setItem('talia.oidcSubject',identity.subject);
  }
- const header=document.querySelector('header'),name=document.createElement('span'),logout=document.createElement('button');
- name.textContent=identity.name;logout.textContent='Sign out';header.append(name,logout);
- logout.onclick=async()=>{const r=await fetch('/auth/logout',{method:'POST'});if(r.ok)location.replace('/');else logout.textContent='Sign out failed — retry';};
+ document.querySelector('#account-name').textContent=identity.name;
+ document.querySelector('#sign-out').onclick=async()=>{const r=await fetch('/auth/logout',{method:'POST'});if(r.ok)location.replace('/');else document.querySelector('#shell-status').textContent='Sign out failed. Please retry.';};
  document.querySelector('#alert-access')?.closest('label')?.setAttribute('hidden','');document.querySelector('#alert-connect')?.setAttribute('hidden','');
- // A lost or revoked server session returns to the sign-in screen.
+ const account=async body=>{const r=await fetch('/account',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});if(r.status===401){location.replace('/');throw Error('Sign in required');}if(!r.ok)throw Error('Account connection failed');const v=await r.json();if(v.error)throw Error(v.error);return v;};
+ const {startShell}=await import('./shell.js');await startShell(identity,account);
  setInterval(async()=>{try{const r=await fetch('/auth/session',{cache:'no-store'});if(r.status===401)location.replace('/');}catch{}},30000);
- await import('./app.js');
 }

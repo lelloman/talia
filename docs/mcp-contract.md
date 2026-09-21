@@ -17,6 +17,10 @@ External MCP agents author Talìa. Embedded chat, production deployment and actu
 Crumbles/Simple Agents task execution are outside P4. Web and native Android use
 the same contracts; Android qualification uses an emulator only.
 
+The [user access contract](user-access.md) defines admin-only authoring/sharing,
+read-only dashboard-scoped viewer access, account defaults and client overrides.
+It supersedes earlier open questions about dashboard ownership and user permissions.
+
 ## Existing boundaries
 
 The [dashboard contract](../dashboard/contracts/v1/README.md) supplies the UI

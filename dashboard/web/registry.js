@@ -43,7 +43,7 @@ export class ClientRegistry {
  async assignment(){await this.enroll();return (await this.send({op:'openSlot',slot:this.slot.id,owner:this.slot.owner})).value;}
  async prepare(){await this.assignment();return (await this.send({op:'delivery',slot:this.slot.id,owner:this.slot.owner})).value;}
  async confirm(revision){await this.send({op:'confirmDelivery',slot:this.slot.id,owner:this.slot.owner,revision});}
- async select(dashboardId,params={},presentation={}){const current=await this.assignment();return (await this.send({op:'select',slot:this.slot.id,owner:this.slot.owner,expected:current.revision,assignment:{dashboardId,params,presentation}})).value;}
+ async select(dashboardId,params={},presentation={}){const current=window.taliaOidc?(await this.send({op:'selectionState',slot:this.slot.id,owner:this.slot.owner})).value:await this.assignment();return (await this.send({op:'select',slot:this.slot.id,owner:this.slot.owner,expected:current.revision,assignment:{dashboardId,params,presentation}})).value;}
  cacheKey(){return 'talia.baseline.'+this.registration.clientId+'.'+this.slot.id;}
  cached(){return read(localStorage,this.cacheKey());}
  cache(delivery){localStorage.setItem(this.cacheKey(),JSON.stringify(delivery));}

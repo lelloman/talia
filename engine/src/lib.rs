@@ -27,3 +27,5 @@ pub mod mcp_engine;
 pub mod mcp_live;
 
 pub mod alerts;
+
+pub mod users;

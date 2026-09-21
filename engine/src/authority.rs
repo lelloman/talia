@@ -545,6 +545,10 @@ impl Store {
             &policy.ok_or(ErrorCode::Unauthenticated)?,
         )?)
     }
+    /// Sharing can grant data access to every user: only the global authoring operator may do it.
+    pub fn agent_require_dashboard_admin(&self,session:&Session)->Result<()> {
+        if self.agent_grants(session)?.iter().any(|g|g.family==Family::Authoring&&g.scope==Scope::All&&g.actions.contains(&Action::Save)){Ok(())}else{Err(ErrorCode::Forbidden)}
+    }
     pub fn agent_require(
         &self,
         session: &Session,

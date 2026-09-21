@@ -45,7 +45,7 @@ async function checkUpdates(){
 async function start(pinned=null,beforeReplace=null){
  const request=++loadRequest;let delivery,pkg,usingCache=false;
  try{if(durable){delivery=pinned||await registry.prepare();pkg=TaliaUI.validatePackage(delivery.package);}else pkg=await fetchPackage();}
- catch(e){if(pinned||e.code)throw e;if(durable){delivery=registry.cached();if(!delivery)throw e;pkg=TaliaUI.validatePackage(delivery.package);}else{const saved=localStorage.getItem('talia.saved.'+config.dashboardId);if(!saved)throw e;pkg=TaliaUI.validatePackage(JSON.parse(saved));}usingCache=true;}
+ catch(e){if(pinned||e.code||window.taliaOidc)throw e;if(durable){delivery=registry.cached();if(!delivery)throw e;pkg=TaliaUI.validatePackage(delivery.package);}else{const saved=localStorage.getItem('talia.saved.'+config.dashboardId);if(!saved)throw e;pkg=TaliaUI.validatePackage(JSON.parse(saved));}usingCache=true;}
  if(durable&&pkg.id!==delivery.assignment.dashboardId)throw Error('dashboard assignment mismatch');
  if(!durable&&pkg.id!==config.dashboardId)throw Error('dashboard assignment mismatch');
  const r=await fetch('/dashboard/shared/vm.js');if(!r.ok)throw Error('VM support unavailable');const library=await r.text();
@@ -56,7 +56,8 @@ async function start(pinned=null,beforeReplace=null){
  if(beforeReplace)await beforeReplace();
  const stamp=++generation;ready=false;bridge?.close();guest?.close();failure=null;diagnostic.hidden=true;root.inert=false;document.querySelector('#restart').hidden=true;
  if(durable){assignmentRevision=delivery.assignment.revision;config.dashboardId=pkg.id;config.params=structuredClone(pkg.params);if(delivery.assignment.presentation.scale!==undefined)config.scale=delivery.assignment.presentation.scale;registry.saveConfig(config);scaleInput.value=config.scale;sidebarInput.checked=config.params.sidebar===true;}
- cachedBaseline=usingCache;loaded=structuredClone(pkg);state=null;update.hidden=true;editRevision=0;if(window.dashboardReport)window.dashboardReport.dirty=false;
+ cachedBaseline=usingCache;loaded=structuredClone(pkg);
+ if(window.taliaOidc){window.taliaDashboard={id:pkg.id,revision:pkg.revision,reads:pkg.grants?.reads||[]};engineClient.stopped=false;engineClient.ready=false;engineClient.values.clear();if(window.taliaViewer)engineClient.actions.clear();window.dispatchEvent(new Event('talia-dashboard-loaded'));}state=null;update.hidden=true;editRevision=0;if(window.dashboardReport)window.dashboardReport.dirty=false;
  registry.replace({dashboardId:loaded.id,packageRevision:loaded.revision,lifecycle:'paused',foreground:!document.hidden,dirty:false,editRevision:0,updateAvailable:false,assignmentRevision,cached:cachedBaseline});
  let localGuest;
  const localBridge=new (durable?DurableBridge:EngineBridge)(msg=>localGuest.eval(`TaliaVM.receive(${JSON.stringify(JSON.stringify(msg))});'ok';`).then(refresh),e=>{if(stamp===generation)fail(e);},loaded.grants);
@@ -73,10 +74,10 @@ document.addEventListener('visibilitychange',async()=>{
  if(failure||!ready)return;
  try{if(document.hidden){bridge.pause();await guest.eval("TaliaVM.pause();'ok';");window.dashboardReport={...window.dashboardReport,paused:true,subscriptions:0};}else{await guest.eval("TaliaVM.resume();'ok';");await bridge.resume();await guest.eval("TaliaVM.reconcile("+JSON.stringify([...bridge.actions.values()])+");'ok';");await refresh();await checkUpdates();}}catch(e){fail(e);}
 });
-window.talia={renameClient:name=>registry.rename(name),registration:()=>registry.publicStatus(),renderer,refresh,command,checkUpdates,reload:start,async selectDashboard(id,params={},presentation={}){if(!/^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(id))throw Error('invalid dashboard ID');if(durable)await registry.select(id,params,presentation);else{config.dashboardId=id;registry.saveConfig(config);}try{await start();}catch(e){loadError(e);throw e;}},async live(source){if(failure||document.hidden||!ready)return;editRevision++;reportRegistry();await command('TaliaVM.markDirty();\n'+source+"\n;'ok';");},get state(){return state;}};
+window.talia={revoke:(reason='Access revoked')=>{fail(reason==='dashboard_changed'?'Dashboard updated. Reload to continue.':'Access to this dashboard has been removed.');engineClient.stopped=true;engineClient.epoch++;engineClient.values.clear();root.replaceChildren();},renameClient:name=>registry.rename(name),registration:()=>registry.publicStatus(),renderer,refresh,command,checkUpdates,reload:start,async selectDashboard(id,params={},presentation={}){if(!/^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(id))throw Error('invalid dashboard ID');if(durable)await registry.select(id,params,presentation);else{config.dashboardId=id;registry.saveConfig(config);}try{await start();}catch(e){loadError(e);throw e;}},async live(source){if(failure||document.hidden||!ready)return;editRevision++;reportRegistry();await command('TaliaVM.markDirty();\n'+source+"\n;'ok';");},get state(){return state;}};
 setInterval(()=>{reportRegistry();},500);setInterval(refresh,100);setInterval(checkUpdates,2000);start().catch(fail);
 
-if(durable)new LiveControl(registry,{
+if(durable&&!window.taliaViewer)new LiveControl(registry,{
  report:()=>({editRevision,foreground:!document.hidden,lifecycle:failure?'failed':ready?'active':'paused',dirty:editRevision>0||window.dashboardReport?.dirty===true}),
  grants:()=>loaded?.grants||{reads:['value'],writes:['value'],runs:[]},
  metadata:()=>({liveInstanceId:registry.slot.live,packageRevision:loaded?.revision,editRevision}),

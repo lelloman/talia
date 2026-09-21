@@ -8,6 +8,10 @@ TALIA-42; agent discovery
 and live-command delivery follow in the MCP adapter subtasks. Registration itself
 provides no engine or agent permissions.
 
+The [user access contract](user-access.md) defines admin-only authoring/sharing,
+read-only dashboard-scoped viewer access, account defaults and client overrides.
+It supersedes earlier open questions about dashboard ownership and user permissions.
+
 ## Identity and local selection
 
 A client has an opaque server-issued ID, platform (`web` or `android`) and editable

@@ -9,6 +9,10 @@ Planning, open-decision tracking and execution status live in the
 [Crumbles Stories](implementation-plan.md). This document is technical reference;
 its open questions are inputs to Story refinement.
 
+The [user access contract](user-access.md) defines admin-only authoring/sharing,
+read-only dashboard-scoped viewer access, account defaults and client overrides.
+It supersedes earlier open questions about dashboard ownership and user permissions.
+
 ## One definition for UI and logic
 
 A dashboard is a configurable application interface. It includes both declarative

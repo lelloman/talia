@@ -1,3 +1,4 @@
+mod browser;
 mod deployment;
 mod oidc;
 use axum::{
@@ -295,9 +296,9 @@ async fn health(State(tx): State<mpsc::Sender<Request>>) -> axum::http::StatusCo
         _=>axum::http::StatusCode::SERVICE_UNAVAILABLE
     }
 }
-async fn rpc(State(tx): State<mpsc::Sender<Request>>, Json(body): Json<Value>) -> Json<Value> {
+async fn rpc(State(tx): State<mpsc::Sender<Request>>, browser:Option<axum::Extension<deployment::Identity>>, Json(body): Json<Value>) -> Json<Value> {
     let (reply, rx) = oneshot::channel();
-    if tx.try_send(Request { browser_subject:None, body, reply, credential: None, agent: false, connection:String::new(), call:String::new() }).is_err() {
+    if tx.try_send(Request { browser_subject:browser.map(|axum::Extension(i)|i.subject), body, reply, credential: None, agent: false, connection:String::new(), call:String::new() }).is_err() {
         return Json(json!({"error":"server busy"}));
     }
     Json(
@@ -305,10 +306,10 @@ async fn rpc(State(tx): State<mpsc::Sender<Request>>, Json(body): Json<Value>) -
             .unwrap_or_else(|_| json!({"error":"server stopped"})),
     )
 }
-async fn client_rpc(State(tx): State<mpsc::Sender<Request>>, headers: HeaderMap, Json(body): Json<Value>) -> Json<Value> {
+async fn client_rpc(State(tx): State<mpsc::Sender<Request>>, headers: HeaderMap, browser:Option<axum::Extension<deployment::Identity>>, Json(body): Json<Value>) -> Json<Value> {
     let credential = headers.get("authorization").and_then(|s|s.to_str().ok()).and_then(|s|s.strip_prefix("Bearer ")).unwrap_or("").to_string();
     let (reply, rx) = oneshot::channel();
-    if tx.try_send(Request { browser_subject:None, body, reply, credential: Some(credential), agent: false, connection:String::new(), call:String::new() }).is_err() { return Json(json!({"error":"limit_exceeded"})); }
+    if tx.try_send(Request { browser_subject:browser.map(|axum::Extension(i)|i.subject), body, reply, credential: Some(credential), agent: false, connection:String::new(), call:String::new() }).is_err() { return Json(json!({"error":"limit_exceeded"})); }
     Json(rx.await.unwrap_or_else(|_|json!({"error":"internal_error"})))
 }
 async fn agent_rpc(State(tx): State<mpsc::Sender<Request>>, headers: HeaderMap, Json(body): Json<Value>) -> Json<Value> {
@@ -321,14 +322,24 @@ async fn agent_rpc(State(tx): State<mpsc::Sender<Request>>, headers: HeaderMap, 
 async fn alerts_rpc(State(tx):State<mpsc::Sender<Request>>,headers:HeaderMap,browser:Option<axum::Extension<deployment::Identity>>,Json(body):Json<Value>)->Json<Value>{
     let credential=headers.get("authorization").and_then(|s|s.to_str().ok()).and_then(|s|s.strip_prefix("Bearer ")).unwrap_or("").to_string();
     let (reply,rx)=oneshot::channel();
-    if body.as_object().is_none_or(|o|o.keys().any(|k|k!="op"&&k!="args")){return Json(json!({"error":"invalid_input"}));}
-    let body=json!({"name":format!("alerts_{}",body["op"].as_str().unwrap_or("")),"arguments":body.get("args").cloned().unwrap_or_else(||json!({}))});
+    if body.as_object().is_none_or(|o|o.keys().any(|k|k!="op"&&k!="args"&&k!="dashboard")){return Json(json!({"error":"invalid_input"}));}
+    let context=body["dashboard"].clone();let mut body=json!({"name":format!("alerts_{}",body["op"].as_str().unwrap_or("")),"arguments":body.get("args").cloned().unwrap_or_else(||json!({}))});if browser.is_some(){body["dashboard"]=context;}
     if tx.try_send(Request{browser_subject:browser.map(|axum::Extension(i)|i.subject),body,credential:Some(credential),agent:true,connection:String::new(),call:String::new(),reply}).is_err(){return Json(json!({"error":"limit_exceeded"}));}
     Json(rx.await.unwrap_or_else(|_|json!({"error":"internal_error"})))
 }
+async fn account_rpc(State(tx):State<mpsc::Sender<Request>>, browser:Option<axum::Extension<deployment::Identity>>, Json(mut body):Json<Value>)->Json<Value>{
+ let Some(axum::Extension(identity))=browser else{return Json(json!({"error":"unauthenticated"}))};
+ // Internal envelope keeps trusted identity separate from untrusted operation arguments.
+ body=json!({"name":identity.name,"request":body});
+ let (reply,rx)=oneshot::channel();
+ if tx.try_send(Request{browser_subject:Some(identity.subject),body,reply,credential:None,agent:false,connection:"account".into(),call:String::new()}).is_err(){return Json(json!({"error":"limit_exceeded"}))}
+ Json(rx.await.unwrap_or_else(|_|json!({"error":"internal_error"})))
+}
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
-    let args: Vec<_> = std::env::args().collect();
+    run(std::env::args().collect()).await
+}
+async fn run(args:Vec<String>)->Result<()> {
     let path = args
         .get(1)
         .ok_or("usage: talia-engine DATABASE [PORT] [--seed]")?;
@@ -374,6 +385,7 @@ async fn main() -> Result<()> {
         .map_err(|e| e.to_string())?
         .trim()
         .to_string();
+    if let Ok(subjects)=std::env::var("TALIA_BOOTSTRAP_ADMINS") {for subject in subjects.split(',').map(str::trim).filter(|s|!s.is_empty()){store.user_bootstrap(subject).map_err(|e|format!("admin bootstrap: {e:?}"))?;}}
     let engine = Engine::new(store);
     engine.store.borrow_mut().recover_runs(engine.now())?;
     engine.store.borrow_mut().agent_recover(engine.now()).map_err(|_| "agent recovery failed".to_string())?;
@@ -400,6 +412,7 @@ async fn main() -> Result<()> {
     let mut router = Router::new()
         .route("/engine", post(rpc))
         .route("/clients", post(client_rpc))
+        .route("/account", post(account_rpc))
         .route("/agent", post(agent_rpc))
         .route("/alerts", post(alerts_rpc))
         .layer(DefaultBodyLimit::max(2_359_296))
@@ -437,12 +450,17 @@ async fn main() -> Result<()> {
   });
   let agent_leases=service.agent_engine.clone();tokio::task::spawn_local(async move{loop{tokio::time::sleep(Duration::from_secs(1)).await;agent_leases.sweep();}});
   let leases=service.clone();tokio::task::spawn_local(async move{loop{tokio::time::sleep(Duration::from_secs(10)).await;let expired:Vec<_>=leases.leases.borrow().iter().filter(|(_,(_,t))|leases.engine.now()-*t>60000).map(|(k,_)|k.clone()).collect();for key in expired{if let Some((id,_))=leases.leases.borrow_mut().remove(&key){leases.engine.unsubscribe(&id);}}}});
-  tokio::task::spawn_local(async move{let active=Rc::new(Cell::new(0usize));while let Some(request)=rx.recv().await{if active.get()>=128{let _=request.reply.send(json!({"error":if request.agent {"limit_exceeded"}else{"server busy"}}));continue;}let active=active.clone();active.set(active.get()+1);let s=service.clone();tokio::task::spawn_local(async move{if request.agent {
+  tokio::task::spawn_local(async move{let active=Rc::new(Cell::new(0usize));while let Some(request)=rx.recv().await{if active.get()>=128{let _=request.reply.send(json!({"error":if request.agent {"limit_exceeded"}else{"server busy"}}));continue;}let active=active.clone();active.set(active.get()+1);let s=service.clone();tokio::task::spawn_local(async move{
+  if let Some(subject)=request.browser_subject.as_deref(){
+    let result=s.browser_execute(subject,&request).await;
+    let response=if request.connection=="account"||request.agent {result.unwrap_or_else(|e|json!({"error":e}))}
+      else if request.credential.is_some(){match result{Ok(v)=>json!({"value":v,"incarnation":s.incarnation}),Err(e)=>json!({"error":e,"incarnation":s.incarnation})}}
+      else{match result{Ok(v)=>json!({"version":1,"incarnation":s.incarnation,"epoch":request.body["epoch"],"value":v}),Err(e)=>json!({"version":1,"incarnation":s.incarnation,"epoch":request.body["epoch"],"error":e})}};
+    let _=request.reply.send(response);active.set(active.get()-1);return;
+  }
+  if request.agent {
     if request.reply.is_closed() {active.set(active.get()-1);return;}
-    let result=if let Some(subject)=request.browser_subject {
-      let mut store=s.engine.store.borrow_mut();
-      store.browser_alert_session(&subject).map(|session|store.alert_api(&session,request.body["name"].as_str().unwrap_or("").strip_prefix("alerts_").unwrap_or(""),request.body["arguments"].clone(),s.engine.now()).unwrap_or_else(|error|json!({"error":error})))
-    }else{s.agent_execute(request.credential.as_deref().unwrap_or(""),&request.connection,&request.call,request.body).await};
+    let result=s.agent_execute(request.credential.as_deref().unwrap_or(""),&request.connection,&request.call,request.body).await;
     let response=result.unwrap_or_else(|error|json!({"error":error}));
     let _=request.reply.send(response);active.set(active.get()-1);return;
   }if let Some(credential)=request.credential {
