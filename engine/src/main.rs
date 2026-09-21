@@ -32,6 +32,7 @@ struct Request {
 #[derive(Clone)]
 struct Service {
     engine: Engine,
+    alert_policies: talia_engine::alerts::policy::Policies,
     pipelines: Pipelines,
     watches: Watches,
     live: talia_engine::mcp_live::Live,
@@ -355,12 +356,14 @@ async fn main() -> Result<()> {
     let engine = Engine::new(store);
     engine.store.borrow_mut().recover_runs(engine.now())?;
     engine.store.borrow_mut().agent_recover(engine.now()).map_err(|_| "agent recovery failed".to_string())?;
+    engine.store.borrow_mut().alert_recover_policies(engine.now())?;
     let pipelines = Pipelines::new(engine.clone())?;
     let watches = Watches::new(pipelines.clone());
     let agent_engine=talia_engine::mcp_engine::AgentEngine::new(engine.clone(),pipelines.clone(),watches.clone());
     let service = Service {
         live: talia_engine::mcp_live::Live::new(engine.clone(),agent_engine.clone()),
         agent_engine,
+        alert_policies: talia_engine::alerts::policy::Policies::new(engine.clone()),
         engine,
         pipelines,
         watches,
@@ -396,6 +399,7 @@ async fn main() -> Result<()> {
       let mut errors=vec![];
       if let Err(e)=scheduler.tick(){errors.push(e);}
       if let Err(e)=monitoring.watches.tick(){errors.push(e);}
+      if let Err(e)=monitoring.alert_policies.tick(){errors.push(e);}
       *monitoring.monitoring_error.borrow_mut()=if errors.is_empty(){None}else{Some(errors.join("; "))};
       tokio::time::sleep(Duration::from_millis(50)).await;
     }
