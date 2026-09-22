@@ -19,6 +19,13 @@ impl Service {
             store
                 .user_seen(subject, r.body["name"].as_str().unwrap_or(subject))
                 .map_err(err)?;
+            let body=&r.body["request"];
+            match body["op"].as_str() {
+                Some("agentKeyCreate") if body.as_object().is_some_and(|o|o.len()==1)=>return store.user_key_issue(subject,r.body["authSession"].as_str().unwrap_or("")).map_err(err),
+                Some("agentKeys") if body.as_object().is_some_and(|o|o.len()==1)=>return store.user_keys(subject).map_err(err),
+                Some("agentKeyRevoke") if body.as_object().is_some_and(|o|o.len()==2)=>return store.user_key_revoke(subject,body["id"].as_str().ok_or("invalid_input")?).map_err(err),
+                _=>{}
+            }
             return store
                 .user_request(subject, r.body["request"].clone())
                 .map_err(err);

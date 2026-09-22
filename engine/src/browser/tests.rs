@@ -83,6 +83,7 @@ fn request(s: &Service, op: &str, args: Value) -> Request {
         .user_package("issuer#viewer", "monitor")
         .unwrap();
     Request {
+        http_mcp: false,
         browser_subject: Some("issuer#viewer".into()),
         body: json!({"version":1,"epoch":1,"client":"tab","incarnation":"test","op":op,"args":args,"dashboard":{"id":"monitor","revision":p["revision"]}}),
         credential: None,

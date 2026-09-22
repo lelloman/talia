@@ -3,3 +3,5 @@ html,body{margin:0;height:100%;font-family:system-ui,sans-serif}#app{min-height:
 @media(max-width:1100px){.workspace-bar{flex-direction:column}.workspace-actions{justify-content:flex-start}}
 @media(max-width:759px){.workspace-actions{width:100%}.workspace-actions select{flex:1;min-width:150px}.workspace-actions label{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}.lv-header>strong{display:flex;align-items:center;gap:8px}.lv-header>strong::before{content:'';width:28px;height:28px;flex-shrink:0;background:url('/assets/brand/brand.svg') center/contain no-repeat}.empty-state{padding:32px 16px}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+
+#agent-access{margin-top:24px}#agent-access input{flex:1;min-width:120px}.agent-key-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 0;border-bottom:1px solid var(--ld-border-subtle)}

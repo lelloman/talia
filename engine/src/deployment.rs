@@ -26,6 +26,7 @@ use std::{
 pub struct Identity {
     pub subject: String,
     pub name: String,
+    pub session_id: String,
 }
 struct Login {
     browser: String,
@@ -182,6 +183,9 @@ impl Deployment {
     }
     async fn identity(&self, headers: &HeaderMap) -> Result<Identity, StatusCode> {
         let id = hash(&cookie(headers, "__Host-talia-session").ok_or(StatusCode::UNAUTHORIZED)?);
+        self.identity_id(&id).await
+    }
+    pub(crate) async fn identity_id(&self, id: &str) -> Result<Identity, StatusCode> {
         let (subject, name, token, checked) = {
             let mut inner = self.inner.lock().unwrap();
             inner.checked.retain(|_, t| now() - *t < 30);
@@ -195,7 +199,7 @@ impl Deployment {
                 .optional()
                 .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
             let (s, n, t) = row.ok_or(StatusCode::UNAUTHORIZED)?;
-            (s, n, t, inner.checked.contains_key(&id))
+            (s, n, t, inner.checked.contains_key(id))
         };
         if !checked {
             let _permit = self
@@ -229,11 +233,12 @@ impl Deployment {
             if !exists {
                 return Err(StatusCode::UNAUTHORIZED);
             }
-            inner.checked.insert(id, now());
+            inner.checked.insert(id.to_string(), now());
         }
         Ok(Identity {
             subject: format!("{}#{}", self.issuer, subject),
             name,
+            session_id: id.to_string(),
         })
     }
     pub fn routes(&self) -> Router {

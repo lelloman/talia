@@ -1,4 +1,6 @@
 // Real browser + actual Rust service, with a local OIDC provider (test binary only).
+import {Client} from '../web/node_modules/@modelcontextprotocol/sdk/dist/esm/client/index.js';
+import {StreamableHTTPClientTransport} from '../web/node_modules/@modelcontextprotocol/sdk/dist/esm/client/streamableHttp.js';
 import {chromium} from '../../spikes/runtime/node_modules/playwright/index.mjs';
 import {spawn,execFileSync} from 'node:child_process';import {once} from 'node:events';
 import {mkdirSync,mkdtempSync,writeFileSync,readFileSync,rmSync} from 'node:fs';import os from 'node:os';import path from 'node:path';import http from 'node:http';import https from 'node:https';import crypto from 'node:crypto';import assert from 'node:assert/strict';
@@ -25,7 +27,40 @@ try{
  async function login(context){const p=await context.newPage();await p.goto(origin);await p.getByRole('link',{name:'Sign in with LelloAuth'}).click();await p.waitForFunction(()=>['Administrator','Viewer'].includes(document.querySelector('#account-role')?.textContent));return p;}
  const a=await login(admin),v=await login(viewer);await v.getByRole('heading',{name:'No dashboards available yet'}).waitFor();assert.equal(await v.locator('#sharing').isVisible(),false);
  const api=(p,body)=>p.evaluate(async body=>(await(await fetch('/account',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json()),body);
- assert.equal((await api(v,{op:'role',subject:issuer+'#viewer',admin:true})).error,'forbidden');
+ // Create a one-time key through the actual browser UI, then use the HTTP transport.
+ await admin.grantPermissions(['clipboard-read','clipboard-write']);
+ await a.locator('.lv-sidebar a[href="#settings"]').click();await a.locator('#agent-key-create').click();
+ await a.waitForFunction(()=>document.querySelector('#agent-key-value').value.length===64);
+ const agentKey=await a.locator('#agent-key-value').inputValue();assert.equal(await a.locator('#agent-endpoint').inputValue(),origin+'/mcp');
+ await a.locator('#agent-config-copy').click();await a.getByText('MCP configuration copied.',{exact:true}).waitFor();
+ mkdirSync('.local/agent-access',{recursive:true});await a.screenshot({path:'.local/agent-access/settings.png',fullPage:true});
+ const config=JSON.parse(await a.evaluate(()=>navigator.clipboard.readText()));assert.equal(config.mcpServers.talia.headers.Authorization,'Bearer '+agentKey);
+ const keyList=await api(a,{op:'agentKeys'});const keyId=keyList.keys[0].id;assert.equal(keyList.keys[0].expires-keyList.keys[0].created,3600000);assert.equal(JSON.stringify(keyList).includes(agentKey),false);
+ const mcp=async(key,method,params={},extra={})=>admin.request.post(origin+'/mcp',{headers:{Authorization:'Bearer '+key,Accept:'application/json, text/event-stream','MCP-Protocol-Version':'2025-11-25',...extra},data:{jsonrpc:'2.0',id:1,method,params}});
+ assert.equal((await mcp('bad','tools/list')).status(),401);
+ assert.equal((await admin.request.post(origin+'/mcp',{data:{jsonrpc:'2.0',id:1,method:'tools/list'}})).status(),401);
+ assert.equal((await mcp(agentKey,'initialize',{protocolVersion:'2025-11-25',capabilities:{},clientInfo:{name:'test',version:'1'}})).status(),200);
+ // Independent official TypeScript SDK against HTTPS with the fixture CA trusted.
+ const fixtureFetch=(url,init={})=>new Promise((resolve,reject)=>{const r=https.request(url,{method:init.method||'GET',headers:Object.fromEntries(new Headers(init.headers)),ca:readFileSync(tmp+'/tls.crt'),signal:init.signal},res=>{const chunks=[];res.on('data',c=>chunks.push(c));res.on('end',()=>resolve(new Response(res.statusCode===204?null:Buffer.concat(chunks),{status:res.statusCode,headers:res.headers})));});r.on('error',reject);r.end(init.body);});
+ const sdk=new Client({name:'talia-interoperability-test',version:'1'},{capabilities:{}});
+ await sdk.connect(new StreamableHTTPClientTransport(new URL(origin+'/mcp'),{requestInit:{headers:{Authorization:'Bearer '+agentKey}},fetch:fixtureFetch}));
+ assert.ok((await sdk.listTools()).tools.some(t=>t.name==='definitions_save'));
+ const definitions=await sdk.callTool({name:'definitions_list',arguments:{}});assert.equal(definitions.isError,false);
+ const catalogBody=definitions.structuredContent;
+ const saved=await sdk.callTool({name:'definitions_save',arguments:{requestId:crypto.randomUUID(),changeSet:{expectedCatalogRevision:catalogBody.catalogRevision,changes:[{op:'put',key:{kind:'ui',id:'agent-test-notice'},document:{source:'<Text id="Notice" text="Agent-authored"/>'}}]}}});
+ assert.equal(saved.isError,false);assert.equal(saved.structuredContent.audit.principal,issuer+'#admin');
+ await sdk.close();
+  const toolList=await(await mcp(agentKey,'tools/list')).json();assert.ok(toolList.result.tools.some(t=>t.name==='dashboard_access_list'));
+ const policyResult=await(await mcp(agentKey,'tools/call',{name:'dashboard_access_list',arguments:{}})).json();assert.equal(policyResult.result.isError,false);
+ assert.equal((await mcp(agentKey,'tools/list',{}, {Origin:'https://foreign.invalid'})).status(),403);
+ assert.equal((await admin.request.get(origin+'/mcp',{headers:{Authorization:'Bearer '+agentKey,Origin:'https://foreign.invalid',Accept:'text/event-stream'}})).status(),403);
+ assert.equal((await mcp(agentKey,'tools/list',{}, {'MCP-Protocol-Version':'invalid'})).status(),400);
+ const viewerKey=await api(v,{op:'agentKeyCreate'});assert.equal((await(await mcp(viewerKey.key,'tools/list')).json()).result.tools.length,0);
+ assert.ok((await(await mcp(viewerKey.key,'tools/call',{name:'dashboard_access_list',arguments:{}})).json()).error);
+ await api(v,{op:'agentKeyRevoke',id:keyId});assert.equal((await mcp(agentKey,'tools/list')).status(),200);
+ await a.locator('.lv-sidebar a[href="#dashboard"]').click();await a.waitForFunction(()=>document.querySelector('#agent-key-value').value==='');
+ assert.equal(await a.evaluate(k=>JSON.stringify({...localStorage,...sessionStorage}).includes(k),agentKey),false);
+  assert.equal((await api(v,{op:'role',subject:issuer+'#viewer',admin:true})).error,'forbidden');
  await a.waitForFunction(()=>window.dashboardReport?.registration?.connected);await a.locator('.lv-sidebar a[href="#sharing"]').click();// Shared components must retain the live runtime and unsaved sharing form.
  const liveId=await a.evaluate(()=>window.dashboardReport.registration.liveInstanceId);
  await a.locator('#share-public').check();
@@ -59,5 +94,17 @@ try{
  await v.reload();await v.waitForFunction(()=>window.dashboardReport?.registration?.connected);assert.equal(await v.evaluate(()=>window.taliaDashboard.id),'monitor');
  await a.locator('.lv-sidebar a[href="#sharing"]').click();await a.locator('#share-public').uncheck();await a.locator('#save-sharing').click();await a.getByText('Dashboard sharing saved.',{exact:true}).waitFor();await v.getByRole('heading',{name:'No dashboards available yet'}).waitFor({timeout:15000});
  assert.equal((await engineCall(v,'hello',{})).error,'forbidden');assert.equal((await api(v,{op:'catalog'})).defaultDashboard,null);
- console.log(JSON.stringify({passed:true,checks:['shared LelloDesign responsive shell','theme and sidebar preserve live runtime','polling preserves sharing drafts','keyboard theme focus','mobile account placement','real OIDC boundary with local provider','viewer starts empty','admin shares from shell','viewer loads public dashboard','server rejects writes and config','account default opens on new installation','reload retains selection','mobile layout fits viewport','unsharing blocks active viewer']}));
+ // A create response arriving after navigation cannot reveal or strand a key.
+ await a.locator('.lv-sidebar a[href="#settings"]').click();
+ let releaseCreate,creationArrived;const held=new Promise(r=>releaseCreate=r),arrived=new Promise(r=>creationArrived=r);
+ await a.route('**/account',async route=>{if(route.request().postDataJSON()?.op==='agentKeyCreate'){const response=await route.fetch();creationArrived();await held;await route.fulfill({response});}else await route.continue();});
+ await a.locator('#agent-key-create').click();await arrived;await a.locator('.lv-sidebar a[href="#dashboard"]').click();releaseCreate();
+ await a.waitForFunction(()=>!document.querySelector('#agent-key-create').disabled);assert.equal(await a.locator('#agent-key-value').inputValue(),'');await a.unroute('**/account');assert.equal((await api(a,{op:'agentKeys'})).keys.length,1);
+  // Revocation, expiry and logout apply to fresh calls using the same key.
+ await a.locator('.lv-sidebar a[href="#settings"]').click();await a.locator('#agent-key-list button').first().click();await a.getByText('Agent key revoked.',{exact:true}).waitFor();assert.equal((await mcp(agentKey,'tools/list')).status(),401);
+ const expiring=await api(a,{op:'agentKeyCreate'});
+ execFileSync('python3',['-c',"import sqlite3,sys; c=sqlite3.connect(sys.argv[1]); c.execute('UPDATE user_agent_keys SET expires=0 WHERE id=?',(sys.argv[2],)); c.commit()",tmp+'/engine.db',expiring.id]);
+ assert.equal((await mcp(expiring.key,'tools/list')).status(),401);
+ const logoutKey=await api(a,{op:'agentKeyCreate'});await a.evaluate(()=>fetch('/auth/logout',{method:'POST'}));assert.equal((await mcp(logoutKey.key,'tools/list')).status(),401);
+  console.log(JSON.stringify({passed:true,checks:['official SDK HTTP MCP authoring with user-attributed audit','HTTP MCP initialize/list/call','one-time key UI and clipboard configuration','navigation during key creation revokes the unseen key','expiry/revocation/logout enforcement','viewer MCP isolation','Origin/protocol validation','shared LelloDesign responsive shell','theme and sidebar preserve live runtime','polling preserves sharing drafts','keyboard theme focus','mobile account placement','real OIDC boundary with local provider','viewer starts empty','admin shares from shell','viewer loads public dashboard','server rejects writes and config','account default opens on new installation','reload retains selection','mobile layout fits viewport','unsharing blocks active viewer']}));
 }finally{await browser?.close();if(engine?.pid){try{process.kill(-engine.pid,'SIGTERM');}catch{}}proxy?.close();provider?.close();rmSync(tmp,{recursive:true,force:true});}

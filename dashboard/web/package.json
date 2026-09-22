@@ -5,5 +5,8 @@
   "dependencies": {
     "@lelloman/lellodesign-vue": "file:../vendor/lellodesign-vue-76d8f662.tgz",
     "vue": "3.5.13"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "1.25.2"
   }
 }

@@ -1,5 +1,7 @@
+import {startAgentAccess} from './agent-access.js';
 const $=id=>document.getElementById(id);
 export async function startShell(identity,account){
+ startAgentAccess(account);
  let catalog,users=[],started=false,busy=false,userSignature;const drafts=new Map();
  const message=text=>$('shell-status').textContent=text;
  async function attempt(work){try{await work();}catch(e){message('Could not complete the request: '+e.message);}}

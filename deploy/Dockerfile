@@ -4,7 +4,7 @@ WORKDIR /src
 COPY spikes/runtime/package*.json spikes/runtime/
 RUN cd spikes/runtime && npm ci --no-audit --no-fund
 COPY dashboard dashboard
-RUN cd dashboard/web && npm ci --no-audit --no-fund
+RUN cd dashboard/web && npm ci --omit=dev --no-audit --no-fund
 COPY engine/shared engine/shared
 COPY assets assets
 COPY deploy/package-web.py deploy/package-web.py
@@ -17,6 +17,7 @@ COPY engine engine
 COPY dashboard/shared dashboard/shared
 COPY dashboard/examples dashboard/examples
 COPY deploy/login.html deploy/login.html
+COPY deploy/operator-policy.json deploy/operator-policy.json
 RUN --mount=type=cache,target=/usr/local/cargo/registry --mount=type=cache,target=/src/engine/target \
     cargo build --manifest-path engine/Cargo.toml --locked --release --bins && \
     mkdir /out && cp engine/target/release/talia-engine engine/target/release/talia-agent engine/target/release/talia-mcp engine/target/release/talia-bootstrap /out/

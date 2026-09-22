@@ -31,7 +31,7 @@ export async function mountChrome(identity,{development=false,signOut=()=>{}}={}
   }),
   h(LelloDialog,{title:development?'Development session':'Your Lello account',modelValue:dialog.value,'onUpdate:modelValue':v=>dialog.value=v},{default:()=>[h('p',{id:'account-name'},identity.name),h('p',{id:'account-role',class:'lv-muted'},development?'Development':admin.value?'Administrator':'Viewer')],actions:()=>[h(LelloButton,{variant:'neutral',onClick:()=>dialog.value=false},{default:()=> 'Close'}),...(!development?[h(LelloButton,{id:'sign-out',variant:'primary',onClick:signOut},{default:()=> 'Sign out'})]:[])]})
  ]});}});
- app.mount('#app');await nextTick();route();addEventListener('hashchange',()=>route(true));
+ app.mount('#app');await nextTick();if(development)document.getElementById('agent-access').hidden=true;route();addEventListener('hashchange',()=>route(true));
  window.taliaShell={update({isAdmin=admin.value,alerts=canAlert.value,connected}={}){admin.value=isAdmin;canAlert.value=alerts;if(connected!==undefined)status.value=connected?'connected':'disconnected';route();},status(value){status.value=value==='connecting...'?'connecting':value==='disconnected'?'disconnected':'connected';}};
  addEventListener('talia-connection',e=>window.taliaShell.status(e.detail));
  return window.taliaShell;

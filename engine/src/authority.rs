@@ -457,6 +457,7 @@ fn revisions_valid(revisions: &[Revision]) -> Result<()> {
     }
     Ok(())
 }
+mod user_keys;
 impl Store {
     /// Trusted HTTP host only, after OIDC session and app-access validation.
     /// The non-hex credential key cannot be authenticated through the Bearer API.
@@ -540,6 +541,7 @@ impl Store {
         })
     }
     fn agent_grants(&self, session: &Session) -> Result<Vec<Grant>> {
+        if session.credential_digest.starts_with("user:"){return self.user_agent_grants(session)}
         let policy:Option<String>=self.conn.query_row("SELECT p.policy FROM agent_credentials c JOIN agent_principals p ON p.id=c.principal WHERE c.digest=? AND p.id=? AND p.enabled=1",params![session.credential_digest,session.principal],|r|r.get(0)).optional()?;
         Ok(serde_json::from_str(
             &policy.ok_or(ErrorCode::Unauthenticated)?,

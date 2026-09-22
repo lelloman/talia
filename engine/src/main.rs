@@ -1,3 +1,4 @@
+mod http_mcp;
 mod browser;
 mod deployment;
 mod oidc;
@@ -29,6 +30,7 @@ struct Request {
     body: Value,
     credential: Option<String>,
     agent: bool,
+    http_mcp: bool,
     connection: String,
     call: String,
     reply: oneshot::Sender<Value>,
@@ -73,9 +75,11 @@ impl Service {
             None => json!({"actionId":id,"status":"unknown"}),
         })
     }
-    async fn agent_execute(&self, credential:&str, connection:&str, call:&str, body:Value)->talia_engine::authority::Result<Value> {
+    async fn agent_execute(&self, credential:&str, connection:&str, call:&str, body:Value, http_mcp:bool)->talia_engine::authority::Result<Value> {
         use talia_engine::authority::ErrorCode;
-        let session=self.engine.store.borrow().agent_authenticate(credential)?;
+        if http_mcp && body["name"]=="_key_auth" {let store=self.engine.store.borrow();let mut info=store.user_key_info(credential)?;info["admin"]=json!(store.user_admin(info["subject"].as_str().unwrap())?);return Ok(info)}
+        let session=if http_mcp {self.engine.store.borrow().user_agent_authenticate(credential)?}else{self.engine.store.borrow().agent_authenticate(credential)?};
+        if http_mcp {self.engine.store.borrow().agent_require_dashboard_admin(&session)?;}
         let r: talia_engine::mcp::Request=serde_json::from_value(body).map_err(|_|ErrorCode::InvalidInput)?;
         if let Some(op)=r.name.strip_prefix("alerts_") {return Ok(self.engine.store.borrow_mut().alert_api(&session,op,r.arguments,self.engine.now()).unwrap_or_else(|error|json!({"error":error})));}
         if r.name=="_cancel_call"||r.name=="_session_close" {self.live.cancel(&session,connection,if r.name=="_cancel_call" {r.arguments["callId"].as_str()}else{None})?;}
@@ -290,7 +294,7 @@ impl Service {
 }
 async fn health(State(tx): State<mpsc::Sender<Request>>) -> axum::http::StatusCode {
     let (reply, rx)=oneshot::channel();
-    if tx.try_send(Request {browser_subject:None,body:json!({"version":1,"client":"healthcheck","epoch":1,"op":"hello"}),reply,credential:None,agent:false,connection:String::new(),call:String::new()}).is_err(){return axum::http::StatusCode::SERVICE_UNAVAILABLE;}
+    if tx.try_send(Request { http_mcp:false,browser_subject:None,body:json!({"version":1,"client":"healthcheck","epoch":1,"op":"hello"}),reply,credential:None,agent:false,connection:String::new(),call:String::new()}).is_err(){return axum::http::StatusCode::SERVICE_UNAVAILABLE;}
     match tokio::time::timeout(Duration::from_secs(3),rx).await {
         Ok(Ok(v)) if v.get("error").is_none() => axum::http::StatusCode::OK,
         _=>axum::http::StatusCode::SERVICE_UNAVAILABLE
@@ -298,7 +302,7 @@ async fn health(State(tx): State<mpsc::Sender<Request>>) -> axum::http::StatusCo
 }
 async fn rpc(State(tx): State<mpsc::Sender<Request>>, browser:Option<axum::Extension<deployment::Identity>>, Json(body): Json<Value>) -> Json<Value> {
     let (reply, rx) = oneshot::channel();
-    if tx.try_send(Request { browser_subject:browser.map(|axum::Extension(i)|i.subject), body, reply, credential: None, agent: false, connection:String::new(), call:String::new() }).is_err() {
+    if tx.try_send(Request { http_mcp:false, browser_subject:browser.map(|axum::Extension(i)|i.subject), body, reply, credential: None, agent: false, connection:String::new(), call:String::new() }).is_err() {
         return Json(json!({"error":"server busy"}));
     }
     Json(
@@ -309,14 +313,14 @@ async fn rpc(State(tx): State<mpsc::Sender<Request>>, browser:Option<axum::Exten
 async fn client_rpc(State(tx): State<mpsc::Sender<Request>>, headers: HeaderMap, browser:Option<axum::Extension<deployment::Identity>>, Json(body): Json<Value>) -> Json<Value> {
     let credential = headers.get("authorization").and_then(|s|s.to_str().ok()).and_then(|s|s.strip_prefix("Bearer ")).unwrap_or("").to_string();
     let (reply, rx) = oneshot::channel();
-    if tx.try_send(Request { browser_subject:browser.map(|axum::Extension(i)|i.subject), body, reply, credential: Some(credential), agent: false, connection:String::new(), call:String::new() }).is_err() { return Json(json!({"error":"limit_exceeded"})); }
+    if tx.try_send(Request { http_mcp:false, browser_subject:browser.map(|axum::Extension(i)|i.subject), body, reply, credential: Some(credential), agent: false, connection:String::new(), call:String::new() }).is_err() { return Json(json!({"error":"limit_exceeded"})); }
     Json(rx.await.unwrap_or_else(|_|json!({"error":"internal_error"})))
 }
 async fn agent_rpc(State(tx): State<mpsc::Sender<Request>>, headers: HeaderMap, Json(body): Json<Value>) -> Json<Value> {
     if headers.contains_key("origin") { return Json(json!({"error":"forbidden"})); }
     let credential = headers.get("authorization").and_then(|s|s.to_str().ok()).and_then(|s|s.strip_prefix("Bearer ")).unwrap_or("").to_string();
     let (reply, rx) = oneshot::channel();
-    if tx.try_send(Request { browser_subject:None, body, reply, credential: Some(credential), agent: true, connection:headers.get("x-talia-session").and_then(|v|v.to_str().ok()).unwrap_or("").into(), call:headers.get("x-talia-call").and_then(|v|v.to_str().ok()).unwrap_or("").into() }).is_err() { return Json(json!({"error":"limit_exceeded"})); }
+    if tx.try_send(Request { http_mcp:false, browser_subject:None, body, reply, credential: Some(credential), agent: true, connection:headers.get("x-talia-session").and_then(|v|v.to_str().ok()).unwrap_or("").into(), call:headers.get("x-talia-call").and_then(|v|v.to_str().ok()).unwrap_or("").into() }).is_err() { return Json(json!({"error":"limit_exceeded"})); }
     Json(rx.await.unwrap_or_else(|_|json!({"error":"internal_error"})))
 }
 async fn alerts_rpc(State(tx):State<mpsc::Sender<Request>>,headers:HeaderMap,browser:Option<axum::Extension<deployment::Identity>>,Json(body):Json<Value>)->Json<Value>{
@@ -324,15 +328,15 @@ async fn alerts_rpc(State(tx):State<mpsc::Sender<Request>>,headers:HeaderMap,bro
     let (reply,rx)=oneshot::channel();
     if body.as_object().is_none_or(|o|o.keys().any(|k|k!="op"&&k!="args"&&k!="dashboard")){return Json(json!({"error":"invalid_input"}));}
     let context=body["dashboard"].clone();let mut body=json!({"name":format!("alerts_{}",body["op"].as_str().unwrap_or("")),"arguments":body.get("args").cloned().unwrap_or_else(||json!({}))});if browser.is_some(){body["dashboard"]=context;}
-    if tx.try_send(Request{browser_subject:browser.map(|axum::Extension(i)|i.subject),body,credential:Some(credential),agent:true,connection:String::new(),call:String::new(),reply}).is_err(){return Json(json!({"error":"limit_exceeded"}));}
+    if tx.try_send(Request{http_mcp:false,browser_subject:browser.map(|axum::Extension(i)|i.subject),body,credential:Some(credential),agent:true,connection:String::new(),call:String::new(),reply}).is_err(){return Json(json!({"error":"limit_exceeded"}));}
     Json(rx.await.unwrap_or_else(|_|json!({"error":"internal_error"})))
 }
 async fn account_rpc(State(tx):State<mpsc::Sender<Request>>, browser:Option<axum::Extension<deployment::Identity>>, Json(mut body):Json<Value>)->Json<Value>{
  let Some(axum::Extension(identity))=browser else{return Json(json!({"error":"unauthenticated"}))};
  // Internal envelope keeps trusted identity separate from untrusted operation arguments.
- body=json!({"name":identity.name,"request":body});
+ body=json!({"name":identity.name,"authSession":identity.session_id,"request":body});
  let (reply,rx)=oneshot::channel();
- if tx.try_send(Request{browser_subject:Some(identity.subject),body,reply,credential:None,agent:false,connection:"account".into(),call:String::new()}).is_err(){return Json(json!({"error":"limit_exceeded"}))}
+ if tx.try_send(Request{http_mcp:false,browser_subject:Some(identity.subject),body,reply,credential:None,agent:false,connection:"account".into(),call:String::new()}).is_err(){return Json(json!({"error":"limit_exceeded"}))}
  Json(rx.await.unwrap_or_else(|_|json!({"error":"internal_error"})))
 }
 #[tokio::main(flavor = "current_thread")]
@@ -417,9 +421,9 @@ async fn run(args:Vec<String>)->Result<()> {
         .route("/alerts", post(alerts_rpc))
         .layer(DefaultBodyLimit::max(2_359_296))
         .route("/healthz", axum::routing::get(health))
-        .with_state(tx);
+        .with_state(tx.clone());
     if let Some(d)=deployment {
-        router=router.merge(d.routes()).layer(axum::middleware::from_fn_with_state(d, deployment::Deployment::gate));
+        router=router.merge(http_mcp::routes(tx.clone(),d.clone())).merge(d.routes()).layer(axum::middleware::from_fn_with_state(d, deployment::Deployment::gate));
     }
     let listener = tokio::net::TcpListener::bind((
         std::env::var("TALIA_LISTEN").unwrap_or_else(|_|"127.0.0.1".into()),
@@ -460,7 +464,7 @@ async fn run(args:Vec<String>)->Result<()> {
   }
   if request.agent {
     if request.reply.is_closed() {active.set(active.get()-1);return;}
-    let result=s.agent_execute(request.credential.as_deref().unwrap_or(""),&request.connection,&request.call,request.body).await;
+    let result=s.agent_execute(request.credential.as_deref().unwrap_or(""),&request.connection,&request.call,request.body,request.http_mcp).await;
     let response=result.unwrap_or_else(|error|json!({"error":error}));
     let _=request.reply.send(response);active.set(active.get()-1);return;
   }if let Some(credential)=request.credential {

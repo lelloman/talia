@@ -1,5 +1,8 @@
 # MCP authoring adapter (P4)
 
+For the deployed service, use [temporary agent keys and HTTPS MCP](agent-access.md).
+The stdio adapter below remains available for operator automation.
+
 [TALIA-43](https://crumbles.lelloman.com/w/LLPR/TALIA/43) exposes saved authoring to
 external MCP clients. `talia-mcp` is a stdio adapter using the
 [official Rust MCP SDK](https://github.com/modelcontextprotocol/rust-sdk), pinned
@@ -68,18 +71,16 @@ Configure the external MCP client to launch this process (use absolute paths):
 }
 ```
 
-The adapter reads its credential file at launch. It permits only an IPv4 loopback
+The adapter reads its credential file at launch. It permits HTTPS origins or an IPv4 loopback
 HTTP origin, disables proxies and redirects, and never takes a principal from tool
 arguments. The engine authenticates and checks current policy on every operation.
 Stdout carries only MCP messages; shutdown follows stdin closure. SDK negotiation
 is qualified with protocol versions 2025-11-25 and 2026-07-28.
 
 `POST /agent` is a private backend bridge, **not an HTTP MCP transport**. It rejects
-Origin-bearing requests and requires an agent Bearer credential. The dashboard
-proxy does not expose it. The existing `/engine` development API remains trusted,
-unauthenticated loopback infrastructure; this change does not secure that API for
-remote deployment. Host registration/delivery still uses its separate `/clients`
-credentials. Keep these development services local.
+Origin-bearing requests and requires an agent Bearer credential. The deployed service exposes it only with machine-credential authentication.
+Browser `/engine` and `/clients` requests in deployment require OIDC authentication
+and account permissions. The unauthenticated development fixture remains loopback-only.
 
 ## Tools and results
 

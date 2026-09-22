@@ -50,8 +50,10 @@ whole-engine access and all server-data mutations are denied. Browser alerts req
 the dashboard's `alerts` read grant, and only admins can acknowledge or silence.
 See [user access](../docs/user-access.md) for ownership, sharing and account defaults.
 Alert configuration and agent operations keep their independent machine grants.
-MCP uses the existing operator credential, provisioned using `talia-agent` and
-`operator-policy.json`; it does not use browser cookies or the OIDC client secret.
+Interactive agents use [temporary account-bound keys](../docs/agent-access.md)
+created in Settings and connect to the HTTPS `/mcp` endpoint. The legacy stdio
+adapter uses its existing operator credential, provisioned using `talia-agent`
+and `operator-policy.json`. Neither transport exposes the OIDC client secret.
 
 ## Installation and recovery
 
