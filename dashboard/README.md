@@ -114,3 +114,33 @@ Durable clients now use [saved dashboard delivery](../docs/dashboard-delivery.md
 Updates leave the loaded runtime intact until explicit reload; cached baselines
 include per-slot parameters and loaded assignment revision. Generated package files
 remain available for the legacy fixture mode.
+
+## Fullscreen monitoring (web)
+
+Open **Dashboard → Fullscreen** for a monitoring surface without the application
+shell. Configure an ordered playlist in **Settings → Monitoring display**, set
+seconds per dashboard, and optionally enable automatic rotation on entry. Use
+Previous/Next, Play/Pause and Exit; move the pointer, touch the surface or use the
+keyboard to reveal controls. Escape exits. Configuration persists for this browser
+and account; other devices have independent settings.
+
+Entering fullscreen preserves the current live dashboard. Cycling loads fresh
+saved dashboard instances; temporary ViewModel state is not retained across
+switches. Dirty agent edits and dashboard errors pause rotation. Hidden tabs and
+disconnections suspend timing. Browser fullscreen refusal falls back to an
+in-window monitoring surface. Native Android and individual Screen cycling are
+not part of this increment.
+
+Qualification:
+
+```sh
+node dashboard/tests/monitoring-mode.test.mjs
+node dashboard/tests/monitoring-mode.mjs
+node dashboard/tests/access.mjs
+```
+
+The first checks scheduler edge cases. The second uses real Chromium fullscreen
+and a fixture dashboard selector for settings, rotation, fallback, error/dirty
+handling, authorization catalog changes and responsive layout. The third covers
+the real HTTPS/OIDC server and verifies fullscreen entry/exit retains the live
+instance, alongside existing sharing, revocation, MCP and session checks.

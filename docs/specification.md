@@ -240,3 +240,29 @@ See [configurable alerts](alerts.md) for the accepted staged-policy, acknowledge
 silence, destination and durable delivery model. Android push, browser Web Push, email and Telegram
 alert delivery precede deployment and homelab migration; Simple Agents and Crumbles
 delegation follow migration. The original alert workstream is tracked in TALIA-47; browser destinations in TALIA-66.
+
+## Web monitoring display
+
+The web client can show its dashboard as a fullscreen monitoring surface, hiding
+application navigation while keeping connection messages, dashboard diagnostics,
+restart controls and update/dirty indicators visible. Fullscreen entry/exit is a
+presentation change and does not replace the live dashboard. If the browser
+rejects native fullscreen, an escapable in-window monitoring surface is used.
+
+Each browser/account can save an ordered playlist of accessible dashboards, a
+whole-second dwell time per dashboard (5–3600 seconds), and whether rotation starts
+on entering monitoring mode. Previous/next and play/pause controls are available;
+pointer movement, touch or keyboard interaction reveals the controls. Escape or
+Exit returns to the normal shell. Fullscreen requires an explicit gesture after
+page reload; saved settings never force a browser into fullscreen.
+
+This first implementation cycles whole dashboards on the web. It uses the normal
+authorized client-selection path, with one live instance at a time. Switching
+loads the target's saved definition and fresh ViewModel; returning to a dashboard
+does not restore its earlier transient state. Server effects survive. Automatic
+rotation pauses on dashboard errors or dirty live edits, and manual switching
+also refuses to discard dirty edits. Hidden or disconnected clients suspend the
+timer and resume with a full dwell period, without catching up missed rotations.
+Removed access pauses the current display and inaccessible playlist entries are
+skipped. Per-Screen rotation and native Android presentation controls are future
+increments, not included in TALIA-67.

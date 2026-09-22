@@ -53,7 +53,7 @@ async function start(pinned=null,beforeReplace=null){
  if(request!==loadRequest)return;
  if(durable&&!usingCache)await registry.confirm(delivery.assignment.revision);
  if(request!==loadRequest)return;
- if(beforeReplace)await beforeReplace();
+ if(beforeReplace){await beforeReplace();if(request!==loadRequest)return;}
  const stamp=++generation;ready=false;bridge?.close();guest?.close();failure=null;diagnostic.hidden=true;root.inert=false;document.querySelector('#restart').hidden=true;
  if(durable){assignmentRevision=delivery.assignment.revision;config.dashboardId=pkg.id;config.params=structuredClone(pkg.params);if(delivery.assignment.presentation.scale!==undefined)config.scale=delivery.assignment.presentation.scale;registry.saveConfig(config);scaleInput.value=config.scale;sidebarInput.checked=config.params.sidebar===true;}
  cachedBaseline=usingCache;loaded=structuredClone(pkg);
@@ -74,7 +74,7 @@ document.addEventListener('visibilitychange',async()=>{
  if(failure||!ready)return;
  try{if(document.hidden){bridge.pause();await guest.eval("TaliaVM.pause();'ok';");window.dashboardReport={...window.dashboardReport,paused:true,subscriptions:0};}else{await guest.eval("TaliaVM.resume();'ok';");await bridge.resume();await guest.eval("TaliaVM.reconcile("+JSON.stringify([...bridge.actions.values()])+");'ok';");await refresh();await checkUpdates();}}catch(e){fail(e);}
 });
-window.talia={revoke:(reason='Access revoked')=>{fail(reason==='dashboard_changed'?'Dashboard updated. Reload to continue.':'Access to this dashboard has been removed.');engineClient.stopped=true;engineClient.epoch++;engineClient.values.clear();root.replaceChildren();},renameClient:name=>registry.rename(name),registration:()=>registry.publicStatus(),renderer,refresh,command,checkUpdates,reload:start,async selectDashboard(id,params={},presentation={}){if(!/^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(id))throw Error('invalid dashboard ID');if(durable)await registry.select(id,params,presentation);else{config.dashboardId=id;registry.saveConfig(config);}try{await start();}catch(e){loadError(e);throw e;}},async live(source){if(failure||document.hidden||!ready)return;editRevision++;reportRegistry();await command('TaliaVM.markDirty();\n'+source+"\n;'ok';");},get state(){return state;}};
+window.talia={revoke:(reason='Access revoked')=>{fail(reason==='dashboard_changed'?'Dashboard updated. Reload to continue.':'Access to this dashboard has been removed.');engineClient.stopped=true;engineClient.epoch++;engineClient.values.clear();root.replaceChildren();},renameClient:name=>registry.rename(name),registration:()=>registry.publicStatus(),renderer,refresh,command,checkUpdates,reload:start,async selectDashboard(id,params={},presentation={},guardDirty=false){const guard=()=>{if(guardDirty&&(editRevision>0||window.dashboardReport?.dirty))throw Error('Temporary dashboard edits must be explicitly discarded before switching.');};guard();if(!/^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(id))throw Error('invalid dashboard ID');if(durable)await registry.select(id,params,presentation);else{config.dashboardId=id;registry.saveConfig(config);}try{await start(null,guardDirty?guard:null);}catch(e){loadError(e);throw e;}},async live(source){if(failure||document.hidden||!ready)return;editRevision++;reportRegistry();await command('TaliaVM.markDirty();\n'+source+"\n;'ok';");},get state(){return state;}};
 setInterval(()=>{reportRegistry();},500);setInterval(refresh,100);setInterval(checkUpdates,2000);start().catch(fail);
 
 if(durable&&!window.taliaViewer)new LiveControl(registry,{

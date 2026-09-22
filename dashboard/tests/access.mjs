@@ -169,6 +169,28 @@ try{
  assert.equal((await engineCall(v,'write',{id:'value'})).error,'forbidden');assert.equal((await engineCall(v,'monitoringConfig',{})).error,'forbidden');
  const another=await browser.newContext({ignoreHTTPSErrors:true});const v2=await login(another);await v2.waitForFunction(()=>window.dashboardReport?.registration?.connected);assert.equal(await v2.evaluate(()=>window.taliaDashboard.id),'monitor');
  await v.setViewportSize({width:390,height:844});assert.equal(await v.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);mkdirSync('.local/access-verification',{recursive:true});await v.getByRole('button',{name:'Open navigation',exact:true}).click();assert.equal(await v.locator('.lv-drawer .lv-account').count(),1);assert.equal(await v.locator('.lv-header .lv-account').count(),0);await v.keyboard.press('Escape');await v.screenshot({path:'.local/access-verification/viewer-mobile.png',fullPage:true});await a.locator('.lv-sidebar a[href="#dashboard"]').click();await a.locator('[data-shell-page=dashboard]').waitFor({state:'visible'});await a.screenshot({path:'.local/access-verification/admin-desktop.png',fullPage:true});
+ // Entering/exiting fullscreen retains the live dashboard instance and uses the full viewport.
+ const beforeDisplay=await a.evaluate(()=>window.dashboardReport.registration.liveInstanceId);
+ await a.locator('#monitoring-enter').click();await a.waitForFunction(()=>document.fullscreenElement?.id==='monitoring-surface');
+ assert.equal(await a.locator('#monitoring-surface').evaluate(e=>e.clientWidth),await a.evaluate(()=>innerWidth));
+ assert.equal(await a.evaluate(()=>window.dashboardReport.registration.liveInstanceId),beforeDisplay);
+ await a.locator('#monitoring-exit').click();await a.waitForFunction(()=>!document.fullscreenElement);
+ assert.equal(await a.evaluate(()=>window.dashboardReport.registration.liveInstanceId),beforeDisplay);
+ // Monitoring selections refuse dirty live edits before changing the server assignment.
+ await a.evaluate(()=>window.talia.live("void 0;"));
+ const dirtySelection=await a.evaluate(async()=>{try{await window.talia.selectDashboard(window.taliaDashboard.id,{}, {},true);return 'unexpected success';}catch(e){return e.message;}});
+ assert.match(dirtySelection,/Temporary dashboard edits/);
+ assert.equal(await a.evaluate(()=>window.dashboardReport.registration.liveInstanceId),beforeDisplay);
+ await a.evaluate(()=>window.talia.reload());
+ // A live edit arriving while a new package is fetched must also survive.
+ const beforeLateEdit=await a.evaluate(()=>window.dashboardReport.registration.liveInstanceId);
+ let releasePackage,packageArrived;const packageHeld=new Promise(r=>releasePackage=r),packageWaiting=new Promise(r=>packageArrived=r);
+ await a.route('**/dashboard/shared/vm.js',async route=>{const response=await route.fetch();packageArrived();await packageHeld;await route.fulfill({response});});
+ await a.evaluate(()=>{window.pendingMonitoringSelection=window.talia.selectDashboard(window.taliaDashboard.id,{}, {},true).then(()=>null,e=>e.message);});
+ await packageWaiting;await a.evaluate(()=>window.talia.live('void 0;'));releasePackage();
+ assert.match(await a.evaluate(()=>window.pendingMonitoringSelection),/Temporary dashboard edits/);
+ assert.equal(await a.evaluate(()=>window.dashboardReport.registration.liveInstanceId),beforeLateEdit);
+ await a.unroute('**/dashboard/shared/vm.js');await a.evaluate(()=>window.talia.reload());
  // System appearance follows OS changes without replacing the runtime.
  await v.getByRole('button',{name:'Change theme: System',exact:true}).click();await v.getByRole('button',{name:'Dark',exact:true}).click();
  await v.reload();await v.waitForFunction(()=>window.dashboardReport?.registration?.connected);assert.equal(await v.locator('.lello-theme').getAttribute('data-lello-theme'),'blue-dark');
@@ -192,5 +214,5 @@ try{
  execFileSync('python3',['-c',"import sqlite3,sys; c=sqlite3.connect(sys.argv[1]); c.execute('UPDATE user_agent_keys SET expires=0 WHERE id=?',(sys.argv[2],)); c.commit()",tmp+'/engine.db',expiring.id]);
  assert.equal((await mcp(expiring.key,'tools/list')).status(),401);
  const logoutKey=await api(a,{op:'agentKeyCreate'});await a.evaluate(()=>fetch('/auth/logout',{method:'POST'}));assert.equal((await mcp(logoutKey.key,'tools/list')).status(),401);
-  console.log(JSON.stringify({passed:true,checks:['browser Web Push enrollment, disable, endpoint rejection, viewer isolation and real worker authenticated detail fetch','HTTP MCP engine read and key-scoped subscriptions survive reconnect','HTTP MCP live inspect/execute/reload and dirty guards','browser remains signed in past initial token expiry with rotated refresh token','persistent 30-day HttpOnly session cookie','official SDK HTTP MCP authoring with user-attributed audit','HTTP MCP initialize/list/call','one-time key UI and clipboard configuration','navigation during key creation revokes the unseen key','expiry/revocation/logout enforcement','viewer MCP isolation','Origin/protocol validation','shared LelloDesign responsive shell','theme and sidebar preserve live runtime','polling preserves sharing drafts','keyboard theme focus','mobile account placement','real OIDC boundary with local provider','viewer starts empty','admin shares from shell','viewer loads public dashboard','server rejects writes and config','account default opens on new installation','reload retains selection','mobile layout fits viewport','unsharing blocks active viewer']}));
+  console.log(JSON.stringify({passed:true,checks:['fullscreen retains live dashboard and monitoring selection preserves dirty edits','browser Web Push enrollment, disable, endpoint rejection, viewer isolation and real worker authenticated detail fetch','HTTP MCP engine read and key-scoped subscriptions survive reconnect','HTTP MCP live inspect/execute/reload and dirty guards','browser remains signed in past initial token expiry with rotated refresh token','persistent 30-day HttpOnly session cookie','official SDK HTTP MCP authoring with user-attributed audit','HTTP MCP initialize/list/call','one-time key UI and clipboard configuration','navigation during key creation revokes the unseen key','expiry/revocation/logout enforcement','viewer MCP isolation','Origin/protocol validation','shared LelloDesign responsive shell','theme and sidebar preserve live runtime','polling preserves sharing drafts','keyboard theme focus','mobile account placement','real OIDC boundary with local provider','viewer starts empty','admin shares from shell','viewer loads public dashboard','server rejects writes and config','account default opens on new installation','reload retains selection','mobile layout fits viewport','unsharing blocks active viewer']}));
 }finally{await browser?.close();if(engine?.pid){try{process.kill(-engine.pid,'SIGTERM');}catch{}}proxy?.close();provider?.close();rmSync(tmp,{recursive:true,force:true});}

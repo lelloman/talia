@@ -1,8 +1,10 @@
+import {startMonitoringMode} from './monitoring-mode.js';
 import {startBrowserPush} from './browser-push.js';
 import {startAgentAccess} from './agent-access.js';
 const $=id=>document.getElementById(id);
 export async function startShell(identity,account){
  startAgentAccess(account);
+ const monitoring=startMonitoringMode(identity);
  let catalog,users=[],started=false,busy=false,userSignature;const drafts=new Map();
  const message=text=>$('shell-status').textContent=text;
  async function attempt(work){try{await work();}catch(e){message('Could not complete the request: '+e.message);}}
@@ -18,7 +20,7 @@ export async function startShell(identity,account){
  async function refresh(){
   if(busy)return;busy=true;try{
    const next=await account({op:'catalog'});
-   if(catalog&&catalog.admin!==next.admin){location.reload();return;}catalog=next;window.taliaViewer=!catalog.admin;
+   if(catalog&&catalog.admin!==next.admin){location.reload();return;}catalog=next;monitoring.setCatalog(catalog.dashboards);window.taliaViewer=!catalog.admin;
    window.taliaShell.update({isAdmin:catalog.admin,alerts:catalog.admin||!!window.taliaDashboard?.reads.includes('alerts')});$('sharing').hidden=!catalog.admin;$('user-admin').hidden=!catalog.admin;$('sidebar').closest('label').hidden=!catalog.admin;
    const previous=window.taliaDashboard?.id||$('dashboard-picker').value;
    if(JSON.stringify([...$('dashboard-picker').options].map(o=>o.value))!==JSON.stringify(catalog.dashboards.map(d=>d.id)))$('dashboard-picker').replaceChildren(...catalog.dashboards.map(d=>new Option(d.id,d.id)));

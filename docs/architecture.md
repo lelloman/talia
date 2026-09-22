@@ -227,3 +227,20 @@ package grants and keep credentials out of the JS context. Native notification
 handlers are host code, independent of a live dashboard. Current implementation and
 qualification limits are documented in [alerts](alerts.md) and its
 [qualification report](alert-qualification.md).
+
+## Web fullscreen and playlist host
+
+`dashboard/web/monitoring-mode.js` owns fullscreen presentation and the ordered
+playlist as trusted client settings. It does not alter authored dashboard packages
+or engine definitions. Settings are scoped to the browser profile and OIDC subject
+in local storage; browser profiles/devices are independent. The shell supplies the
+current authorized catalog and runtime load/connection events. Existing server
+checks remain authoritative for every selection and read.
+
+The playlist scheduler serializes switches through `talia.selectDashboard` and
+starts the next dwell only after that operation completes. Unchanged catalog
+polls do not reset deadlines. Hidden/disconnected state clears the deadline;
+errors and temporary live edits pause rotation. Native fullscreen and its in-page
+fallback retain the same dashboard DOM and guest; only a playlist switch creates
+a new guest via the existing loader. The fullscreen surface contains diagnostics
+and transient accessible controls, with sibling content inert until exit.
