@@ -206,9 +206,9 @@ Client-owned connection state survives dashboard failure. A new server incarnati
 ## Alert delivery contract
 
 See [configurable alerts](alerts.md) for the accepted staged-policy, acknowledgement,
-silence, destination and durable delivery model. Android push, email and Telegram
+silence, destination and durable delivery model. Android push, browser Web Push, email and Telegram
 alert delivery precede deployment and homelab migration; Simple Agents and Crumbles
-delegation follow migration. Current work is tracked in TALIA-47.
+delegation follow migration. The original alert workstream is tracked in TALIA-47; browser destinations in TALIA-66.
 
 
 ## Implemented alert boundary

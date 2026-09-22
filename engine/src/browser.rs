@@ -14,6 +14,32 @@ impl Service {
                 .unwrap()
                 .to_string()
         };
+        if r.connection == "account" && r.body["request"]["op"].as_str().is_some_and(|op|op.starts_with("browserPush")) {
+            use talia_engine::alerts::web_push;
+            let body=&r.body["request"];
+            let op=body["op"].as_str().ok_or("invalid_input")?;
+            let id=body["id"].as_str().unwrap_or("");
+            if !self.engine.store.borrow().user_admin(subject).map_err(err)? {return Err("forbidden".into());}
+            let allowed: &[&str]=match op {"browserPushConfig"=>&["op"],"browserPushStatus"|"browserPushDisable"=>&["op","id"],"browserPushRegister"=>&["op","id","subscription","applicationServerKey"],"browserPushAlert"=>&["op","id","key","occurrence","revision"],_=>return Err("invalid_input".into())};
+            if body.as_object().is_none_or(|o|o.keys().any(|k|!allowed.contains(&k.as_str()))) {return Err("invalid_input".into());}
+            match op {
+                "browserPushConfig"=>return web_push::public_config().await,
+                "browserPushStatus"=>return self.engine.store.borrow().browser_push_status(subject,id),
+                "browserPushDisable"=>return self.engine.store.borrow_mut().browser_push_disable(subject,id,self.engine.now()),
+                "browserPushAlert"=>return self.engine.store.borrow().browser_push_alert(subject,id,body["key"].as_str().ok_or("invalid_input")?,body["occurrence"].as_u64().ok_or("invalid_input")?,body["revision"].as_u64().ok_or("invalid_input")?),
+                _=>{}
+            }
+            if id.len()!=44 || !id.starts_with("browser-") || !id[8..].bytes().all(|b|b.is_ascii_hexdigit()||b==b'-') {return Err("invalid browser ID".into());}
+            let config=web_push::public_config().await?;
+            if body["applicationServerKey"]!=config["applicationServerKey"] {return Err("Web Push key changed; enroll again".into());}
+            let raw=json!({"subscription":body["subscription"],"application_server_key":body["applicationServerKey"]}).to_string();
+            let address=web_push::address(&raw)?;
+            let origins:Vec<String>=serde_json::from_value(config["allowedOrigins"].clone()).map_err(|_|"invalid provider")?;
+            if !web_push::endpoint_allowed(&address.subscription.endpoint,&origins) {return Err("push endpoint origin is not allowed".into());}
+            let mut store=self.engine.store.borrow_mut();
+            if !store.user_admin(subject).map_err(err)? {return Err("forbidden".into());}
+            return store.browser_push_register(subject,id,&raw,config["provider"].as_str().unwrap(),self.engine.now());
+        }
         if r.connection == "account" {
             let mut store = self.engine.store.borrow_mut();
             store

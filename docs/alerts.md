@@ -65,7 +65,7 @@ twice after retry: no exactly-once claim is made.
 
 ## Destinations and Android
 
-Named destinations select email, Telegram, or Android push. Policies reference names;
+Named destinations select email, Telegram, Android push, or browser Web Push. Policies reference names;
 credentials and provider addresses are host-managed and never enter guest JS. Each
 installation has a stable ID across restart/update and a separate renewable token.
 Reinstall/data clearing creates a new identity. Registration requires authentication;
@@ -175,3 +175,74 @@ labels, schedule and enabled state can change at runtime. Shared policy edits up
 all referencing bindings. The provider file path is selected at service start, while
 its contents are reread for each delivery. See the qualification report for verified
 failure/recovery cases and the limits of fixture-only provider evidence.
+
+## Browser Web Push destinations
+
+The web shell's **Settings → Browser notifications** enrolls a browser profile
+with an explicit notification-permission gesture. Each enrollment has a stable
+`browser-<UUID>` installation ID, owned by the signed-in OIDC subject, and creates
+a destination with that same ID, channel `web_push`, and target `device:<ID>`.
+An agent can reference this destination in normal alert response actions, including
+repeats until acknowledgement. Registration itself never sends a notification.
+In-dashboard presentation remains independent of Web Push.
+
+Enrollment currently requires an administrator, matching the existing global
+alert-access boundary. Viewer dashboard grants do not grant push access to all
+server alerts. Subscriptions are host-managed secrets, absent from dashboard VMs,
+MCP configuration responses and delivery history. Android devices retain channel
+`push`; browser destinations resolve only `web_push` devices. Named browser
+selectors can also use `user:<OIDC subject>` or administrator-managed `group:<name>`.
+
+Configure one provider in the private `TALIA_ALERT_PROVIDERS` JSON file:
+
+```json
+{
+  "browser": {
+    "kind": "web_push",
+    "private_key": "/run/talia/web-push.pem",
+    "subject": "mailto:operator@example.com"
+  }
+}
+```
+
+Generate a persistent P-256 VAPID key once with
+`openssl ecparam -name prime256v1 -genkey -noout -out web-push.pem` under a private
+umask. Mount it read-only, readable by container UID 65532, alongside the provider
+file. Keep this key through rebuilds and backups; replacing it requires browser
+re-enrollment. No Firebase project or browser-vendor account is needed for Web
+Push. Provider settings and key contents are read asynchronously at runtime. If
+multiple Web Push providers exist, enrollment selects the first name in sorted
+order; use one unless deliberately managing a transition.
+
+Default permitted push origins are `https://fcm.googleapis.com`,
+`https://updates.push.services.mozilla.com`, and `https://web.push.apple.com`.
+An optional `allowed_origins` array replaces that exact-origin allowlist. Add only
+trusted browser-vendor origins when needed. Redirects are never followed. HTTPS
+is required except numeric loopback HTTP fixtures. Outbound HTTPS must reach the
+selected push service. Delivery uses RFC 8291 encrypted payloads and VAPID;
+201/202 means vendor acceptance, not display or acknowledgement. Temporary
+429/5xx rejection follows the existing bounded retry policy. A 404/410 retires
+only the subscription that failed, never a newer rotated address.
+
+The root-scoped `/push-sw.js` service worker handles notifications without a live
+dashboard connection; it does not cache or intercept app requests. Encrypted
+wakeups contain alert identity/revision/expiry, not alert text or credentials.
+Before display the worker fetches current details using the browser's authenticated
+session. The server checks current admin access, installation ownership/enabled
+state, occurrence, revision and acknowledgement. Stale, revoked and acknowledged
+notifications are suppressed. Offline fetch failure can show a generic notice
+without alert details. Clicking opens the current Alerts panel; it never silently
+acknowledges an alert or follows an external notification URL.
+
+Disable unregisters delivery authority, unsubscribes and closes this worker's
+notifications. Normal web sign-out attempts the same cleanup; server session
+revocation still prevents fetching alert details if cleanup fails. Account
+switches require explicit enrollment for the new owner. Foreground refresh syncs
+rotated subscription addresses; missing subscriptions require re-enrollment.
+Changes to browser notification permission are reflected in Settings.
+
+A secure context, browser permission and background Web Push support are required.
+Delivery while the dashboard tab is closed depends on the browser/OS continuing
+to process push. A private-LAN deployment must be reachable when the worker fetches
+alert details (for example through the LAN or VPN). Expired login requires signing
+in again; there is no persistent bearer token embedded in the worker.

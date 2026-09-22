@@ -1,3 +1,4 @@
+import {startBrowserPush} from './browser-push.js';
 import {startAgentAccess} from './agent-access.js';
 const $=id=>document.getElementById(id);
 export async function startShell(identity,account){
@@ -37,5 +38,5 @@ export async function startShell(identity,account){
  $('rename-client').onclick=()=>attempt(async()=>{await window.talia.renameClient($('client-name').value);message('Client name saved.');});
  $('refresh-dashboards').onclick=()=>attempt(refresh);
  window.addEventListener('talia-dashboard-loaded',()=>{const d=window.taliaDashboard;$('dashboard-title').textContent=d.id;$('dashboard-picker').value=d.id;$('client-name').value=window.talia?.registration().name||'Web dashboard';$('alerts-panel').hidden=window.taliaViewer&&!d.reads.includes('alerts');window.taliaShell.update({alerts:!$('alerts-panel').hidden});sharing();});
- await attempt(refresh);setInterval(()=>{if(!document.hidden)attempt(refresh);},10000);
+ await attempt(refresh);await startBrowserPush(identity,account);setInterval(()=>{if(!document.hidden)attempt(refresh);},10000);
 }

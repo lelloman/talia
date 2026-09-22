@@ -55,3 +55,16 @@ See [alert configuration and operational limits](alerts.md) and the
 [implementation plan](implementation-plan.md). Release/deployment preparation
 precedes homelab migration; Simple Agents and Crumbles integrations follow that
 migration.
+
+## Browser Web Push fixture coverage (TALIA-66)
+
+`cargo test --manifest-path engine/Cargo.toml --offline` includes real VAPID
+signing and encryption/decryption against a local HTTP fixture, acceptance and
+failure status mapping, destination-channel isolation, subscription retirement
+without disabling a rotated address, ownership and stale-alert checks.
+`node dashboard/tests/access.mjs` runs Chromium against the real HTTPS/OIDC
+service, with only the vendor subscription mocked, to exercise browser enrollment,
+root service-worker registration, endpoint rejection, viewer denial and disable.
+`node dashboard/tests/browser-push.test.mjs` covers worker display, stale/denied
+suppression, generic offline fallback and fixed same-origin click navigation.
+These checks do not establish real browser-vendor or OS background delivery.

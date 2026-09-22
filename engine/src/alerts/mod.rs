@@ -376,3 +376,5 @@ pub mod providers;
 pub mod api;
 
 pub mod fcm;
+
+pub mod web_push;

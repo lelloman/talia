@@ -30,15 +30,49 @@ try{
   if(u.pathname==='/introspect'){const sub=tokens.get(form.get('token'));return json(res,{active:!!sub,sub,iss:issuer,client_id:'talia'});}res.statusCode=404;res.end();
  });provider.listen(0,'127.0.0.1');await once(provider,'listening');issuer='http://127.0.0.1:'+provider.address().port;
  proxy=https.createServer({key:readFileSync(tmp+'/tls.key'),cert:readFileSync(tmp+'/tls.crt')},(req,res)=>{const upstream=http.request({hostname:'127.0.0.1',port,path:req.url,method:req.method,headers:req.headers},r=>{res.writeHead(r.statusCode,r.headers);r.pipe(res);});upstream.on('error',()=>{res.statusCode=503;res.end();});req.pipe(upstream);});proxy.listen(0,'127.0.0.1');await once(proxy,'listening');origin='https://localhost:'+proxy.address().port;
+ execFileSync('openssl',['ecparam','-name','prime256v1','-genkey','-noout','-out',tmp+'/vapid.pem']);
+ writeFileSync(tmp+'/providers.json',JSON.stringify({browser:{kind:'web_push',private_key:tmp+'/vapid.pem',subject:'mailto:fixture@example.test'}}));
  writeFileSync(tmp+'/secret','fixture-secret-with-at-least-thirty-two-characters');execFileSync('python3',['deploy/package-web.py',tmp+'/web']);
- engine=spawn('cargo',['test','--manifest-path','engine/Cargo.toml','--offline','--bin','talia-engine','browser_fixture_service','--','--ignored','--nocapture'],{env:{...process.env,TALIA_TEST_DB:tmp+'/engine.db',TALIA_OIDC_ISSUER:issuer,TALIA_OIDC_CLIENT_ID:'talia',TALIA_OIDC_SECRET_FILE:tmp+'/secret',TALIA_PUBLIC_ORIGIN:origin,TALIA_AUTH_DB:tmp+'/auth.db',TALIA_WEB_ROOT:tmp+'/web',TALIA_BOOTSTRAP_ADMINS:issuer+'#admin'},detached:true,stdio:['ignore','pipe','pipe']});
+ engine=spawn('cargo',['test','--manifest-path','engine/Cargo.toml','--offline','--bin','talia-engine','browser_fixture_service','--','--ignored','--nocapture'],{env:{...process.env,TALIA_ALERT_PROVIDERS:tmp+'/providers.json',TALIA_TEST_DB:tmp+'/engine.db',TALIA_OIDC_ISSUER:issuer,TALIA_OIDC_CLIENT_ID:'talia',TALIA_OIDC_SECRET_FILE:tmp+'/secret',TALIA_PUBLIC_ORIGIN:origin,TALIA_AUTH_DB:tmp+'/auth.db',TALIA_WEB_ROOT:tmp+'/web',TALIA_BOOTSTRAP_ADMINS:issuer+'#admin'},detached:true,stdio:['ignore','pipe','pipe']});
  await new Promise((resolve,reject)=>{let out='';const timeout=setTimeout(()=>reject(Error('service startup timeout')),60000);engine.stdout.on('data',d=>{out+=d;const m=out.match(/\{"incarnation":"[^"]+","port":(\d+)\}/);if(m){port=Number(m[1]);clearTimeout(timeout);resolve();}});engine.stderr.on('data',d=>process.stderr.write(d));engine.on('exit',code=>{clearTimeout(timeout);reject(Error('service exited '+code));});});
- browser=await chromium.launch({headless:true});const admin=await browser.newContext({ignoreHTTPSErrors:true}),viewer=await browser.newContext({ignoreHTTPSErrors:true});await admin.addCookies([{name:'fixture_admin',value:'1',url:issuer}]);
+ browser=await chromium.launch({headless:true,channel:'chromium',args:['--ignore-certificate-errors']});const admin=await browser.newContext({ignoreHTTPSErrors:true}),viewer=await browser.newContext({ignoreHTTPSErrors:true});await admin.addCookies([{name:'fixture_admin',value:'1',url:issuer}]);
  async function login(context){const p=await context.newPage();await p.goto(origin);await p.getByRole('link',{name:'Sign in with LelloAuth'}).click();await p.waitForFunction(()=>['Administrator','Viewer'].includes(document.querySelector('#account-role')?.textContent));return p;}
  const a=await login(admin),v=await login(viewer);await v.getByRole('heading',{name:'No dashboards available yet'}).waitFor();assert.equal(await v.locator('#sharing').isVisible(),false);
  const api=(p,body)=>p.evaluate(async body=>(await(await fetch('/account',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json()),body);
+ // Actual HTTPS worker and server registration; only the vendor push subscription is a fixture.
+ await admin.grantPermissions(['notifications'],{origin});
+ const pushKey=crypto.createECDH('prime256v1');pushKey.generateKeys();
+ const pushSubscription={endpoint:'https://fcm.googleapis.com/fixture/opaque-secret',keys:{p256dh:pushKey.getPublicKey().toString('base64url'),auth:crypto.randomBytes(16).toString('base64url')}};
+ await a.evaluate(subscription=>{
+  let current=null;
+  PushManager.prototype.getSubscription=async()=>current;
+  PushManager.prototype.subscribe=async options=>{if(!options.userVisibleOnly)throw Error('must be visible');current={toJSON:()=>subscription,unsubscribe:async()=>{window.pushUnsubscribed=(window.pushUnsubscribed||0)+1;current=null;return true;}};return current;};
+ },pushSubscription);
+ await a.locator('.lv-sidebar a[href="#settings"]').click();
+ await a.evaluate(()=>window.dispatchEvent(new Event('hashchange')));
+ await a.waitForFunction(()=>!document.querySelector('#browser-push-enable').disabled).catch(async e=>{console.error(await a.locator('#browser-push-status').textContent());console.error(await api(a,{op:'browserPushConfig'}));throw e;});
+ await a.locator('#browser-push-enable').click();
+ await a.getByText('Browser notifications enabled.',{exact:true}).waitFor();
+ const browserId=await a.evaluate(()=>JSON.parse(localStorage.getItem('talia.browserPush')).id);
+ assert.match(browserId,/^browser-/);
+ assert.equal((await api(a,{op:'browserPushStatus',id:browserId})).device.enabled,true);
+ // Simulate an expired subscription retired server-side while the browser still caches it.
+ await api(a,{op:'browserPushDisable',id:browserId});
+ await a.evaluate(()=>window.dispatchEvent(new Event('hashchange')));
+ await a.waitForFunction(()=>!document.querySelector('#browser-push-enable').disabled);
+ await a.locator('#browser-push-enable').click();await a.getByText('Browser notifications enabled.',{exact:true}).waitFor();
+ assert.equal(await a.evaluate(()=>window.pushUnsubscribed),1);
+ assert.equal(await a.evaluate(()=>JSON.parse(localStorage.getItem('talia.browserPush')).id),browserId);
+ assert.equal((await api(v,{op:'browserPushStatus',id:browserId})).error,'forbidden');
+ assert.equal((await api(v,{op:'browserPushConfig'})).error,'forbidden');
+ const browserConfig=await api(a,{op:'browserPushConfig'});
+ assert.equal((await api(a,{op:'browserPushRegister',id:browserId,applicationServerKey:browserConfig.applicationServerKey,subscription:{...pushSubscription,endpoint:'http://127.0.0.1/private'}})).error,'push endpoint origin is not allowed');
+ assert.equal(await a.evaluate(async()=>new URL((await navigator.serviceWorker.ready).active.scriptURL).pathname),'/push-sw.js');
+ await a.locator('#browser-push-disable').click();
+ await a.getByText('Browser notifications are disabled.',{exact:true}).waitFor();
+ assert.equal((await api(a,{op:'browserPushStatus',id:browserId})).device.enabled,false);
  // Create a one-time key through the actual browser UI, then use the HTTP transport.
- await admin.grantPermissions(['clipboard-read','clipboard-write']);
+ await admin.grantPermissions(['clipboard-read','clipboard-write','notifications'],{origin});await a.bringToFront();
  await a.locator('.lv-sidebar a[href="#settings"]').click();await a.locator('#agent-key-create').click();
  await a.waitForFunction(()=>document.querySelector('#agent-key-value').value.length===64);
  const agentKey=await a.locator('#agent-key-value').inputValue();assert.equal(await a.locator('#agent-endpoint').inputValue(),origin+'/mcp');
@@ -61,6 +95,19 @@ try{
  assert.equal(saved.isError,false);assert.equal(saved.structuredContent.audit.principal,issuer+'#admin');
  // Engine and host-routed tools must work through the same official HTTP SDK.
  const sdkTool=async(name,args={})=>{const r=await sdk.callTool({name,arguments:args});assert.equal(r.isError,false,JSON.stringify(r));return r.structuredContent;};
+ const pushConfiguration=await sdkTool('alerts_config');
+ assert.equal(pushConfiguration.destinations.find(d=>d.id===browserId).channel,'web_push');
+ assert.equal(JSON.stringify(pushConfiguration).includes('opaque-secret'),false);
+ await sdkTool('alerts_observe',{requestId:crypto.randomUUID(),expected:0,observation:{key:'browser-fixture',active:true,stage:'warning',severity:'warning',message:'Browser fixture alert'}});
+ const pushAlert=(await sdkTool('alerts_snapshot')).alerts.find(alert=>alert.key==='browser-fixture');
+ await api(a,{op:'browserPushRegister',id:browserId,subscription:pushSubscription,applicationServerKey:browserConfig.applicationServerKey});
+ const pushWorker=admin.serviceWorkers().find(w=>w.url().endsWith('/push-sw.js'));
+ const workerRequest={op:'browserPushAlert',id:browserId,key:pushAlert.key,occurrence:pushAlert.occurrence,revision:pushAlert.revision};
+ const workerRead=body=>pushWorker.evaluate(async body=>(await fetch('/account',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json(),body);
+ assert.equal((await workerRead(workerRequest)).alert.message,'Browser fixture alert');
+ assert.equal((await workerRead({...workerRequest,revision:pushAlert.revision+1})).error,'notification superseded');
+ await api(a,{op:'browserPushDisable',id:browserId});
+ assert.equal((await workerRead(workerRequest)).error,'forbidden');
  const metric=await sdkTool('engine_read',{id:'value'});assert.equal(metric.sample.value.version,1);
  const subscription=await sdkTool('engine_subscribe',{ids:['value']});
  assert.equal((await sdkTool('engine_poll',{subscriptionId:subscription.subscriptionId})).subscriptionId,subscription.subscriptionId);
@@ -145,5 +192,5 @@ try{
  execFileSync('python3',['-c',"import sqlite3,sys; c=sqlite3.connect(sys.argv[1]); c.execute('UPDATE user_agent_keys SET expires=0 WHERE id=?',(sys.argv[2],)); c.commit()",tmp+'/engine.db',expiring.id]);
  assert.equal((await mcp(expiring.key,'tools/list')).status(),401);
  const logoutKey=await api(a,{op:'agentKeyCreate'});await a.evaluate(()=>fetch('/auth/logout',{method:'POST'}));assert.equal((await mcp(logoutKey.key,'tools/list')).status(),401);
-  console.log(JSON.stringify({passed:true,checks:['HTTP MCP engine read and key-scoped subscriptions survive reconnect','HTTP MCP live inspect/execute/reload and dirty guards','browser remains signed in past initial token expiry with rotated refresh token','persistent 30-day HttpOnly session cookie','official SDK HTTP MCP authoring with user-attributed audit','HTTP MCP initialize/list/call','one-time key UI and clipboard configuration','navigation during key creation revokes the unseen key','expiry/revocation/logout enforcement','viewer MCP isolation','Origin/protocol validation','shared LelloDesign responsive shell','theme and sidebar preserve live runtime','polling preserves sharing drafts','keyboard theme focus','mobile account placement','real OIDC boundary with local provider','viewer starts empty','admin shares from shell','viewer loads public dashboard','server rejects writes and config','account default opens on new installation','reload retains selection','mobile layout fits viewport','unsharing blocks active viewer']}));
+  console.log(JSON.stringify({passed:true,checks:['browser Web Push enrollment, disable, endpoint rejection, viewer isolation and real worker authenticated detail fetch','HTTP MCP engine read and key-scoped subscriptions survive reconnect','HTTP MCP live inspect/execute/reload and dirty guards','browser remains signed in past initial token expiry with rotated refresh token','persistent 30-day HttpOnly session cookie','official SDK HTTP MCP authoring with user-attributed audit','HTTP MCP initialize/list/call','one-time key UI and clipboard configuration','navigation during key creation revokes the unseen key','expiry/revocation/logout enforcement','viewer MCP isolation','Origin/protocol validation','shared LelloDesign responsive shell','theme and sidebar preserve live runtime','polling preserves sharing drafts','keyboard theme focus','mobile account placement','real OIDC boundary with local provider','viewer starts empty','admin shares from shell','viewer loads public dashboard','server rejects writes and config','account default opens on new installation','reload retains selection','mobile layout fits viewport','unsharing blocks active viewer']}));
 }finally{await browser?.close();if(engine?.pid){try{process.kill(-engine.pid,'SIGTERM');}catch{}}proxy?.close();provider?.close();rmSync(tmp,{recursive:true,force:true});}

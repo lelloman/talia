@@ -583,7 +583,9 @@ async fn logout(State(d): State<Deployment>, headers: HeaderMap) -> Response {
         .into_response()
 }
 async fn asset(State(d): State<Deployment>, r: Request) -> Response {
-    let path = if r.uri().path() == "/" {
+    let path = if r.uri().path() == "/push-sw.js" {
+        "/dashboard/web/push-sw.js"
+    } else if r.uri().path() == "/" {
         "/dashboard/web/index.html"
     } else {
         r.uri().path()

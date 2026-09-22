@@ -101,3 +101,15 @@ MCP sharing, denied direct-engine operations, a second browser installation and
 share revocation. Its private fixture credentials are outside Git; delete the
 temporary identity after the run. Local reproducible coverage is in
 `dashboard/tests/access.mjs` and does not require real provider accounts.
+
+## Optional browser notifications
+
+Set `TALIA_ALERT_PROVIDERS` to a private JSON file mounted in the container and
+mount a persistent P-256 VAPID private key readable by UID 65532. The complete
+provider format and enrollment lifecycle are in
+[Browser Web Push destinations](../docs/alerts.md#browser-web-push-destinations).
+Adding environment variables or mounts requires recreating the container;
+subsequent provider-file changes are picked up without restarting Talìa.
+After deployment, an administrator enables browser notifications in Settings and
+an alert policy targets the displayed destination ID. Real vendor delivery and
+OS permission must be qualified on that browser; local fixtures do not prove it.

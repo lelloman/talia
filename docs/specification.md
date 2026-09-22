@@ -98,7 +98,7 @@ status or outcomes.
 Configuration includes the condition, how long it must persist, and actions
 when it fires or recovers. Available action categories are:
 
-- Present alert state to dashboards and optionally deliver Android push, email,
+- Present alert state to dashboards and optionally deliver Android push, browser Web Push, email,
   or Telegram notifications using staged, reusable response policies.
 - Start a structured task in Simple Agents (post-migration integration).
 - Issue a Crumbles ticket and track its lifecycle and outcome (post-migration integration).
@@ -237,6 +237,6 @@ questions above are not silently resolved by the plan.
 ## Alert delivery contract
 
 See [configurable alerts](alerts.md) for the accepted staged-policy, acknowledgement,
-silence, destination and durable delivery model. Android push, email and Telegram
+silence, destination and durable delivery model. Android push, browser Web Push, email and Telegram
 alert delivery precede deployment and homelab migration; Simple Agents and Crumbles
-delegation follow migration. Current work is tracked in TALIA-47.
+delegation follow migration. The original alert workstream is tracked in TALIA-47; browser destinations in TALIA-66.

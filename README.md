@@ -78,7 +78,7 @@ The [P2 durable engine](engine/README.md) provides SQLite-backed state, runtime 
 
 The [configurable alert workstream](docs/alerts.md) adds server-owned occurrences,
 shared JS response policies, acknowledgement, silences, durable delivery and named
-destinations. SMTP email, Telegram and FCM Android push have provider adapters;
+destinations. SMTP email, Telegram, FCM Android push and browser Web Push have provider adapters;
 web and native Android expose alert controls independently of dashboard failures.
 See [alert qualification](docs/alert-qualification.md) for test evidence and limits.
 Live provider credentials, deployment preparation and homelab migration remain next;

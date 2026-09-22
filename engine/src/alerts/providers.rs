@@ -13,6 +13,12 @@ fn telegram_base() -> String {
 #[derive(Clone, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Provider {
+    WebPush {
+        private_key: String,
+        subject: String,
+        #[serde(default = "super::web_push::default_origins")]
+        allowed_origins: Vec<String>,
+    },
     Fcm {
         project: String,
         service_account: String,
@@ -78,6 +84,7 @@ async fn send_inner(p: &Provider, d: &Dispatch) -> Outcome {
         d.alert.severity, state, d.alert.message, d.alert.key, d.alert.occurrence
     );
     match p {
+        Provider::WebPush {private_key, subject, allowed_origins} => super::web_push::send(private_key, subject, allowed_origins, d).await,
         Provider::Fcm {
             project,
             service_account,
@@ -311,6 +318,7 @@ mod tests {
                 }
                 Outcome::Retry(_) | Outcome::RetryAfter(_, _) => 2,
                 Outcome::Unknown(_) => 3,
+                Outcome::ExpiredAddress(_) => panic!("unexpected expired Telegram address"),
             };
             assert_eq!(actual, expected);
             server.abort();
