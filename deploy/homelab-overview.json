@@ -1,0 +1,603 @@
+[
+  {
+    "op": "put",
+    "key": {
+      "kind": "data_source",
+      "id": "homelab-prometheus"
+    },
+    "document": {
+      "id": "homelab-prometheus",
+      "kind": "prometheus",
+      "url": "http://prometheus:9090",
+      "timeout_ms": 8000,
+      "max_bytes": 131072
+    }
+  },
+  {
+    "op": "put",
+    "key": {
+      "kind": "variable_definition",
+      "id": "homelab-snapshot"
+    },
+    "document": {
+      "id": "homelab-snapshot",
+      "version": 1,
+      "kind": "stored",
+      "source": "",
+      "value_schema": "any",
+      "state_schema": "any",
+      "dependencies": []
+    }
+  },
+  {
+    "op": "put",
+    "key": {
+      "kind": "variable",
+      "id": "homelab-summary"
+    },
+    "document": {
+      "id": "homelab-summary",
+      "definition": "homelab-snapshot",
+      "params": {
+        "version": 1,
+        "value": [
+          "object",
+          []
+        ]
+      },
+      "history_count": 10,
+      "history_age_ms": 3600000
+    }
+  },
+  {
+    "op": "put",
+    "key": {
+      "kind": "monitor_definition",
+      "id": "homelab-collect"
+    },
+    "document": {
+      "id": "homelab-collect",
+      "version": 1,
+      "kind": "pipeline",
+      "source": "{async run(ctx){\n const q=ctx.params.queries,end=ctx.now()/1000;\n const result=await Promise.all([ctx.source('prom',{kind:'query',query:q.cpu}),ctx.source('prom',{kind:'query',query:q.memory}),ctx.source('prom',{kind:'query',query:q.disk}),ctx.source('prom',{kind:'query',query:q.targets}),ctx.source('prom',{kind:'range',query:q.cpu,start:end-3600,end,step:300}),ctx.source('prom',{kind:'range',query:q.memory,start:end-3600,end,step:300})]);\n const number=s=>s&&s.samples.length&&Number.isFinite(s.samples[0][1])?s.samples[0][1]:null;\n const targets=ctx.params.targets.map(t=>{const s=result[3].result.find(s=>s.metric.job===t.job&&s.metric.instance===t.instance);const n=number(s);return {...t,status:n===1?'up':n===0?'down':'unknown'};});\n for(const s of result[3].result){const id=s.metric.job+'|'+s.metric.instance;if(!targets.some(t=>t.id===id)){const n=number(s);targets.push({id,job:s.metric.job,instance:s.metric.instance,name:s.metric.job,status:n===1?'up':n===0?'down':'unknown'});}}\n const host=targets.some(t=>t.job==='node-exporter'&&t.status==='up');\n const history=r=>(r.result[0]?r.result[0].samples:[]).map(s=>s[1]).filter(Number.isFinite).map(n=>Math.round(n*10)/10);\n const disks=result[2].result.map(s=>({id:s.metric.instance+'|'+s.metric.device+'|'+s.metric.mountpoint,mount:s.metric.mountpoint,device:s.metric.device,free:host?number(s):null})).sort((a,b)=>a.mount.localeCompare(b.mount));\n const currentDisks=disks.map(d=>d.mount);\n for(const mount of ['/','/mnt/external','/boot/efi'])if(!currentDisks.includes(mount))disks.push({id:'missing:'+mount,mount,device:'not reported',free:null});\n await ctx.publish('summary',{updated:ctx.now(),cpu:host?number(result[0].result[0]):null,memory:host?number(result[1].result[0]):null,disks,targets,cpuHistory:history(result[4]),memoryHistory:history(result[5])});\n}}"
+    }
+  },
+  {
+    "op": "put",
+    "key": {
+      "kind": "monitor_instance",
+      "id": "homelab-collection"
+    },
+    "document": {
+      "id": "homelab-collection",
+      "definition": "homelab-collect",
+      "sources": {
+        "prom": "homelab-prometheus"
+      },
+      "outputs": {
+        "summary": "homelab-summary"
+      },
+      "params": {
+        "version": 1,
+        "value": [
+          "object",
+          [
+            [
+              "queries",
+              [
+                "object",
+                [
+                  [
+                    "cpu",
+                    [
+                      "string",
+                      "100 * (1 - avg(rate(node_cpu_seconds_total{job=\"node-exporter\",mode=\"idle\"}[5m])))"
+                    ]
+                  ],
+                  [
+                    "memory",
+                    [
+                      "string",
+                      "100 * (1 - node_memory_MemAvailable_bytes{job=\"node-exporter\"} / node_memory_MemTotal_bytes{job=\"node-exporter\"})"
+                    ]
+                  ],
+                  [
+                    "disk",
+                    [
+                      "string",
+                      "100 * node_filesystem_avail_bytes{job=\"node-exporter\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\"} / node_filesystem_size_bytes{job=\"node-exporter\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\"}"
+                    ]
+                  ],
+                  [
+                    "targets",
+                    [
+                      "string",
+                      "up and (time() - timestamp(up) < 90)"
+                    ]
+                  ]
+                ]
+              ]
+            ],
+            [
+              "targets",
+              [
+                "array",
+                [
+                  [
+                    "object",
+                    [
+                      [
+                        "id",
+                        [
+                          "string",
+                          "access-gateway|access-gateway:8080"
+                        ]
+                      ],
+                      [
+                        "job",
+                        [
+                          "string",
+                          "access-gateway"
+                        ]
+                      ],
+                      [
+                        "instance",
+                        [
+                          "string",
+                          "access-gateway:8080"
+                        ]
+                      ],
+                      [
+                        "name",
+                        [
+                          "string",
+                          "Access Gateway"
+                        ]
+                      ]
+                    ]
+                  ],
+                  [
+                    "object",
+                    [
+                      [
+                        "id",
+                        [
+                          "string",
+                          "dns-collector|dns-collector:9165"
+                        ]
+                      ],
+                      [
+                        "job",
+                        [
+                          "string",
+                          "dns-collector"
+                        ]
+                      ],
+                      [
+                        "instance",
+                        [
+                          "string",
+                          "dns-collector:9165"
+                        ]
+                      ],
+                      [
+                        "name",
+                        [
+                          "string",
+                          "DNS Collector"
+                        ]
+                      ]
+                    ]
+                  ],
+                  [
+                    "object",
+                    [
+                      [
+                        "id",
+                        [
+                          "string",
+                          "idle-manager|idle-manager:8090"
+                        ]
+                      ],
+                      [
+                        "job",
+                        [
+                          "string",
+                          "idle-manager"
+                        ]
+                      ],
+                      [
+                        "instance",
+                        [
+                          "string",
+                          "idle-manager:8090"
+                        ]
+                      ],
+                      [
+                        "name",
+                        [
+                          "string",
+                          "Idle Manager"
+                        ]
+                      ]
+                    ]
+                  ],
+                  [
+                    "object",
+                    [
+                      [
+                        "id",
+                        [
+                          "string",
+                          "knot-observer|knot-observer:9170"
+                        ]
+                      ],
+                      [
+                        "job",
+                        [
+                          "string",
+                          "knot-observer"
+                        ]
+                      ],
+                      [
+                        "instance",
+                        [
+                          "string",
+                          "knot-observer:9170"
+                        ]
+                      ],
+                      [
+                        "name",
+                        [
+                          "string",
+                          "Knot Observer"
+                        ]
+                      ]
+                    ]
+                  ],
+                  [
+                    "object",
+                    [
+                      [
+                        "id",
+                        [
+                          "string",
+                          "knot-resolver|knot-resolver:8453"
+                        ]
+                      ],
+                      [
+                        "job",
+                        [
+                          "string",
+                          "knot-resolver"
+                        ]
+                      ],
+                      [
+                        "instance",
+                        [
+                          "string",
+                          "knot-resolver:8453"
+                        ]
+                      ],
+                      [
+                        "name",
+                        [
+                          "string",
+                          "Knot Resolver"
+                        ]
+                      ]
+                    ]
+                  ],
+                  [
+                    "object",
+                    [
+                      [
+                        "id",
+                        [
+                          "string",
+                          "lelloauth|lelloauth:8080"
+                        ]
+                      ],
+                      [
+                        "job",
+                        [
+                          "string",
+                          "lelloauth"
+                        ]
+                      ],
+                      [
+                        "instance",
+                        [
+                          "string",
+                          "lelloauth:8080"
+                        ]
+                      ],
+                      [
+                        "name",
+                        [
+                          "string",
+                          "LelloAuth"
+                        ]
+                      ]
+                    ]
+                  ],
+                  [
+                    "object",
+                    [
+                      [
+                        "id",
+                        [
+                          "string",
+                          "prometheus|localhost:9090"
+                        ]
+                      ],
+                      [
+                        "job",
+                        [
+                          "string",
+                          "prometheus"
+                        ]
+                      ],
+                      [
+                        "instance",
+                        [
+                          "string",
+                          "localhost:9090"
+                        ]
+                      ],
+                      [
+                        "name",
+                        [
+                          "string",
+                          "Prometheus"
+                        ]
+                      ]
+                    ]
+                  ],
+                  [
+                    "object",
+                    [
+                      [
+                        "id",
+                        [
+                          "string",
+                          "node-exporter|node-exporter:9100"
+                        ]
+                      ],
+                      [
+                        "job",
+                        [
+                          "string",
+                          "node-exporter"
+                        ]
+                      ],
+                      [
+                        "instance",
+                        [
+                          "string",
+                          "node-exporter:9100"
+                        ]
+                      ],
+                      [
+                        "name",
+                        [
+                          "string",
+                          "Host exporter"
+                        ]
+                      ]
+                    ]
+                  ],
+                  [
+                    "object",
+                    [
+                      [
+                        "id",
+                        [
+                          "string",
+                          "observo|observo:8080"
+                        ]
+                      ],
+                      [
+                        "job",
+                        [
+                          "string",
+                          "observo"
+                        ]
+                      ],
+                      [
+                        "instance",
+                        [
+                          "string",
+                          "observo:8080"
+                        ]
+                      ],
+                      [
+                        "name",
+                        [
+                          "string",
+                          "Observo"
+                        ]
+                      ]
+                    ]
+                  ],
+                  [
+                    "object",
+                    [
+                      [
+                        "id",
+                        [
+                          "string",
+                          "pezzottflix|pezzottflix:9092"
+                        ]
+                      ],
+                      [
+                        "job",
+                        [
+                          "string",
+                          "pezzottflix"
+                        ]
+                      ],
+                      [
+                        "instance",
+                        [
+                          "string",
+                          "pezzottflix:9092"
+                        ]
+                      ],
+                      [
+                        "name",
+                        [
+                          "string",
+                          "Pezzottflix"
+                        ]
+                      ]
+                    ]
+                  ],
+                  [
+                    "object",
+                    [
+                      [
+                        "id",
+                        [
+                          "string",
+                          "pezzottify-server|pezzottify-server:9091"
+                        ]
+                      ],
+                      [
+                        "job",
+                        [
+                          "string",
+                          "pezzottify-server"
+                        ]
+                      ],
+                      [
+                        "instance",
+                        [
+                          "string",
+                          "pezzottify-server:9091"
+                        ]
+                      ],
+                      [
+                        "name",
+                        [
+                          "string",
+                          "Pezzottify"
+                        ]
+                      ]
+                    ]
+                  ],
+                  [
+                    "object",
+                    [
+                      [
+                        "id",
+                        [
+                          "string",
+                          "simple-agents|simple-agents:9781"
+                        ]
+                      ],
+                      [
+                        "job",
+                        [
+                          "string",
+                          "simple-agents"
+                        ]
+                      ],
+                      [
+                        "instance",
+                        [
+                          "string",
+                          "simple-agents:9781"
+                        ]
+                      ],
+                      [
+                        "name",
+                        [
+                          "string",
+                          "Simple Agents"
+                        ]
+                      ]
+                    ]
+                  ],
+                  [
+                    "object",
+                    [
+                      [
+                        "id",
+                        [
+                          "string",
+                          "simple-ai|simple-ai:8080"
+                        ]
+                      ],
+                      [
+                        "job",
+                        [
+                          "string",
+                          "simple-ai"
+                        ]
+                      ],
+                      [
+                        "instance",
+                        [
+                          "string",
+                          "simple-ai:8080"
+                        ]
+                      ],
+                      [
+                        "name",
+                        [
+                          "string",
+                          "SimpleAI"
+                        ]
+                      ]
+                    ]
+                  ]
+                ]
+              ]
+            ]
+          ]
+        ]
+      },
+      "schedule": {
+        "kind": "interval",
+        "every_ms": 30000
+      },
+      "stale_after_ms": 90000
+    }
+  },
+  {
+    "op": "put",
+    "key": {
+      "kind": "ui",
+      "id": "homelab-metric-card"
+    },
+    "document": {
+      "source": "<Column id=\"card\" gap=\"8dp\" padding=\"12dp\"><Text id=\"title\" text={params.label}/><Status id=\"value\" text={params.value}/><Chart id=\"trend\" values={params.history} label={params.chartLabel} height=\"200dp\"/></Column>"
+    }
+  },
+  {
+    "op": "put",
+    "key": {
+      "kind": "dashboard",
+      "id": "monitor"
+    },
+    "document": {
+      "ui": "<Dashboard id=\"monitor\"><Surface id=\"main\"><Scroll id=\"scroll\"><Column id=\"overview\" gap=\"16dp\" padding=\"16dp\">\n<Text id=\"title\" text=\"Homelab overview\"/><Status id=\"status\" text={state.status}/><Text id=\"updated\" text={state.updated}/>\n<Width id=\"wide\" min=\"640dp\"><Grid id=\"metricsWide\" columns={2} gap=\"16dp\"><Use id=\"cpuWide\" definition=\"homelab-metric-card\" params={state.cpu}/><Use id=\"memoryWide\" definition=\"homelab-metric-card\" params={state.memory}/></Grid></Width>\n<Width id=\"narrow\" max=\"640dp\"><Column id=\"metricsNarrow\" gap=\"16dp\"><Use id=\"cpuNarrow\" definition=\"homelab-metric-card\" params={state.cpu}/><Use id=\"memoryNarrow\" definition=\"homelab-metric-card\" params={state.memory}/></Column></Width>\n<Text id=\"diskHeading\" text=\"Disk space available\"/><For id=\"disks\" items={state.disks} key={item.id}><Column id=\"disk\" gap=\"4dp\" padding=\"12dp\"><Text id=\"mount\" text={item.label}/><Status id=\"free\" text={item.value}/></Column></For>\n<Text id=\"servicesHeading\" text=\"Service metrics\"/><Status id=\"summary\" text={state.summary}/><Text id=\"scope\" text=\"Checks whether Prometheus can collect each service\u2019s metrics; this is not a full application health check.\"/>\n<For id=\"targets\" items={state.targets} key={item.id}><Column id=\"target\" gap=\"4dp\" padding=\"8dp\"><Status id=\"name\" text={item.label}/><Text id=\"instance\" text={item.detail}/></Column></For>\n</Column></Scroll></Surface></Dashboard>",
+      "view_model": "defineVM({\n initial:()=>({status:'Waiting for Prometheus collection\u2026',updated:'',summary:'Waiting for target status\u2026',cpu:{label:'CPU usage',value:'Unavailable',history:[],chartLabel:'CPU % \u00b7 1 hour / 5-minute samples'},memory:{label:'Memory usage',value:'Unavailable',history:[],chartLabel:'Memory % \u00b7 1 hour / 5-minute samples'},disks:[],targets:[]}),\n async start(ctx){await ctx.subscribe('homelab-summary','snapshot');},\n actions:{snapshot(ctx,event){const sample=event.value,v=sample.value,s=ctx.state();if(!v||!Array.isArray(v.targets)){ctx.commit(s,{...s.value,status:'Waiting for the first valid collection\u2026'});return;}\n const pct=n=>Number.isFinite(n)?n.toFixed(1)+'%':'Unavailable';\n const good=sample.quality==='good';const up=v.targets.filter(t=>t.status==='up').length;\n ctx.commit(s,{...s.value,status:good?'Prometheus connected \u00b7 collected every 30 seconds':'Collection '+sample.quality+' \u00b7 showing the last available readings',updated:'Last collected: '+new Date(v.updated).toISOString().replace('T',' ').replace(/\\.\\d{3}Z$/,' UTC'),summary:up+' / '+v.targets.length+' service metrics reachable',cpu:{...s.value.cpu,value:pct(v.cpu),history:v.cpuHistory},memory:{...s.value.memory,value:pct(v.memory),history:v.memoryHistory},disks:v.disks.map(d=>({id:d.id,label:d.mount+' \u00b7 '+d.device,value:Number.isFinite(d.free)?pct(d.free)+' free':'Unavailable'})),targets:v.targets.map(t=>({id:t.id,label:(t.status==='up'?'OK':t.status==='down'?'UNREACHABLE':'NO RECENT DATA')+' \u00b7 '+t.name,detail:t.instance}))});\n }}\n});",
+      "references": [
+        {
+          "kind": "ui",
+          "id": "homelab-metric-card"
+        }
+      ],
+      "params": {},
+      "grants": {
+        "reads": [
+          "homelab-summary"
+        ],
+        "writes": [],
+        "runs": []
+      }
+    }
+  }
+]
