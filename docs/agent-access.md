@@ -35,6 +35,9 @@ external effects are not undone.
 stateless JSON responses, host/origin validation and bounded request admission.
 There is no SSE push stream or transport-session resume buffer; engine subscription
 leases retain the existing explicit polling interface, scoped to the key. The
+full random key ID supplies the internal 64-hex connection identity used by
+engine and live tools; reconnecting with the same key preserves its leases, and
+a different key cannot poll them even when issued to the same account. The
 endpoint authenticates every request using the Bearer header; browser cookies,
 URL query tokens and permanent operator credentials are not accepted as substitutes.
 The standard initialize, notifications, tools/list and tools/call exchange is
@@ -52,7 +55,8 @@ automation and do not accept these temporary keys.
 
 `node dashboard/tests/access.mjs` exercises the real Rust service with a local OIDC
 provider and HTTPS proxy: creation/copy UI, SDK discovery and authoring, attribution,
-viewer isolation, wrong-origin/protocol rejection, cross-user revoke isolation,
+engine reads, key-isolated subscription polling across reconnects, live inspection,
+execution and reload (including dirty guards), viewer isolation, wrong-origin/protocol rejection, cross-user revoke isolation,
 expiry, revocation and logout. `cargo test --manifest-path engine/Cargo.toml`
 also checks role changes and credential separation. Fixtures never send real alerts.
 The MCP client SDK is a web dev dependency only; deployment builds omit it.

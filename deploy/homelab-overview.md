@@ -47,7 +47,9 @@ revision. Before removing its deployment read permission, remove the dashboard's
 read grant. Revert policy via offline provisioning using the then-current policy
 version; preserve newer data instead of restoring an old database wholesale.
 
-A separate defect discovered during verification rejects HTTP MCP engine/live
-operations: the adapter's connection ID does not meet their 64-hex-character
-contract. Saved authoring succeeds; collection was independently verified through
-read-only server diagnostics. No remote browser reload was claimed.
+At initial verification, HTTP MCP engine/live operations were rejected because
+the adapter's connection ID did not meet their 64-hex-character contract. Saved
+authoring succeeded; collection was independently verified through read-only server
+diagnostics. No remote browser reload was claimed. [TALIA-65](https://crumbles.lelloman.com/w/LLPR/TALIA/65)
+corrects the adapter and adds real HTTP SDK engine/live regression coverage; deploy
+that fix to enable remote inspection and reload.

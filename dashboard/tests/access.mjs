@@ -59,6 +59,35 @@ try{
  const catalogBody=definitions.structuredContent;
  const saved=await sdk.callTool({name:'definitions_save',arguments:{requestId:crypto.randomUUID(),changeSet:{expectedCatalogRevision:catalogBody.catalogRevision,changes:[{op:'put',key:{kind:'ui',id:'agent-test-notice'},document:{source:'<Text id="Notice" text="Agent-authored"/>'}}]}}});
  assert.equal(saved.isError,false);assert.equal(saved.structuredContent.audit.principal,issuer+'#admin');
+ // Engine and host-routed tools must work through the same official HTTP SDK.
+ const sdkTool=async(name,args={})=>{const r=await sdk.callTool({name,arguments:args});assert.equal(r.isError,false,JSON.stringify(r));return r.structuredContent;};
+ const metric=await sdkTool('engine_read',{id:'value'});assert.equal(metric.sample.value.version,1);
+ const subscription=await sdkTool('engine_subscribe',{ids:['value']});
+ assert.equal((await sdkTool('engine_poll',{subscriptionId:subscription.subscriptionId})).subscriptionId,subscription.subscriptionId);
+ // A second key for this very same account cannot borrow the first key's lease.
+ const otherKey=await api(a,{op:'agentKeyCreate'});
+ const borrowed=await(await mcp(otherKey.key,'tools/call',{name:'engine_poll',arguments:{subscriptionId:subscription.subscriptionId}})).json();
+ assert.equal(borrowed.result.isError,true);assert.equal(borrowed.result.structuredContent.error,'not_found');
+ await api(a,{op:'agentKeyRevoke',id:otherKey.id});
+ await sdk.close();
+ // Reconnecting with the original key retains the key-scoped subscription.
+ await sdk.connect(new StreamableHTTPClientTransport(new URL(origin+'/mcp'),{requestInit:{headers:{Authorization:'Bearer '+agentKey}},fetch:fixtureFetch}));
+ assert.equal((await sdkTool('engine_poll',{subscriptionId:subscription.subscriptionId})).subscriptionId,subscription.subscriptionId);
+ await sdkTool('engine_unsubscribe',{subscriptionId:subscription.subscriptionId});
+ await a.locator('.lv-sidebar a[href="#dashboard"]').click();
+ await a.waitForFunction(()=>window.dashboardReport?.registration?.connected);
+ const liveTarget=await a.evaluate(()=>{const r=talia.registration();return {clientId:r.clientId,slotId:r.slotId,liveInstanceId:r.liveInstanceId};});
+ const listed=await sdkTool('clients_list');
+ const liveSlot=listed.clients.find(c=>c.clientId===liveTarget.clientId).slots.find(s=>s.liveInstanceId===liveTarget.liveInstanceId);
+ assert.equal((await sdkTool('live_inspect',{target:liveTarget})).snapshot.dirty,false);
+ const edit=await sdkTool('live_execute',{target:liveTarget,expectedEditRevision:0,source:'const s=ctx.state();await ctx.commit(s,{...s.value,title:{text:"HTTP MCP edit"}});',requestId:crypto.randomUUID()});
+ assert.equal(edit.audit.status,'complete');await a.waitForFunction(()=>dashboardReport.dirty&&dashboardReport.state.title.text==='HTTP MCP edit');
+ const reloadArgs={target:liveTarget,expectedEditRevision:1,expectedAssignmentRevision:liveSlot.desiredAssignment.revision,requestId:crypto.randomUUID()};
+ const deniedReload=await sdk.callTool({name:'live_reload',arguments:reloadArgs});assert.equal(deniedReload.isError,true);assert.equal(deniedReload.structuredContent.error,'dirty_ack_required');
+ const reloadId=crypto.randomUUID();
+ const reloaded=await sdkTool('live_reload',{...reloadArgs,discardDirty:true,requestId:reloadId});assert.equal(reloaded.audit.status,'complete');
+ await a.waitForFunction(old=>dashboardReport.registration.connected&&dashboardReport.registration.liveInstanceId!==old&&!dashboardReport.dirty,liveTarget.liveInstanceId);
+ assert.equal((await sdkTool('operation_status',{requestId:reloadId})).outcome.liveInstanceId,await a.evaluate(()=>dashboardReport.registration.liveInstanceId));
  await sdk.close();
   const toolList=await(await mcp(agentKey,'tools/list')).json();assert.ok(toolList.result.tools.some(t=>t.name==='dashboard_access_list'));
  const policyResult=await(await mcp(agentKey,'tools/call',{name:'dashboard_access_list',arguments:{}})).json();assert.equal(policyResult.result.isError,false);
@@ -116,5 +145,5 @@ try{
  execFileSync('python3',['-c',"import sqlite3,sys; c=sqlite3.connect(sys.argv[1]); c.execute('UPDATE user_agent_keys SET expires=0 WHERE id=?',(sys.argv[2],)); c.commit()",tmp+'/engine.db',expiring.id]);
  assert.equal((await mcp(expiring.key,'tools/list')).status(),401);
  const logoutKey=await api(a,{op:'agentKeyCreate'});await a.evaluate(()=>fetch('/auth/logout',{method:'POST'}));assert.equal((await mcp(logoutKey.key,'tools/list')).status(),401);
-  console.log(JSON.stringify({passed:true,checks:['browser remains signed in past initial token expiry with rotated refresh token','persistent 30-day HttpOnly session cookie','official SDK HTTP MCP authoring with user-attributed audit','HTTP MCP initialize/list/call','one-time key UI and clipboard configuration','navigation during key creation revokes the unseen key','expiry/revocation/logout enforcement','viewer MCP isolation','Origin/protocol validation','shared LelloDesign responsive shell','theme and sidebar preserve live runtime','polling preserves sharing drafts','keyboard theme focus','mobile account placement','real OIDC boundary with local provider','viewer starts empty','admin shares from shell','viewer loads public dashboard','server rejects writes and config','account default opens on new installation','reload retains selection','mobile layout fits viewport','unsharing blocks active viewer']}));
+  console.log(JSON.stringify({passed:true,checks:['HTTP MCP engine read and key-scoped subscriptions survive reconnect','HTTP MCP live inspect/execute/reload and dirty guards','browser remains signed in past initial token expiry with rotated refresh token','persistent 30-day HttpOnly session cookie','official SDK HTTP MCP authoring with user-attributed audit','HTTP MCP initialize/list/call','one-time key UI and clipboard configuration','navigation during key creation revokes the unseen key','expiry/revocation/logout enforcement','viewer MCP isolation','Origin/protocol validation','shared LelloDesign responsive shell','theme and sidebar preserve live runtime','polling preserves sharing drafts','keyboard theme focus','mobile account placement','real OIDC boundary with local provider','viewer starts empty','admin shares from shell','viewer loads public dashboard','server rejects writes and config','account default opens on new installation','reload retains selection','mobile layout fits viewport','unsharing blocks active viewer']}));
 }finally{await browser?.close();if(engine?.pid){try{process.kill(-engine.pid,'SIGTERM');}catch{}}proxy?.close();provider?.close();rmSync(tmp,{recursive:true,force:true});}

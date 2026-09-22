@@ -95,7 +95,10 @@ async fn gate(
     };
     req.extensions_mut().insert(Auth {
         token: token.clone(),
-        connection: format!("http-{}", &info["id"].as_str().unwrap()[..48]),
+        // Engine/live operations require a 64-hex identity. The random public key
+        // ID already has that shape and scopes leases across stateless HTTP calls
+        // and reconnects without using or exposing the bearer secret.
+        connection: info["id"].as_str().unwrap().to_owned(),
         admin: info["admin"] == true,
     });
     let mut response = next.run(req).await;
