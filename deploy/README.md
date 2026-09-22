@@ -30,11 +30,31 @@ Protocol reference: [OpenID Connect Core](https://openid.net/specs/openid-connec
 ## Sessions and permissions
 
 Opaque individual sessions use Secure/HttpOnly/SameSite cookies. Only session
-hashes are stored. Provider access tokens are encrypted at rest with a key derived
-from the confidential-client secret. Browser sessions survive service restart;
-changing issuer/client/secret/origin invalidates them. Session lifetime is bounded
-by ID-token expiry and eight hours. Sign out invalidates the Talìa session;
+hashes are stored. Provider access and refresh tokens are encrypted together at
+rest with a key derived from the confidential-client secret. Browser sessions
+survive service restart; changing issuer/client/secret/origin invalidates them.
+New renewable sessions last 30 days, with automatic server-side access-token
+refresh on demand within 30 seconds of expiry. The deadline is absolute, not
+extended by activity. Sign out invalidates the Talìa session;
 LelloAuth's SSO session and other applications are unaffected.
+
+Rotation is serialized per browser session across tabs, browser APIs and agent-key
+checks; unrelated sessions can refresh concurrently. The encrypted successor is
+saved before introspection. In-flight logout never recreates a deleted session.
+A durable pending marker prevents reuse of a refresh token after an interrupted
+rotation (crash, cancellation, lost response); that session must sign in again.
+Explicit provider 5xx responses can be retried, while failed identity validation,
+invalid grants and ambiguous transport failures require a new login. A temporary
+introspection outage retains the session and its latest token pair while denying
+requests until validation succeeds.
+
+Existing sessions from before this change contain only an access token. They
+retain their original short deadline: sign in once after upgrading to obtain a
+renewable session. A provider that omits refresh tokens retains the old bounded
+session behavior. No auth table/schema change is needed; the encrypted payload
+format changed. Back up both databases before upgrading. Rolling back the binary
+cannot use new payloads and requires affected users to sign in again; preserve
+the current engine/auth databases rather than restoring stale application data.
 
 LelloAuth introspection verifies current user/app/token access on sign-in and at
 most every 30 seconds during use. Revocation fails closed; provider outages return

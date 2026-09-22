@@ -8,7 +8,7 @@ const tmp=mkdtempSync(path.join(os.tmpdir(),'talia-access-'));let engine,browser
 try{
  execFileSync('openssl',['req','-x509','-newkey','rsa:2048','-nodes','-keyout',tmp+'/tls.key','-out',tmp+'/tls.crt','-days','1','-subj','/CN=localhost','-addext','subjectAltName=DNS:localhost'],{stdio:'ignore'});
  const keys=crypto.generateKeyPairSync('rsa',{modulusLength:2048}),jwk={...keys.publicKey.export({format:'jwk'}),kid:'fixture',use:'sig',alg:'RS256'};
- let issuer,origin,port;const codes=new Map(),tokens=new Map();
+ let issuer,origin,port;const codes=new Map(),tokens=new Map(),refreshTokens=new Map(),refreshCounts=new Map();
  const json=(res,v)=>{res.setHeader('Content-Type','application/json');res.end(JSON.stringify(v));};
  provider=http.createServer(async(req,res)=>{
   const u=new URL(req.url,issuer);if(u.pathname==='/.well-known/openid-configuration')return json(res,{issuer,authorization_endpoint:issuer+'/authorize',token_endpoint:issuer+'/token',jwks_uri:issuer+'/jwks',introspection_endpoint:issuer+'/introspect',response_types_supported:['code'],id_token_signing_alg_values_supported:['RS256'],code_challenge_methods_supported:['S256'],token_endpoint_auth_methods_supported:['none','client_secret_basic']});
@@ -16,7 +16,17 @@ try{
   if(u.pathname==='/authorize'){const user=(req.headers.cookie||'').includes('fixture_admin=1')?'admin':'viewer';const code=crypto.randomUUID();codes.set(code,{user,nonce:u.searchParams.get('nonce'),challenge:u.searchParams.get('code_challenge')});const redirect=new URL(u.searchParams.get('redirect_uri'));redirect.searchParams.set('code',code);redirect.searchParams.set('state',u.searchParams.get('state'));res.writeHead(302,{Location:redirect.href});return res.end();}
   const chunks=[];for await(const c of req)chunks.push(c);const form=new URLSearchParams(Buffer.concat(chunks).toString());
   if(req.headers.authorization!=='Basic '+Buffer.from('talia:fixture-secret-with-at-least-thirty-two-characters').toString('base64')){res.statusCode=401;return res.end();}
-  if(u.pathname==='/token'){const c=codes.get(form.get('code'));codes.delete(form.get('code'));if(!c||crypto.createHash('sha256').update(form.get('code_verifier')||'').digest('base64url')!==c.challenge){res.statusCode=400;return res.end();}const now=Math.floor(Date.now()/1000),payload={iss:issuer,sub:c.user,aud:'talia',iat:now,exp:now+3600,nonce:c.nonce,name:c.user};const input=Buffer.from(JSON.stringify({alg:'RS256',kid:'fixture'})).toString('base64url')+'.'+Buffer.from(JSON.stringify(payload)).toString('base64url');const token=crypto.randomUUID();tokens.set(token,c.user);return json(res,{access_token:token,token_type:'Bearer',id_token:input+'.'+crypto.sign('RSA-SHA256',Buffer.from(input),keys.privateKey).toString('base64url')});}
+  if(u.pathname==='/token'){
+   const refreshing=form.get('grant_type')==='refresh_token';
+   const c=refreshing?refreshTokens.get(form.get('refresh_token')):codes.get(form.get('code'));
+   if(refreshing)refreshTokens.delete(form.get('refresh_token'));else codes.delete(form.get('code'));
+   if(!c||(!refreshing&&crypto.createHash('sha256').update(form.get('code_verifier')||'').digest('base64url')!==c.challenge)){res.statusCode=400;return json(res,{error:'invalid_grant'});}
+   if(refreshing)refreshCounts.set(c.user,(refreshCounts.get(c.user)||0)+1);
+   const now=Math.floor(Date.now()/1000),ttl=refreshing?3600:5,payload={iss:issuer,sub:c.user,aud:'talia',iat:now,exp:now+ttl,name:c.user,...(refreshing?{}:{nonce:c.nonce})};
+   const input=Buffer.from(JSON.stringify({alg:'RS256',kid:'fixture'})).toString('base64url')+'.'+Buffer.from(JSON.stringify(payload)).toString('base64url');
+   const token=crypto.randomUUID(),refresh=crypto.randomUUID();tokens.set(token,c.user);refreshTokens.set(refresh,c);
+   return json(res,{access_token:token,refresh_token:refresh,expires_in:ttl,token_type:'Bearer',id_token:input+'.'+crypto.sign('RSA-SHA256',Buffer.from(input),keys.privateKey).toString('base64url')});
+  }
   if(u.pathname==='/introspect'){const sub=tokens.get(form.get('token'));return json(res,{active:!!sub,sub,iss:issuer,client_id:'talia'});}res.statusCode=404;res.end();
  });provider.listen(0,'127.0.0.1');await once(provider,'listening');issuer='http://127.0.0.1:'+provider.address().port;
  proxy=https.createServer({key:readFileSync(tmp+'/tls.key'),cert:readFileSync(tmp+'/tls.crt')},(req,res)=>{const upstream=http.request({hostname:'127.0.0.1',port,path:req.url,method:req.method,headers:req.headers},r=>{res.writeHead(r.statusCode,r.headers);r.pipe(res);});upstream.on('error',()=>{res.statusCode=503;res.end();});req.pipe(upstream);});proxy.listen(0,'127.0.0.1');await once(proxy,'listening');origin='https://localhost:'+proxy.address().port;
@@ -69,7 +79,7 @@ try{
  await a.getByRole('button',{name:'Collapse sidebar',exact:true}).click();
  await a.waitForFunction(()=>Math.round(document.querySelector('.lv-sidebar').getBoundingClientRect().width)===80);
  await a.locator('.lv-sidebar a[href="#settings"]').click();await a.locator('.lv-sidebar a[href="#sharing"]').click();
- await a.waitForTimeout(10500);assert.equal(await a.locator('#share-public').isChecked(),true);
+ await a.waitForTimeout(10500);assert.equal(refreshCounts.get('admin'),1);assert.equal(refreshCounts.get('viewer'),1);assert.ok((await admin.cookies()).find(c=>c.name==='__Host-talia-session').expires-Date.now()/1000>29*86400);assert.equal(await a.locator('#share-public').isChecked(),true);
  assert.equal(await a.evaluate(()=>window.dashboardReport.registration.liveInstanceId),liveId);
  await a.emulateMedia({reducedMotion:'reduce'});assert.equal(await a.locator('.lv-scaffold').evaluate(e=>getComputedStyle(e).transitionDuration),'0s');await a.getByRole('button',{name:'Expand sidebar',exact:true}).click();
  await a.getByRole('button',{name:'Change theme: Dark',exact:true}).click();await a.keyboard.press('Home');await a.keyboard.press('Enter');
@@ -90,7 +100,7 @@ try{
  await v.emulateMedia({colorScheme:'light'});await v.waitForFunction(()=>document.querySelector('.lello-theme').dataset.lelloTheme==='blue-light');
  await v.getByRole('button',{name:'Open navigation',exact:true}).click();await v.setViewportSize({width:1280,height:900});await v.waitForFunction(()=>!document.querySelector('.lv-drawer').open);assert.equal(await v.locator('.lv-sidebar .lv-account').count(),1);
  await v.setViewportSize({width:320,height:760});assert.equal(await v.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
- // Session and account selection survive page reload.
+ // Session and account selection survive page reload past the original ID/access lifetime.
  await v.reload();await v.waitForFunction(()=>window.dashboardReport?.registration?.connected);assert.equal(await v.evaluate(()=>window.taliaDashboard.id),'monitor');
  await a.locator('.lv-sidebar a[href="#sharing"]').click();await a.locator('#share-public').uncheck();await a.locator('#save-sharing').click();await a.getByText('Dashboard sharing saved.',{exact:true}).waitFor();await v.getByRole('heading',{name:'No dashboards available yet'}).waitFor({timeout:15000});
  assert.equal((await engineCall(v,'hello',{})).error,'forbidden');assert.equal((await api(v,{op:'catalog'})).defaultDashboard,null);
@@ -106,5 +116,5 @@ try{
  execFileSync('python3',['-c',"import sqlite3,sys; c=sqlite3.connect(sys.argv[1]); c.execute('UPDATE user_agent_keys SET expires=0 WHERE id=?',(sys.argv[2],)); c.commit()",tmp+'/engine.db',expiring.id]);
  assert.equal((await mcp(expiring.key,'tools/list')).status(),401);
  const logoutKey=await api(a,{op:'agentKeyCreate'});await a.evaluate(()=>fetch('/auth/logout',{method:'POST'}));assert.equal((await mcp(logoutKey.key,'tools/list')).status(),401);
-  console.log(JSON.stringify({passed:true,checks:['official SDK HTTP MCP authoring with user-attributed audit','HTTP MCP initialize/list/call','one-time key UI and clipboard configuration','navigation during key creation revokes the unseen key','expiry/revocation/logout enforcement','viewer MCP isolation','Origin/protocol validation','shared LelloDesign responsive shell','theme and sidebar preserve live runtime','polling preserves sharing drafts','keyboard theme focus','mobile account placement','real OIDC boundary with local provider','viewer starts empty','admin shares from shell','viewer loads public dashboard','server rejects writes and config','account default opens on new installation','reload retains selection','mobile layout fits viewport','unsharing blocks active viewer']}));
+  console.log(JSON.stringify({passed:true,checks:['browser remains signed in past initial token expiry with rotated refresh token','persistent 30-day HttpOnly session cookie','official SDK HTTP MCP authoring with user-attributed audit','HTTP MCP initialize/list/call','one-time key UI and clipboard configuration','navigation during key creation revokes the unseen key','expiry/revocation/logout enforcement','viewer MCP isolation','Origin/protocol validation','shared LelloDesign responsive shell','theme and sidebar preserve live runtime','polling preserves sharing drafts','keyboard theme focus','mobile account placement','real OIDC boundary with local provider','viewer starts empty','admin shares from shell','viewer loads public dashboard','server rejects writes and config','account default opens on new installation','reload retains selection','mobile layout fits viewport','unsharing blocks active viewer']}));
 }finally{await browser?.close();if(engine?.pid){try{process.kill(-engine.pid,'SIGTERM');}catch{}}proxy?.close();provider?.close();rmSync(tmp,{recursive:true,force:true});}

@@ -1,5 +1,5 @@
 //! LelloAuth OIDC browser boundary. No shared dashboard keys or provider tokens in JavaScript.
-use crate::oidc::OidcClient;
+use crate::oidc::{OidcClient, SessionTokens};
 use axum::{
     body::Body,
     extract::{Query, Request, State},
@@ -19,7 +19,7 @@ use serde::Deserialize;
 use std::{
     collections::HashMap,
     path::PathBuf,
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, Weak},
     time::{SystemTime, UNIX_EPOCH},
 };
 #[derive(Clone)]
@@ -34,10 +34,13 @@ struct Login {
     nonce: String,
     expires: i64,
 }
+const SESSION_SECONDS: i64 = 30 * 24 * 60 * 60;
+
 struct Inner {
     db: Connection,
     logins: HashMap<String, Login>,
     checked: HashMap<String, i64>,
+    checks: HashMap<String, Weak<tokio::sync::Mutex<()>>>,
 }
 #[derive(Clone)]
 pub struct Deployment {
@@ -107,7 +110,12 @@ impl Deployment {
         .to_owned();
         let client = OidcClient::confidential(&issuer, &client_id, secret.clone())
             .await
-            .map_err(|e| { #[cfg(test)] eprintln!("OIDC fixture initialization: {e}"); let _=e; "cannot initialize OIDC provider" })?;
+            .map_err(|e| {
+                #[cfg(test)]
+                eprintln!("OIDC fixture initialization: {e}");
+                let _ = e;
+                "cannot initialize OIDC provider"
+            })?;
         let root = PathBuf::from(std::env::var("TALIA_WEB_ROOT").map_err(|_| "web root required")?)
             .canonicalize()
             .map_err(|_| "web root unavailable")?;
@@ -146,6 +154,7 @@ impl Deployment {
                 db,
                 logins: HashMap::new(),
                 checked: HashMap::new(),
+                checks: HashMap::new(),
             })),
             key: Arc::new(key),
             budget: Arc::new(tokio::sync::Semaphore::new(16)),
@@ -186,7 +195,23 @@ impl Deployment {
         self.identity_id(&id).await
     }
     pub(crate) async fn identity_id(&self, id: &str) -> Result<Identity, StatusCode> {
-        let (subject, name, token, checked) = {
+        // A single rotation per session; unrelated sessions never wait on its I/O.
+        let check = {
+            let mut inner = self.inner.lock().unwrap();
+            inner.checks.retain(|_, lock| lock.strong_count() > 0);
+            if let Some(lock) = inner.checks.get(id).and_then(Weak::upgrade) {
+                lock
+            } else {
+                if inner.checks.len() >= 1024 {
+                    return Err(StatusCode::SERVICE_UNAVAILABLE);
+                }
+                let lock = Arc::new(tokio::sync::Mutex::new(()));
+                inner.checks.insert(id.into(), Arc::downgrade(&lock));
+                lock
+            }
+        };
+        let _check = check.lock().await;
+        let (subject, name, encrypted, checked) = {
             let mut inner = self.inner.lock().unwrap();
             inner.checked.retain(|_, t| now() - *t < 30);
             let row: Option<(String, String, Vec<u8>)> = inner
@@ -201,26 +226,57 @@ impl Deployment {
             let (s, n, t) = row.ok_or(StatusCode::UNAUTHORIZED)?;
             (s, n, t, inner.checked.contains_key(id))
         };
-        if !checked {
+        let plaintext = self.open(encrypted)?;
+        // Existing sessions keep their original short expiry and can still sign out.
+        let mut tokens =
+            serde_json::from_str::<SessionTokens>(&plaintext).unwrap_or(SessionTokens {
+                access: plaintext,
+                refresh: None,
+                access_expires: i64::MAX,
+                nonce: String::new(),
+                refreshing: false,
+            });
+        if tokens.refreshing {
+            self.remove_session(id)?;
+            return Err(StatusCode::UNAUTHORIZED);
+        }
+        let refresh_due = tokens.refresh.is_some() && tokens.access_expires <= now() + 30;
+        if !checked || refresh_due {
             let _permit = self
                 .budget
                 .try_acquire()
                 .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
+            if refresh_due {
+                // Persist before consuming a rotating credential. A crash/cancellation
+                // cannot replay the old token and revoke its whole provider family.
+                tokens.refreshing = true;
+                self.store_tokens(id, &tokens)?;
+                let next = self.client.refresh_session(&tokens, &subject).await;
+                tokens = match next {
+                    Ok(t) => t,
+                    Err(crate::oidc::OidcError::RefreshUnavailable) => {
+                        tokens.refreshing = false;
+                        self.store_tokens(id, &tokens)?;
+                        return Err(StatusCode::SERVICE_UNAVAILABLE);
+                    }
+                    Err(_) => {
+                        self.remove_session(id)?;
+                        return Err(StatusCode::UNAUTHORIZED);
+                    }
+                };
+                // Save the successor before introspection; a temporary introspection
+                // outage must not lose an already rotated refresh token.
+                self.store_tokens(id, &tokens)?;
+            }
             if !self
                 .client
-                .active(&self.open(token)?, &subject)
+                .active(&tokens.access, &subject)
                 .await
                 .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?
             {
-                self.inner
-                    .lock()
-                    .unwrap()
-                    .db
-                    .execute("DELETE FROM sessions WHERE id=?", [&id])
-                    .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
+                self.remove_session(id)?;
                 return Err(StatusCode::UNAUTHORIZED);
             }
-            // A concurrent logout must not be undone by introspection completing late.
             let mut inner = self.inner.lock().unwrap();
             let exists: bool = inner
                 .db
@@ -240,6 +296,34 @@ impl Deployment {
             name,
             session_id: id.to_string(),
         })
+    }
+    fn remove_session(&self, id: &str) -> Result<(), StatusCode> {
+        let mut inner = self.inner.lock().unwrap();
+        inner.checked.remove(id);
+        inner
+            .db
+            .execute("DELETE FROM sessions WHERE id=?", [id])
+            .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
+        Ok(())
+    }
+    fn store_tokens(&self, id: &str, tokens: &SessionTokens) -> Result<(), StatusCode> {
+        let payload =
+            serde_json::to_string(tokens).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        let encrypted = self.seal(&payload)?;
+        let updated = self
+            .inner
+            .lock()
+            .unwrap()
+            .db
+            .execute(
+                "UPDATE sessions SET token=? WHERE id=? AND expires>?",
+                params![encrypted, id, now()],
+            )
+            .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
+        if updated != 1 {
+            return Err(StatusCode::UNAUTHORIZED);
+        }
+        Ok(())
     }
     pub fn routes(&self) -> Router {
         Router::new()
@@ -408,7 +492,7 @@ async fn finish(
         .budget
         .try_acquire()
         .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
-    let (claims, access) = d
+    let (claims, tokens) = d
         .client
         .exchange_session(
             &q.code.ok_or(StatusCode::UNAUTHORIZED)?,
@@ -418,21 +502,26 @@ async fn finish(
         )
         .await
         .map_err(|_| StatusCode::UNAUTHORIZED)?;
-    if access.is_empty()
+    if tokens.access.is_empty()
         || !d
             .client
-            .active(&access, &claims.sub)
+            .active(&tokens.access, &claims.sub)
             .await
             .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?
     {
         return Err(StatusCode::UNAUTHORIZED);
     }
-    let expires = (claims.exp as i64).min(now() + 28800);
+    let expires = if tokens.refresh.is_some() {
+        now() + SESSION_SECONDS
+    } else {
+        (claims.exp as i64).min(now() + 28800)
+    };
     if expires <= now() {
         return Err(StatusCode::UNAUTHORIZED);
     }
     let token = random();
-    let encrypted = d.seal(&access)?;
+    let encrypted =
+        d.seal(&serde_json::to_string(&tokens).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?)?;
     let mut inner = d.inner.lock().unwrap();
     let tx = inner
         .db
@@ -573,6 +662,7 @@ mod tests {
                 db,
                 logins: HashMap::new(),
                 checked: HashMap::new(),
+                checks: HashMap::new(),
             })),
             key: Arc::new(aead::LessSafeKey::new(
                 aead::UnboundKey::new(&aead::AES_256_GCM, &[7; 32]).unwrap(),
@@ -631,7 +721,7 @@ mod tests {
                     .unwrap()
                     .starts_with("Basic "));
                 ResponseTemplate::new(200)
-                    .set_body_json(json!({"id_token":jwt,"access_token":"private-provider-token"}))
+                    .set_body_json(json!({"id_token":jwt,"access_token":"private-provider-token","refresh_token":"private-refresh-token","expires_in":900,"token_type":"Bearer"}))
             })
             .mount(server)
             .await;
@@ -794,5 +884,245 @@ mod tests {
         )
         .await
         .is_err());
+    }
+    async fn renewable(server: &MockServer, d: &Deployment) -> (String, HeaderMap) {
+        let (state, nonce, challenge, browser) = flow(d).await;
+        token(server, &nonce, &challenge).await;
+        let (session, age) = finish(
+            d,
+            &headers(&browser),
+            Callback {
+                state: Some(state),
+                code: Some("code".into()),
+            },
+        )
+        .await
+        .unwrap();
+        assert!(age >= SESSION_SECONDS - 1);
+        let id = hash(&session);
+        let raw: Vec<u8> = d
+            .inner
+            .lock()
+            .unwrap()
+            .db
+            .query_row("SELECT token FROM sessions WHERE id=?", [&id], |r| r.get(0))
+            .unwrap();
+        assert!(!raw
+            .windows(b"private-refresh-token".len())
+            .any(|b| b == b"private-refresh-token"));
+        let mut tokens: SessionTokens = serde_json::from_str(&d.open(raw).unwrap()).unwrap();
+        tokens.access_expires = now() - 1;
+        d.store_tokens(&id, &tokens).unwrap();
+        server.reset().await;
+        (id, headers(&format!("__Host-talia-session={session}")))
+    }
+    async fn refreshed(server: &MockServer, subject: &str, delay: u64) {
+        let mut claims = valid_claims(&server.uri());
+        claims.sub = subject.into();
+        claims.nonce = None;
+        let jwt = keys().0.sign(&claims);
+        Mock::given(method("POST")).and(path("/token"))
+            .respond_with(move |r: &wiremock::Request| {
+                let form: HashMap<_,_> = url::form_urlencoded::parse(&r.body).into_owned().collect();
+                assert_eq!(form["grant_type"], "refresh_token");
+                assert_eq!(form["refresh_token"], "private-refresh-token");
+                assert!(r.headers.get("authorization").unwrap().to_str().unwrap().starts_with("Basic "));
+                ResponseTemplate::new(200).set_delay(std::time::Duration::from_millis(delay))
+                    .set_body_json(json!({"id_token":jwt,"access_token":"next-access","refresh_token":"next-refresh","expires_in":900,"token_type":"Bearer"}))
+            }).expect(1).mount(server).await;
+        Mock::given(path("/introspect"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(
+                json!({"active":true,"sub":subject,"client_id":CLIENT_ID,"iss":server.uri()}),
+            ))
+            .mount(server)
+            .await;
+    }
+    #[tokio::test]
+    async fn expired_access_refreshes_once_for_concurrent_requests_and_survives_reopen() {
+        let (server, d) = fixture().await;
+        let (id, h) = renewable(&server, &d).await;
+        refreshed(&server, "provider-subject-123", 50).await;
+        let (a, b, c) = tokio::join!(d.identity(&h), d.identity(&h), d.identity(&h));
+        assert!(a.is_ok() && b.is_ok() && c.is_ok());
+        let inner = d.inner.lock().unwrap();
+        let raw: Vec<u8> = inner
+            .db
+            .query_row("SELECT token FROM sessions WHERE id=?", [&id], |r| r.get(0))
+            .unwrap();
+        let tokens: SessionTokens = serde_json::from_str(&d.open(raw).unwrap()).unwrap();
+        assert_eq!(tokens.refresh.as_deref(), Some("next-refresh"));
+        assert_eq!(tokens.access, "next-access");
+        assert!(!tokens.refreshing);
+        let path = std::env::temp_dir().join(format!("talia-refresh-{}.db", random()));
+        inner
+            .db
+            .execute("VACUUM INTO ?", [path.to_str().unwrap()])
+            .unwrap();
+        drop(inner);
+        let reopened = Deployment {
+            inner: Arc::new(Mutex::new(Inner {
+                db: Connection::open(&path).unwrap(),
+                logins: HashMap::new(),
+                checked: HashMap::new(),
+                checks: HashMap::new(),
+            })),
+            ..d.clone()
+        };
+        assert!(reopened.identity(&h).await.is_ok());
+        drop(reopened);
+        std::fs::remove_file(path).unwrap();
+        server.verify().await;
+    }
+    #[tokio::test]
+    async fn logout_during_refresh_does_not_resurrect_session() {
+        let (server, d) = fixture().await;
+        let (id, h) = renewable(&server, &d).await;
+        refreshed(&server, "provider-subject-123", 100).await;
+        let auth = d.identity(&h);
+        let signout = async {
+            for _ in 0..100 {
+                if server
+                    .received_requests()
+                    .await
+                    .unwrap()
+                    .iter()
+                    .any(|r| r.url.path() == "/token")
+                {
+                    break;
+                }
+                tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+            }
+            logout(State(d.clone()), h.clone()).await;
+        };
+        let (result, _) = tokio::join!(auth, signout);
+        assert!(matches!(result, Err(StatusCode::UNAUTHORIZED)));
+        assert_eq!(
+            d.inner
+                .lock()
+                .unwrap()
+                .db
+                .query_row("SELECT count(*) FROM sessions WHERE id=?", [id], |r| r
+                    .get::<_, i64>(0))
+                .unwrap(),
+            0
+        );
+    }
+    #[tokio::test]
+    async fn refresh_rejects_identity_change_invalid_grant_and_interrupted_rotation() {
+        for mode in ["subject", "nonce", "audience", "grant", "interrupted"] {
+            let (server, d) = fixture().await;
+            let (id, h) = renewable(&server, &d).await;
+            if mode == "subject" {
+                refreshed(&server, "someone-else", 0).await;
+            } else if mode == "nonce" || mode == "audience" {
+                let mut claims = valid_claims(&server.uri());
+                claims.nonce = if mode == "nonce" {
+                    Some("wrong-original-nonce".into())
+                } else {
+                    None
+                };
+                if mode == "audience" {
+                    claims.aud = crate::oidc::Audience::One("another-app".into());
+                }
+                Mock::given(path("/token")).respond_with(ResponseTemplate::new(200).set_body_json(json!({
+                    "id_token":keys().0.sign(&claims),"access_token":"next-access","refresh_token":"next-refresh","expires_in":900
+                }))).expect(1).mount(&server).await;
+            } else if mode == "grant" {
+                Mock::given(path("/token"))
+                    .respond_with(
+                        ResponseTemplate::new(400).set_body_json(json!({"error":"invalid_grant"})),
+                    )
+                    .expect(1)
+                    .mount(&server)
+                    .await;
+            } else {
+                let raw: Vec<u8> = d
+                    .inner
+                    .lock()
+                    .unwrap()
+                    .db
+                    .query_row("SELECT token FROM sessions WHERE id=?", [&id], |r| r.get(0))
+                    .unwrap();
+                let mut t: SessionTokens = serde_json::from_str(&d.open(raw).unwrap()).unwrap();
+                t.refreshing = true;
+                d.store_tokens(&id, &t).unwrap();
+            }
+            assert!(matches!(
+                d.identity(&h).await,
+                Err(StatusCode::UNAUTHORIZED)
+            ));
+            assert!(matches!(
+                d.identity(&h).await,
+                Err(StatusCode::UNAUTHORIZED)
+            ));
+            server.verify().await;
+        }
+    }
+    #[tokio::test]
+    async fn refresh_outage_preserves_session_and_successor_survives_introspection_outage() {
+        let (server, d) = fixture().await;
+        let (id, h) = renewable(&server, &d).await;
+        Mock::given(path("/token"))
+            .respond_with(ResponseTemplate::new(503))
+            .mount(&server)
+            .await;
+        assert!(matches!(
+            d.identity(&h).await,
+            Err(StatusCode::SERVICE_UNAVAILABLE)
+        ));
+        server.reset().await;
+        refreshed(&server, "provider-subject-123", 0).await;
+        Mock::given(path("/introspect"))
+            .respond_with(ResponseTemplate::new(503))
+            .with_priority(1)
+            .mount(&server)
+            .await;
+        assert!(matches!(
+            d.identity(&h).await,
+            Err(StatusCode::SERVICE_UNAVAILABLE)
+        ));
+        let raw: Vec<u8> = d
+            .inner
+            .lock()
+            .unwrap()
+            .db
+            .query_row("SELECT token FROM sessions WHERE id=?", [id], |r| r.get(0))
+            .unwrap();
+        let t: SessionTokens = serde_json::from_str(&d.open(raw).unwrap()).unwrap();
+        assert_eq!(t.refresh.as_deref(), Some("next-refresh"));
+        server.verify().await;
+        server.reset().await;
+        Mock::given(path("/introspect")).respond_with(ResponseTemplate::new(200).set_body_json(json!({"active":true,"sub":"provider-subject-123","client_id":CLIENT_ID,"iss":server.uri()}))).mount(&server).await;
+        assert!(d.identity(&h).await.is_ok());
+    }
+    #[tokio::test]
+    async fn absolute_session_expiry_and_legacy_payload_remain_enforced() {
+        let (server, d) = fixture().await;
+        let (id, h) = renewable(&server, &d).await;
+        let encrypted = d.seal("legacy-access").unwrap();
+        d.inner
+            .lock()
+            .unwrap()
+            .db
+            .execute(
+                "UPDATE sessions SET token=? WHERE id=?",
+                params![encrypted, id],
+            )
+            .unwrap();
+        Mock::given(path("/introspect")).respond_with(ResponseTemplate::new(200).set_body_json(json!({"active":true,"sub":"provider-subject-123","client_id":CLIENT_ID,"iss":server.uri()}))).mount(&server).await;
+        assert!(d.identity(&h).await.is_ok());
+        d.inner
+            .lock()
+            .unwrap()
+            .db
+            .execute(
+                "UPDATE sessions SET expires=? WHERE id=?",
+                params![now() - 1, id],
+            )
+            .unwrap();
+        assert!(matches!(
+            d.identity(&h).await,
+            Err(StatusCode::UNAUTHORIZED)
+        ));
     }
 }

@@ -38,6 +38,8 @@ pub enum OidcError {
     ProviderResponseTooLarge,
     #[error("OIDC authorization code was rejected")]
     AuthorizationCodeRejected,
+    #[error("OIDC refresh endpoint unavailable")]
+    RefreshUnavailable,
     #[error("OIDC token is invalid: {0}")]
     InvalidToken(&'static str),
     #[error("OIDC signing key is unknown")]
@@ -114,6 +116,23 @@ struct OidcTokenResponse {
     id_token: String,
     #[serde(default)]
     access_token: String,
+    #[serde(default)]
+    refresh_token: Option<String>,
+    #[serde(default)]
+    expires_in: Option<u64>,
+    #[serde(default)]
+    token_type: Option<String>,
+}
+
+// Persisted only inside the authenticated-encrypted server session payload.
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SessionTokens {
+    pub access: String,
+    pub refresh: Option<String>,
+    pub access_expires: i64,
+    pub nonce: String,
+    #[serde(default)]
+    pub refreshing: bool,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -269,7 +288,7 @@ impl OidcClient {
         redirect_uri: &str,
         code_verifier: &str,
         nonce: &str,
-    ) -> Result<(OidcClaims, String), OidcError> {
+    ) -> Result<(OidcClaims, SessionTokens), OidcError> {
         if code.is_empty() || code.len() > 4_096 {
             return Err(OidcError::AuthorizationCodeRejected);
         }
@@ -308,7 +327,85 @@ impl OidcClient {
         if claims.nonce.as_deref() != Some(nonce) {
             return Err(OidcError::InvalidToken("invalid nonce"));
         }
-        Ok((claims, tokens.access_token))
+        let session = self.session_tokens(tokens, &claims, nonce)?;
+        Ok((claims, session))
+    }
+
+    fn session_tokens(
+        &self,
+        tokens: OidcTokenResponse,
+        claims: &OidcClaims,
+        nonce: &str,
+    ) -> Result<SessionTokens, OidcError> {
+        if tokens.access_token.is_empty()
+            || tokens.access_token.len() > MAX_ID_TOKEN_BYTES
+            || tokens
+                .refresh_token
+                .as_ref()
+                .is_some_and(|t| t.is_empty() || t.len() > MAX_ID_TOKEN_BYTES)
+            || tokens
+                .token_type
+                .as_ref()
+                .is_some_and(|t| !t.eq_ignore_ascii_case("Bearer"))
+        {
+            return Err(OidcError::InvalidToken("invalid token response"));
+        }
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+        let expires = match tokens.expires_in {
+            Some(ttl) if ttl > 0 && ttl <= 86400 * 365 => now + ttl,
+            Some(_) => return Err(OidcError::InvalidToken("invalid access lifetime")),
+            None => claims.exp,
+        };
+        if expires <= now {
+            return Err(OidcError::InvalidToken("expired access token"));
+        }
+        Ok(SessionTokens {
+            access: tokens.access_token,
+            refresh: tokens.refresh_token,
+            access_expires: expires as i64,
+            nonce: nonce.into(),
+            refreshing: false,
+        })
+    }
+
+    pub async fn refresh_session(
+        &self,
+        previous: &SessionTokens,
+        subject: &str,
+    ) -> Result<SessionTokens, OidcError> {
+        let refresh = previous
+            .refresh
+            .as_deref()
+            .ok_or(OidcError::AuthorizationCodeRejected)?;
+        let response = self
+            .http_client
+            .post(&self.discovery.token_endpoint)
+            .basic_auth(&self.client_id, self.client_secret.as_ref())
+            .form(&[("grant_type", "refresh_token"), ("refresh_token", refresh)])
+            .send()
+            .await?;
+        if response.status().is_client_error() {
+            return Err(OidcError::AuthorizationCodeRejected);
+        }
+        if response.status().is_server_error() {
+            return Err(OidcError::RefreshUnavailable);
+        }
+        let tokens: OidcTokenResponse =
+            decode_json_response_limited(response.error_for_status()?, TOKEN_RESPONSE_LIMIT)
+                .await?;
+        // LelloAuth returns a fresh signed ID token on an openid refresh grant.
+        let claims = self.validate_id_token(&tokens.id_token).await?;
+        if claims.sub != subject || claims.nonce.as_ref().is_some_and(|n| n != &previous.nonce) {
+            return Err(OidcError::InvalidToken("refresh identity changed"));
+        }
+        let mut next = self.session_tokens(tokens, &claims, &previous.nonce)?;
+        if next.refresh.is_none() {
+            next.refresh = previous.refresh.clone();
+        }
+        Ok(next)
     }
 
     async fn validate_id_token_for_audience(
