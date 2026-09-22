@@ -1,0 +1,552 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Event",
+  "type": "object",
+  "properties": {
+    "attempt": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Counter"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "occurred_at_ms": {
+      "$ref": "#/$defs/Counter"
+    },
+    "payload": {
+      "$ref": "#/$defs/EventPayload"
+    },
+    "sequence": {
+      "$ref": "#/$defs/Counter"
+    },
+    "session_id": {
+      "$ref": "#/$defs/Id"
+    },
+    "version": {
+      "type": "integer",
+      "format": "uint16",
+      "maximum": 1,
+      "minimum": 1
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "session_id",
+    "sequence",
+    "occurred_at_ms",
+    "payload"
+  ],
+  "$defs": {
+    "Artifact": {
+      "type": "object",
+      "properties": {
+        "artifact_id": {
+          "$ref": "#/$defs/Id"
+        },
+        "bytes": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "media_type": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "artifact_id",
+        "name",
+        "media_type",
+        "bytes",
+        "sha256"
+      ]
+    },
+    "Capability": {
+      "type": "string",
+      "enum": [
+        "network",
+        "repository_read",
+        "repository_write",
+        "external_mutation",
+        "human_input",
+        "session_resume"
+      ]
+    },
+    "CommandReceipt": {
+      "type": "object",
+      "properties": {
+        "command_id": {
+          "$ref": "#/$defs/Id"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ErrorCode"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "resource_version": {
+          "$ref": "#/$defs/Counter"
+        },
+        "session_id": {
+          "$ref": "#/$defs/Id"
+        },
+        "status": {
+          "$ref": "#/$defs/CommandStatus"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "command_id",
+        "session_id",
+        "status",
+        "resource_version"
+      ]
+    },
+    "CommandStatus": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "applied",
+        "rejected"
+      ]
+    },
+    "Counter": {
+      "type": "integer",
+      "format": "uint64",
+      "maximum": 9007199254740991,
+      "minimum": 1
+    },
+    "EffectReceipt": {
+      "type": "object",
+      "properties": {
+        "binding_id": {
+          "$ref": "#/$defs/Id"
+        },
+        "evidence": true,
+        "operation_id": {
+          "$ref": "#/$defs/Id"
+        },
+        "status": {
+          "$ref": "#/$defs/EffectStatus"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "operation_id",
+        "binding_id",
+        "status",
+        "evidence"
+      ]
+    },
+    "EffectStatus": {
+      "type": "string",
+      "enum": [
+        "applied",
+        "not_applied",
+        "uncertain"
+      ]
+    },
+    "ErrorCode": {
+      "type": "string",
+      "enum": [
+        "invalid_request",
+        "unsupported_version",
+        "unauthorized",
+        "forbidden",
+        "not_found",
+        "idempotency_conflict",
+        "stale_version",
+        "invalid_state",
+        "request_expired",
+        "capacity_unavailable",
+        "evidence_expired",
+        "cursor_expired",
+        "unavailable",
+        "internal"
+      ]
+    },
+    "EventPayload": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "from": {
+              "$ref": "#/$defs/SessionState"
+            },
+            "kind": {
+              "type": "string",
+              "const": "state_changed"
+            },
+            "reason": {
+              "type": "string"
+            },
+            "resource_version": {
+              "$ref": "#/$defs/Counter"
+            },
+            "to": {
+              "$ref": "#/$defs/SessionState"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "from",
+            "to",
+            "reason",
+            "resource_version"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "channel": {
+              "$ref": "#/$defs/OutputChannel"
+            },
+            "content": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string",
+              "const": "output"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "channel",
+            "content"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "arguments": true,
+            "call_id": {
+              "$ref": "#/$defs/Id"
+            },
+            "kind": {
+              "type": "string",
+              "const": "tool_call"
+            },
+            "name": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "call_id",
+            "name",
+            "arguments"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "call_id": {
+              "$ref": "#/$defs/Id"
+            },
+            "kind": {
+              "type": "string",
+              "const": "tool_result"
+            },
+            "result": true
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "call_id",
+            "result"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "cpu_time_secs": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0
+            },
+            "input_tokens": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0
+            },
+            "kind": {
+              "type": "string",
+              "const": "usage"
+            },
+            "output_tokens": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "cpu_time_secs",
+            "input_tokens",
+            "output_tokens"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "human_input"
+            },
+            "request": {
+              "$ref": "#/$defs/HumanRequest"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "request"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "command_updated"
+            },
+            "receipt": {
+              "$ref": "#/$defs/CommandReceipt"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "receipt"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "artifact": {
+              "$ref": "#/$defs/Artifact"
+            },
+            "kind": {
+              "type": "string",
+              "const": "artifact_available"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "artifact"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "code": {
+              "$ref": "#/$defs/Id"
+            },
+            "kind": {
+              "type": "string",
+              "const": "diagnostic"
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "code",
+            "message"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "result"
+            },
+            "result": {
+              "$ref": "#/$defs/SessionResult"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "result"
+          ]
+        }
+      ]
+    },
+    "HumanRequest": {
+      "type": "object",
+      "properties": {
+        "attempt": {
+          "$ref": "#/$defs/Counter"
+        },
+        "expires_at_ms": {
+          "$ref": "#/$defs/Counter"
+        },
+        "kind": {
+          "$ref": "#/$defs/HumanRequestKind"
+        },
+        "request_id": {
+          "$ref": "#/$defs/Id"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "request_id",
+        "attempt",
+        "expires_at_ms",
+        "kind"
+      ]
+    },
+    "HumanRequestKind": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "choices": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "kind": {
+              "type": "string",
+              "const": "question"
+            },
+            "question": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "question",
+            "choices"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "binding_id": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Id"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "capability": {
+              "$ref": "#/$defs/Capability"
+            },
+            "kind": {
+              "type": "string",
+              "const": "permission"
+            },
+            "rationale": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "capability",
+            "rationale"
+          ]
+        }
+      ]
+    },
+    "Id": {
+      "type": "string",
+      "maxLength": 128,
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$"
+    },
+    "Outcome": {
+      "type": "string",
+      "enum": [
+        "succeeded",
+        "failed",
+        "cancelled"
+      ]
+    },
+    "OutputChannel": {
+      "type": "string",
+      "enum": [
+        "instructions",
+        "context",
+        "assistant",
+        "stdout",
+        "stderr"
+      ]
+    },
+    "SessionResult": {
+      "type": "object",
+      "properties": {
+        "artifact_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Id"
+          }
+        },
+        "effect_receipts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EffectReceipt"
+          }
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "summary": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "outcome",
+        "summary",
+        "artifact_ids",
+        "effect_receipts"
+      ]
+    },
+    "SessionState": {
+      "type": "string",
+      "enum": [
+        "queued",
+        "running",
+        "waiting_for_input",
+        "pausing",
+        "paused",
+        "cancelling",
+        "interrupted",
+        "succeeded",
+        "failed",
+        "cancelled"
+      ]
+    }
+  }
+}

@@ -29,3 +29,5 @@ pub mod mcp_live;
 pub mod alerts;
 
 pub mod users;
+
+pub mod reports;

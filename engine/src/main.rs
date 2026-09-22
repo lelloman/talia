@@ -40,6 +40,7 @@ struct Service {
     engine: Engine,
     alert_policies: talia_engine::alerts::policy::Policies,
     alert_sender: talia_engine::alerts::providers::Sender,
+    reports: talia_engine::reports::worker::Worker,
     pipelines: Pipelines,
     watches: Watches,
     live: talia_engine::mcp_live::Live,
@@ -81,6 +82,7 @@ impl Service {
         let session=if http_mcp {self.engine.store.borrow().user_agent_authenticate(credential)?}else{self.engine.store.borrow().agent_authenticate(credential)?};
         if http_mcp {self.engine.store.borrow().agent_require_dashboard_admin(&session)?;}
         let r: talia_engine::mcp::Request=serde_json::from_value(body).map_err(|_|ErrorCode::InvalidInput)?;
+        if let Some(op)=r.name.strip_prefix("reports_") {return Ok(self.engine.store.borrow_mut().report_api(&session,op,r.arguments,self.engine.now()).unwrap_or_else(|error|json!({"error":error})));}
         if let Some(op)=r.name.strip_prefix("alerts_") {return Ok(self.engine.store.borrow_mut().alert_api(&session,op,r.arguments,self.engine.now()).unwrap_or_else(|error|json!({"error":error})));}
         if r.name=="_cancel_call"||r.name=="_session_close" {self.live.cancel(&session,connection,if r.name=="_cancel_call" {r.arguments["callId"].as_str()}else{None})?;}
         if r.name=="clients_list"||r.name.starts_with("live_"){return self.live.execute(&session,connection,call,r).await;}
@@ -395,6 +397,7 @@ async fn run(args:Vec<String>)->Result<()> {
     engine.store.borrow_mut().agent_recover(engine.now()).map_err(|_| "agent recovery failed".to_string())?;
     engine.store.borrow_mut().alert_recover_policies(engine.now())?;
     engine.store.borrow_mut().alert_recover_deliveries(engine.now())?;
+    engine.store.borrow().report_recover()?;
     let pipelines = Pipelines::new(engine.clone())?;
     let watches = Watches::new(pipelines.clone());
     let agent_engine=talia_engine::mcp_engine::AgentEngine::new(engine.clone(),pipelines.clone(),watches.clone());
@@ -403,6 +406,7 @@ async fn run(args:Vec<String>)->Result<()> {
         agent_engine,
         alert_policies: talia_engine::alerts::policy::Policies::new(engine.clone()),
         alert_sender: talia_engine::alerts::providers::Sender::new(engine.clone()),
+        reports: talia_engine::reports::worker::Worker::new(engine.clone()),
         engine,
         pipelines,
         watches,
@@ -448,6 +452,7 @@ async fn run(args:Vec<String>)->Result<()> {
       if let Err(e)=monitoring.alert_policies.tick(){errors.push(e);}
       if let Err(e)=monitoring.engine.store.borrow_mut().alert_schedule(monitoring.engine.now()){errors.push(e);}
       if let Err(e)=monitoring.alert_sender.tick(){errors.push(e);}
+      if let Err(e)=monitoring.reports.tick(){errors.push(e);}
       *monitoring.monitoring_error.borrow_mut()=if errors.is_empty(){None}else{Some(errors.join("; "))};
       tokio::time::sleep(Duration::from_millis(50)).await;
     }

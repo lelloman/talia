@@ -2500,6 +2500,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "simple-agents-client"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sha2",
+ "simple-agents-protocol",
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "simple-agents-protocol"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "chrono",
+ "hex",
+ "schemars",
+ "serde",
+ "serde_json",
+ "sha2",
+ "thiserror 2.0.20",
+]
+
+[[package]]
 name = "simple_asn1"
 version = "0.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2697,6 +2724,7 @@ dependencies = [
  "rusqlite",
  "serde",
  "serde_json",
+ "simple-agents-client",
  "thiserror 2.0.20",
  "tokio",
  "tower",

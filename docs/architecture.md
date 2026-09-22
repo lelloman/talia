@@ -244,3 +244,17 @@ errors and temporary live edits pause rotation. Native fullscreen and its in-pag
 fallback retain the same dashboard DOM and guest; only a playlist switch creates
 a new guest via the existing loader. The fullscreen surface contains diagnostics
 and transient accessible controls, with sibling content inert until exit.
+
+## Report execution
+
+`engine/src/reports` owns versioned workflow definitions, pinned run snapshots,
+step outcomes, agent submission identity and email delivery state in SQLite
+migration 13. The server scheduler admits non-overlapping executions; the local
+async worker advances bounded steps without holding a database transaction during
+I/O. Existing engine reads, source adapters, calendar schedules and SMTP provider
+configuration are reused. Report scripts are pure bounded QuickJS transformations;
+external LLM execution uses the pinned public Simple Agents client/protocol bundle.
+Exact persisted submissions reconcile by key across restart. HTML generation
+escapes model/source content; unknown SMTP acceptance is retained without automatic
+resend. The `reports_*` MCP tools require global authoring/admin authority and use
+persistent request IDs. See [reports](reports.md) for lifecycle and limits.

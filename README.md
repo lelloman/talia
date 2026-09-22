@@ -82,6 +82,8 @@ destinations. SMTP email, Telegram, FCM Android push and browser Web Push have p
 web and native Android expose alert controls independently of dashboard failures.
 See [alert qualification](docs/alert-qualification.md) for test evidence and limits.
 Live provider credentials, deployment preparation and homelab migration remain next;
-Simple Agents and Crumbles integration follow migration.
+General Simple Agents investigations and Crumbles integration follow migration;
+[scheduled reports](docs/reports.md) already support Simple Agents runs, composed
+HTML email, manual previews and retained execution/delivery history.
 
 Network deployment packaging and access controls: [deployment guide](deploy/README.md).

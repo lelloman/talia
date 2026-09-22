@@ -1,0 +1,28 @@
+{
+  "frame": "data",
+  "connection_generation": 1,
+  "envelope": {
+    "version": 1,
+    "message_id": "command-1",
+    "stream": "human_commands",
+    "sequence": 1,
+    "runner_id": "runner-1",
+    "workspace_id": 1,
+    "target": {
+      "scope": "session",
+      "profile_id": 2,
+      "ticket_id": "LLPR/CRUMBLES-1",
+      "run_id": "run-1",
+      "attempt": 1,
+      "session_generation": 1
+    },
+    "actor": { "kind": "human", "user_id": 3, "client_id": "web-1" },
+    "created_at": "2026-09-07T12:00:00Z",
+    "expires_at": "2026-09-07T12:01:00Z",
+    "payload": {
+      "kind": "command",
+      "expected": { "state": "active", "resource_version": 1 },
+      "action": { "command": "pause" }
+    }
+  }
+}

@@ -266,3 +266,13 @@ timer and resume with a full dwell period, without catching up missed rotations.
 Removed access pauses the current display and inaccessible playlist entries are
 skipped. Per-Screen rotation and native Android presentation controls are future
 increments, not included in TALIA-67.
+
+## Scheduled reports
+
+Talìa can compose recurrent reports from engine Variables, configured data sources,
+read-only endpoint checks, sandboxed JavaScript and tracked Simple Agents sessions,
+then retain and email formatted summaries. Simple Agents reporting is included now;
+it is not deferred behind homelab migration. Report definitions and manual previews
+are MCP-managed and execute on the server independently of clients. See
+[scheduled reports](reports.md) for the implemented workflow, scheduling,
+permissions, failure handling, durable recovery and configuration contract.

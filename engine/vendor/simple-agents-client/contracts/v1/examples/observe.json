@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "idempotency_key": "observation-2026-09-11-01",
+  "source": {
+    "system": "monitor",
+    "reference": "check-01"
+  },
+  "profile_id": "read-only-observer",
+  "work": {
+    "instructions": "Read the supplied observations and report anomalies. Do not change the observed systems.",
+    "context": "service-A: healthy; service-B: latency increased"
+  },
+  "capabilities": [],
+  "binding_ids": [],
+  "budget": {
+    "wall_time_secs": 300,
+    "cpu_time_secs": 240,
+    "memory_bytes": 536870912,
+    "max_processes": 64,
+    "workspace_bytes": 67108864,
+    "evidence_bytes": 16777216,
+    "retention_secs": 604800
+  }
+}

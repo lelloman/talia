@@ -65,6 +65,7 @@ fn setup() -> Service {
         agent_engine,
         alert_policies: talia_engine::alerts::policy::Policies::new(engine.clone()),
         alert_sender: talia_engine::alerts::providers::Sender::new(engine.clone()),
+        reports: talia_engine::reports::worker::Worker::new(engine.clone()),
         engine,
         pipelines,
         watches,

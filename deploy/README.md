@@ -113,3 +113,13 @@ subsequent provider-file changes are picked up without restarting Talìa.
 After deployment, an administrator enables browser notifications in Settings and
 an alert policy targets the displayed destination ID. Real vendor delivery and
 OS permission must be qualified on that browser; local fixtures do not prove it.
+
+## Scheduled reports and Simple Agents
+
+Reports use the existing SMTP destinations/provider file plus an optional private
+`TALIA_REPORT_AGENTS=/run/talia/report-agents.json` map and Simple Agents token file.
+Provision the caller/profile on Simple Agents, mount those files read-only for UID
+65532, and recreate the container to add the environment variable. Configure and
+preview workflows through MCP. See [scheduled reports](../docs/reports.md) for the
+provider format, complete example and restart/delivery semantics. Migration 13
+adds report tables; retain a database backup before upgrading.

@@ -49,3 +49,9 @@ The previous detailed implementation plan remains in Git at commit `c3c3e22`.
 Its stage scopes, acceptance scenario and unresolved planning topics were migrated
 to the Stories above on 2026-09-19. No production deployment, migration or legacy
 service retirement is authorized by this planning migration.
+
+Scheduled reporting workflows, including direct Simple Agents execution for report
+composition, are implemented in [TALIA-68](https://crumbles.lelloman.com/w/LLPR/TALIA/68).
+This advances the reporting subset of agent integration; general investigations,
+outcome triggers and Crumbles delegation remain in the later integration workstream.
+See [report contract and setup](reports.md).

@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CommandRequest",
+  "type": "object",
+  "properties": {
+    "action": {
+      "$ref": "#/$defs/Command"
+    },
+    "expected_resource_version": {
+      "$ref": "#/$defs/Counter"
+    },
+    "idempotency_key": {
+      "$ref": "#/$defs/Id"
+    },
+    "version": {
+      "type": "integer",
+      "format": "uint16",
+      "maximum": 1,
+      "minimum": 1
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "idempotency_key",
+    "expected_resource_version",
+    "action"
+  ],
+  "$defs": {
+    "Command": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "pause"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "cancel"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "resume"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "instructions": {
+              "type": "string",
+              "maxLength": 16384,
+              "minLength": 1
+            },
+            "kind": {
+              "type": "string",
+              "const": "steer"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "instructions"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "answer": {
+              "type": "string",
+              "maxLength": 16384,
+              "minLength": 1
+            },
+            "kind": {
+              "type": "string",
+              "const": "answer"
+            },
+            "request_id": {
+              "$ref": "#/$defs/Id"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "request_id",
+            "answer"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "approved": {
+              "type": "boolean"
+            },
+            "kind": {
+              "type": "string",
+              "const": "approve"
+            },
+            "request_id": {
+              "$ref": "#/$defs/Id"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "request_id",
+            "approved"
+          ]
+        }
+      ]
+    },
+    "Counter": {
+      "type": "integer",
+      "format": "uint64",
+      "maximum": 9007199254740991,
+      "minimum": 1
+    },
+    "Id": {
+      "type": "string",
+      "maxLength": 128,
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$"
+    }
+  }
+}
