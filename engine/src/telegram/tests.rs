@@ -590,3 +590,121 @@ async fn requests_acknowledge_once_and_refresh_typing_until_complete() {
     std::fs::remove_dir_all(dir).unwrap();
     std::fs::remove_dir_all(ai_dir).unwrap();
 }
+
+#[tokio::test]
+async fn queued_requests_expire_once_without_starting_inference() {
+    let _bot = bot_fixture().await;
+    let ai = MockServer::start().await;
+    let ai_dir = crate::ai::tests::config(&ai.uri());
+    let (w, dir) = fixture();
+    connect(&w).await;
+    pair(&w, 55, 55, true).await;
+    w.admin("admin", json!({"op":"telegramSettings","expected":1,"enabled":true,"investigations":true,"sources":[]})).await.unwrap();
+    {
+        let mut s = w.engine.store.borrow_mut();
+        for id in [60, 61] {
+            s.telegram_ingest(&json!({"update_id":id,"message":{"chat":{"id":55,"type":"private"},"from":{"id":55,"is_bot":false},"text":"Check"}}), -299000).unwrap();
+        }
+        // A retained job from the old deployment must use the new bound too.
+        s.conn
+            .execute(
+                "UPDATE telegram_jobs SET body=json_set(body,'$.deadline',601000) WHERE id=61",
+                [],
+            )
+            .unwrap();
+    }
+    w.expire_queued().unwrap();
+    w.expire_queued().unwrap();
+    w.conversation().await.unwrap();
+    {
+        let s = w.engine.store.borrow();
+        assert_eq!(
+            s.conn
+                .query_row(
+                    "SELECT count(*) FROM telegram_jobs WHERE status='failed'",
+                    [],
+                    |r| r.get::<_, i64>(0)
+                )
+                .unwrap(),
+            2
+        );
+        assert_eq!(s.conn.query_row("SELECT count(*) FROM telegram_outbox WHERE body LIKE '%timed out after five minutes%' AND status='pending'",[],|r|r.get::<_,i64>(0)).unwrap(),2);
+        assert_eq!(s.conn.query_row("SELECT count(*) FROM telegram_outbox WHERE id GLOB 'ack-*' AND status='pending'",[],|r|r.get::<_,i64>(0)).unwrap(),0);
+        assert_eq!(
+            s.conn
+                .query_row("SELECT count(*) FROM ai_runs", [], |r| r.get::<_, i64>(0))
+                .unwrap(),
+            0
+        );
+    }
+    drop(w);
+    assert!(ai.received_requests().await.unwrap().is_empty());
+    std::fs::remove_dir_all(dir).unwrap();
+    std::fs::remove_dir_all(ai_dir).unwrap();
+}
+
+#[tokio::test]
+async fn active_request_uses_remaining_budget_and_discards_late_answer() {
+    let _bot = bot_fixture().await;
+    let (w, dir) = fixture();
+    connect(&w).await;
+    pair(&w, 55, 55, true).await;
+    let ai = MockServer::start().await;
+    let ai_dir = crate::ai::tests::config(&ai.uri());
+    w.admin("admin", json!({"op":"telegramSettings","expected":1,"enabled":true,"investigations":true,"sources":[]})).await.unwrap();
+    Mock::given(path("/v1/chat/completions"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_delay(Duration::from_millis(500))
+                .set_body_json(crate::ai::tests::answer("TOO-LATE")),
+        )
+        .expect(1)
+        .mount(&ai)
+        .await;
+    // 299.8 seconds were already spent queued; only 200 ms remain.
+    w.engine.store.borrow_mut().telegram_ingest(&json!({"update_id":60,"message":{"chat":{"id":55,"type":"private"},"from":{"id":55,"is_bot":false},"text":"Check"}}), -298800).unwrap();
+    w.conversation().await.unwrap();
+    tokio::time::sleep(Duration::from_millis(550)).await;
+    w.conversation().await.unwrap();
+    {
+        let s = w.engine.store.borrow();
+        let (status, body): (String, String) = s
+            .conn
+            .query_row(
+                "SELECT status,body FROM telegram_jobs WHERE id=60",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .unwrap();
+        let body: Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(status, "failed");
+        assert_eq!(
+            body["deadline"].as_i64().unwrap() - body["created"].as_i64().unwrap(),
+            300000
+        );
+        let run = s.ai_run("telegram-60-answer-0").unwrap().unwrap();
+        assert_eq!(run.status, "failed");
+        assert!(run.error.unwrap().contains("deadline exceeded"));
+        assert_eq!(s.conn.query_row("SELECT count(*) FROM telegram_outbox WHERE body LIKE '%timed out after five minutes%'",[],|r|r.get::<_,i64>(0)).unwrap(),1);
+        assert_eq!(
+            s.conn
+                .query_row("SELECT count(*) FROM telegram_history", [], |r| r
+                    .get::<_, i64>(0))
+                .unwrap(),
+            0
+        );
+        assert_eq!(
+            s.conn
+                .query_row(
+                    "SELECT count(*) FROM telegram_outbox WHERE body LIKE '%TOO-LATE%'",
+                    [],
+                    |r| r.get::<_, i64>(0)
+                )
+                .unwrap(),
+            0
+        );
+    }
+    drop(w);
+    std::fs::remove_dir_all(dir).unwrap();
+    std::fs::remove_dir_all(ai_dir).unwrap();
+}

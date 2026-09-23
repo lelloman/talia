@@ -197,6 +197,7 @@ impl Worker {
         }
     }
     pub fn tick(&self) -> Result<()> {
+        self.expire_queued()?;
         let now = self.engine.now();
         if !self.conversation_active.get() {
             self.conversation_active.set(true);

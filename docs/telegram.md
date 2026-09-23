@@ -57,6 +57,12 @@ failure, cancellation or revoked access. Typing is best-effort: Telegram failure
 do not interrupt an investigation. Acknowledgements use the durable outgoing queue
 and its existing uncertain-delivery policy, and are never added to AI history.
 
+Each request has a five-minute total deadline from acceptance, including queue
+time, compaction and investigation. Expired queued requests never start inference.
+On timeout Talìa stops waiting, stops typing, retains failure evidence and queues
+a clear timeout reply; late results are discarded. Sending a new message starts
+a new request. Provider/network failures may still end a request earlier.
+
 Conversation state is per chat/account. `/new` starts a fresh epoch and cancels
 older local work/replies. `/compact` requests a summary; automatic compaction runs
 before an answer at 16 messages or 16 KB of recent context. Summaries keep at most

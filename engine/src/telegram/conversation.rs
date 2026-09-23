@@ -1,5 +1,6 @@
 use super::*;
 use crate::ai;
+const MESSAGE_TIMEOUT_MS: i64 = 5 * 60 * 1000;
 #[derive(Clone, Serialize, Deserialize)]
 struct Job {
     id: i64,
@@ -51,7 +52,7 @@ impl Store {
             if count>=100||own>=4{s.telegram_enqueue(&format!("busy-{uid}"),chat,"chat",Some(&user.to_string()),"Investigation queue is full. Please wait for the current work to finish.")?;return Ok(());}
             let epoch=s.conn.query_row("SELECT epoch FROM telegram_context WHERE chat=? AND user=?",params![chat,user],|r|r.get(0)).map_err(err)?;
             let report=reference.filter(|(kind,_)|kind=="report").and_then(|(_,id)|id);
-            let job=Job{id:uid,chat,user,epoch,text:text.into(),report,created:now,deadline:now+900000,revision:c.version,phase:if command=="/compact"{"compact"}else{"answer"}.into(),through:0,ai_run:None,error:None};
+            let job=Job{id:uid,chat,user,epoch,text:text.into(),report,created:now,deadline:now.saturating_add(MESSAGE_TIMEOUT_MS),revision:c.version,phase:if command=="/compact"{"compact"}else{"answer"}.into(),through:0,ai_run:None,error:None};
             s.conn.execute("INSERT INTO telegram_jobs VALUES(?,?,?,'queued',?)",params![uid,chat,user,serde_json::to_string(&job).map_err(err)?]).map_err(err)?;
             let acknowledgement=if command=="/compact"{"Got it — I’ll compact this conversation and let you know when it’s ready."}else if count>0{"Got it — your request is queued. I’ll reply here when it’s ready."}else{"Got it — I’ll look into it and reply here."};
             s.telegram_enqueue(&format!("ack-{uid}"),chat,"chat",Some(&user.to_string()),acknowledgement)?;Ok(())
@@ -68,7 +69,48 @@ impl Store {
     }
 }
 impl Worker {
+    // Queue expiry runs independently of the active inference so a backlog does
+    // not extend another message's deadline.
+    pub(super) fn expire_queued(&self) -> Result<()> {
+        let jobs: Vec<Job> = {
+            let s = self.engine.store.borrow();
+            let mut q = s.conn.prepare("SELECT body FROM telegram_jobs WHERE status='queued' AND min(json_extract(body,'$.deadline'),json_extract(body,'$.created')+?)<=? LIMIT 100").map_err(err)?;
+            let rows = q
+                .query_map([MESSAGE_TIMEOUT_MS, self.engine.now()], |r| {
+                    r.get::<_, String>(0)
+                })
+                .map_err(err)?;
+            rows.map(|r| serde_json::from_str(&r.map_err(err)?).map_err(err))
+                .collect::<Result<_>>()?
+        };
+        for mut job in jobs {
+            if self.job_allowed(&job)? {
+                self.fail_job(&mut job, "Investigation deadline exceeded".into(), true)?;
+            } else {
+                self.engine
+                    .store
+                    .borrow()
+                    .telegram_job_put(&job, "cancelled")?;
+            }
+        }
+        Ok(())
+    }
+    fn fail_job(&self, job: &mut Job, error: String, timed_out: bool) -> Result<()> {
+        job.error = Some(error);
+        self.engine.store.borrow_mut().alert_atomic(|s| {
+            s.telegram_job_put(job, "failed")?;
+            // An old acknowledgement must not arrive after the timeout notice.
+            s.conn.execute("UPDATE telegram_outbox SET status='failed' WHERE id=? AND status='pending'", [format!("ack-{}-000", job.id)]).map_err(err)?;
+            let text = if timed_out {
+                "Your request timed out after five minutes. I’ve stopped waiting for a result. You can send a new message to try again."
+            } else {
+                "The investigation failed. Its run and error are retained in Talìa; please ask an administrator to check the Telegram status."
+            };
+            s.telegram_enqueue(&format!("error-{}",job.id),job.chat,"chat",Some(&job.user.to_string()),text)
+        })
+    }
     pub(super) async fn conversation(&self) -> Result<()> {
+        self.expire_queued()?;
         // One active advance per worker; oldest outstanding job per account/chat.
         let jobs: Vec<Job> = {
             let s = self.engine.store.borrow();
@@ -79,6 +121,10 @@ impl Worker {
         };
         let mut seen = std::collections::BTreeSet::new();
         for mut job in jobs {
+            // Apply the new bound to jobs retained by older deployments too.
+            job.deadline = job
+                .deadline
+                .min(job.created.saturating_add(MESSAGE_TIMEOUT_MS));
             if !seen.insert((job.chat, job.user)) {
                 continue;
             }
@@ -102,12 +148,10 @@ impl Worker {
                 if !self.job_allowed(&job)? {
                     continue;
                 }
-                job.error = Some(error);
-                let s = self.engine.store.borrow();
-                s.telegram_job_put(&job, "failed")?;
-                {
-                    s.telegram_enqueue(&format!("error-{}",job.id),job.chat,"chat",Some(&job.user.to_string()),"The investigation failed. Its run and error are retained in Talìa; please ask an administrator to check the Telegram status.")?;
-                }
+                let timed_out = self.engine.now() >= job.deadline
+                    || error.contains("AI execution deadline exceeded")
+                    || error == "Investigation deadline exceeded";
+                self.fail_job(&mut job, error, timed_out)?;
             }
             break;
         }
