@@ -1,0 +1,1 @@
+<Dashboard id="host"><Surface id="main"><Scroll id="scroll"><Column id="root"><If id="waiting" when={!state.ready}><Text id="wait" text="Waiting for host metrics…" tone="muted"/></If><If id="ready" when={state.ready}><Use id="hostContent" definition="host-layout" params={state.presentation}/></If></Column></Scroll></Surface></Dashboard>
