@@ -124,7 +124,11 @@ impl Store {
                 for name in &r.definition.destinations {
                     let d = destinations
                         .iter()
-                        .find(|d| &d.id == name && d.enabled && ["email", "telegram"].contains(&d.channel.as_str()))
+                        .find(|d| {
+                            &d.id == name
+                                && d.enabled
+                                && ["email", "telegram"].contains(&d.channel.as_str())
+                        })
                         .ok_or("email or Telegram destination unavailable")?;
                     r.deliveries.push(Delivery {
                         destination: name.clone(),
@@ -158,11 +162,11 @@ pub fn tools() -> Vec<Value> {
     for (op,description,properties,required) in [
   ("list","List server-side reporting workflow definitions. Requires global authoring/admin access.",json!({}),vec![]),
   ("get","Read one versioned reporting definition.",json!({"id":{"type":"string"}}),vec!["id"]),
-  ("save","Create/update a reporting workflow without restart. Ordered steps support read, source, script, simple_agents. JavaScript is a synchronous function(ctx), with ctx.steps, ctx.period, ctx.now and ctx.decode(wire). compose returns {subject,summary,sections:[{title,text}]}; HTML is escaped. Simple Agents consumes explicit previous-step inputs; provider credentials/budgets are operator-owned.",json!({"definition":{"type":"object","description":"{id,version,enabled,schedule:null|{kind:daily,time:HH:MM,zone:IANA,weekdays?:[1..7]}|{kind:interval,every_ms},period_ms?,timeout_ms?,steps:[{id,optional?,kind:read,variable}|{id,optional?,kind:source,source,request:JS}|{id,optional?,kind:script,source:JS}|{id,optional?,kind:simple_agents,provider,instructions,inputs:[stepId]}],compose:JS,destinations:[emailOrTelegramDestinationId]}"},"expected":{"type":"integer","minimum":0}}),vec!["definition","expected"]),
-  ("run","Run a report now. send:false executes all steps INCLUDING Simple Agents and saves a preview without delivery; send:true also delivers. One execution per report at a time. Reuse requestId only for an identical retry.",json!({"id":{"type":"string"},"send":{"type":"boolean"}}),vec!["id","send"]),
+  ("save","Create/update a reporting workflow without restart. Ordered steps support read, source, script. JavaScript is a synchronous function(ctx), with ctx.steps, ctx.period, ctx.now and ctx.decode(wire). compose returns {subject,summary,sections:[{title,text}]}; HTML is escaped.",json!({"definition":{"type":"object","description":"{id,version,enabled,schedule:null|{kind:daily,time:HH:MM,zone:IANA,weekdays?:[1..7]}|{kind:interval,every_ms},period_ms?,timeout_ms?,steps:[{id,optional?,kind:read,variable}|{id,optional?,kind:source,source,request:JS}|{id,optional?,kind:script,source:JS}],compose:JS,destinations:[emailOrTelegramDestinationId]}"},"expected":{"type":"integer","minimum":0}}),vec!["definition","expected"]),
+  ("run","Run a report now. send:false executes all steps and saves a preview without delivery; send:true also delivers. One execution per report at a time. Reuse requestId only for an identical retry.",json!({"id":{"type":"string"},"send":{"type":"boolean"}}),vec!["id","send"]),
   ("run_get","Read frozen definition, step results, tracked agent session, report HTML/text and per-destination delivery outcomes for one run.",json!({"id":{"type":"string"}}),vec!["id"]),
   ("runs","List bounded run summaries for a report, paginated by exclusive run-ID cursor.",json!({"report":{"type":"string"},"before":{"type":"string"},"limit":{"type":"integer","minimum":1,"maximum":100}}),vec!["report"]),
-  ("deliver","Deliver an already-composed unsent preview without rerunning checks or Simple Agents. An already requested delivery cannot be replayed with a different key.",json!({"id":{"type":"string"}}),vec!["id"]),
+  ("deliver","Deliver an already-composed unsent preview without rerunning checks. An already requested delivery cannot be replayed with a different key.",json!({"id":{"type":"string"}}),vec!["id"]),
   ("prune","Delete terminal run content before UTC millisecond cutoff. Request tombstones remain to prevent replay starting new work.",json!({"before":{"type":"integer","minimum":0}}),vec!["before"]),
  ] {let read=["list","get","runs","run_get"].contains(&op);let mut props=properties;let mut req=required;if !read{props["requestId"]=json!({"type":"string","minLength":1,"maxLength":64});req.push("requestId");}tools.push(json!({"name":format!("reports_{op}"),"description":description,"inputSchema":{"type":"object","properties":props,"required":req,"additionalProperties":false},"annotations":{"readOnlyHint":read,"destructiveHint":op=="prune","idempotentHint":true,"openWorldHint":!read}}));}
     tools

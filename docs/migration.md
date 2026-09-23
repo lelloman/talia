@@ -22,7 +22,7 @@ Source links below assume sibling checkouts. Production state may differ.
 | [Metrics](../../simple-agents/docs/metrics.md) | Collection credentials are separate from session callers; Runner-loss metrics account for managed idle hosts |
 | [Homelab README](../../homelab/README.md) | Prometheus/Loki/Grafana/Alertmanager already exist; public access passes through VPS and WireGuard; README records a Promtail Docker-discovery incompatibility |
 | [Health checker](../../homelab/health-monitor/health-check.py) | Hourly SQLite snapshots, deterministic checks and direct Telegram notifications; replace with Talìa collection, storage and finding lifecycle |
-| [Investigation launcher](../../homelab/health-monitor/investigate.py) | Builds health context and launches local Codex; replace with durable Simple Agents assessments |
+| [Investigation launcher](../../homelab/health-monitor/investigate.py) | Builds health context and launches local Codex; replace with Talìa-owned assessments |
 | [Homelab Agent](../../homelab/homelab-agent/README.md), [health tools](../../homelab/homelab-agent/src/homelab_agent/tools/health.py) | CLI/Telegram assistant reads health.db and refreshes the script with suppressed alerts; migrate these tools before retiring the writer |
 | [Prometheus config](../../homelab/monitoring/prometheus.yml), [rules](../../homelab/monitoring/alerts.yml) | Preserve existing scrape/alert coverage and timing, including storage and application alerts |
 | [Alertmanager entrypoint](../../homelab/monitoring/alertmanager-entrypoint.sh) | Routes to Telegram and supports an optional additional webhook; qualify authenticated Talìa ingestion without disrupting existing delivery |
@@ -95,8 +95,8 @@ detailed specification is discussed:
 - Keep persistent MCP authoring separate from temporary live ViewModel changes;
   neither live experiments nor a client reload should silently alter saved
   definitions or roll back engine-side effects.
-- Map existing health checks to Talìa probes, Prometheus queries, Simple Agents
-  tasks or Crumbles workflows. Preserve known coverage while correcting misleading
+- Map existing health checks to Talìa probes, Prometheus queries, Talìa LLM
+  harness runs or Crumbles workflows. Preserve known coverage while correcting misleading
   missing-data and integrity-check semantics.
 - Inventory alert conditions and routes. Decide which evaluation/delivery remains
   in Prometheus/Alertmanager and which moves to Talìa, avoiding duplicate alerts
@@ -105,9 +105,8 @@ detailed specification is discussed:
   before using absence of errors as evidence.
 - Investigate the Crumbles API and define ticket creation, lifecycle tracking,
   result consumption and outcome actions. Crumbles is part of the core scope.
-- Define structured Simple Agents tasks, their results, and the permitted tools
-  needed for checks, analyses and investigations. No direct SimpleAI integration
-  or alternate local LLM execution path is planned.
+- Define bounded Talìa harness runs, their results and permitted tools for checks,
+  analyses and investigations using simple-ai completion endpoints.
 - Adapt homelab-agent health consumers and operational runbook references before
   retiring health.db updates and the local investigation launcher. Whether the
   entire conversational assistant is replaced remains open.

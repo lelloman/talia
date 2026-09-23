@@ -5,12 +5,11 @@ use crate::{
     runtime::Engine,
 };
 use std::{
-    cell::Cell,
     rc::Rc,
     sync::{Arc, Mutex},
 };
 use wiremock::{
-    matchers::{method, path, path_regex},
+    matchers::{method, path},
     Mock, MockServer, ResponseTemplate,
 };
 fn definition() -> Definition {
@@ -132,124 +131,12 @@ fn tmp() -> std::path::PathBuf {
     p
 }
 #[tokio::test]
-async fn agent_submission_reconciles_after_restart_and_composes_retained_result() {
-    agent_recovery(503).await;
-    agent_recovery(201).await;
-}
-async fn agent_recovery(submission_status: u16) {
-    let server = MockServer::start().await;
-    let dir = tmp();
-    let token = dir.join("token");
-    std::fs::write(&token, "fixture-credential").unwrap();
-    let request: Value = serde_json::from_str(include_str!(
-        "../../vendor/simple-agents-client/contracts/v1/examples/observe.json"
-    ))
-    .unwrap();
-    let provider = json!({"origin":server.uri(),"caller_id":"talia","token_file":token,"profile_id":request["profile_id"],"capabilities":[],"binding_ids":[],"budget":request["budget"]});
-    let config = dir.join("agents.json");
-    std::fs::write(&config, json!({"observer":provider}).to_string()).unwrap();
-    let submitted = Arc::new(Mutex::new(None::<Value>));
-    let received = submitted.clone();
-    Mock::given(method("POST"))
-        .and(path("/v1/sessions"))
-        .respond_with(move |r: &wiremock::Request| {
-            *received.lock().unwrap() = Some(serde_json::from_slice(&r.body).unwrap());
-            ResponseTemplate::new(submission_status)
-        })
-        .expect(1)
-        .mount(&server)
-        .await;
-    let received = submitted.clone();
-    Mock::given(method("GET")).and(path_regex("/v1/sessions/by-key/.*")).respond_with(move|_:&wiremock::Request|{
-  if let Some(r)=received.lock().unwrap().as_ref(){ResponseTemplate::new(200).set_body_json(json!({"version":1,"session_id":"session-1","caller_id":"talia","source":r["source"],"profile_id":r["profile_id"],"state":"succeeded","resource_version":2,"attempt":1,"effective":{"profile_revision":1,"engine":"fixture","engine_version":"1","capabilities":[],"binding_revisions":[],"budget":r["budget"]},"created_at_ms":1000,"retain_until_ms":99999999}))}else{ResponseTemplate::new(404)}
- }).mount(&server).await;
-    Mock::given(method("GET")).and(path("/v1/sessions/session-1/result")).respond_with(ResponseTemplate::new(200).set_body_json(json!({"outcome":"succeeded","summary":"Agent found all services healthy","artifact_ids":[],"effect_receipts":[]}))).mount(&server).await;
-    let db = dir.join("engine.db");
-    let mut s = Store::open(&db).unwrap();
-    let mut d = definition();
-    d.steps.push(serde_json::from_value(json!({"id":"analysis","kind":"simple_agents","provider":"observer","instructions":"Assess these observations","inputs":["check"]})).unwrap());
-    d.compose="ctx=>({subject:'Morning report',summary:ctx.steps.analysis.value.result.summary,sections:[]})".into();
-    s.report_save(&d, 0, 1000).unwrap();
-    let r = s.report_start("morning", "operator", false, 1000).unwrap();
-    let clock = Rc::new(Cell::new(1000));
-    let e = Engine::with_clock(s, {
-        let c = clock.clone();
-        Rc::new(move || c.get())
-    });
-    let mut worker = Worker::new(e.clone());
-    worker.agents = Some(config.to_str().unwrap().into());
-    worker.advance(&r.id).await.unwrap();
-    worker.advance(&r.id).await.unwrap();
-    worker.advance(&r.id).await.unwrap();
-    assert!(e
-        .store
-        .borrow()
-        .report_run(&r.id)
-        .unwrap()
-        .agent
-        .unwrap()
-        .session_id
-        .is_none());
-    assert!(submitted.lock().unwrap().is_some());
-    drop(worker);
-    drop(e);
-    clock.set(7000);
-    let s = Store::open(&db).unwrap();
-    s.report_recover().unwrap();
-    let e = Engine::with_clock(s, {
-        let c = clock.clone();
-        Rc::new(move || c.get())
-    });
-    let mut worker = Worker::new(e.clone());
-    worker.agents = Some(config.to_str().unwrap().into());
-    worker.advance(&r.id).await.unwrap();
-    worker.advance(&r.id).await.unwrap();
-    let done = e.store.borrow().report_run(&r.id).unwrap();
-    assert_eq!(done.status, "complete");
-    assert_eq!(
-        done.content.unwrap().summary,
-        "Agent found all services healthy"
-    );
-    assert_eq!(done.outputs["analysis"].value["session_id"], "session-1");
-    assert!(!serde_json::to_string(&done.outputs)
-        .unwrap()
-        .contains("fixture-credential"));
-    server.verify().await;
-    drop(worker);
-    drop(e);
-    std::fs::remove_dir_all(dir).unwrap();
-}
-#[tokio::test]
-async fn required_agent_failure_and_delivery_recovery_are_explicit() {
+async fn delivery_recovery_is_explicit() {
     let mut s = Store::open(":memory:").unwrap();
-    let mut d = definition();
-    d.steps=vec![serde_json::from_value(json!({"id":"analysis","kind":"simple_agents","provider":"missing","instructions":"Report","inputs":[]})).unwrap()];
-    s.report_save(&d, 0, 1000).unwrap();
+    s.report_save(&definition(), 0, 1000).unwrap();
     let mut r = s.report_start("morning", "operator", false, 1000).unwrap();
-    let request: Value = serde_json::from_str(include_str!(
-        "../../vendor/simple-agents-client/contracts/v1/examples/observe.json"
-    ))
-    .unwrap();
-    let provider: agent::Provider = serde_json::from_value(json!({
-        "origin":"http://127.0.0.1:1234", "caller_id":"talia",
-        "token_file":"/nonexistent", "profile_id":request["profile_id"],
-        "budget":request["budget"]
-    }))
-    .unwrap();
-    let pending = provider
-        .prepare("missing", &r, &d.steps[0], "Report", &[])
-        .unwrap();
-    let evidence = serde_json::to_value(&pending).unwrap();
-    r.agent = Some(pending);
-    s.report_put(&r).unwrap();
     let e = Engine::with_clock(s, Rc::new(|| 1000));
-    let mut w = Worker::new(e.clone());
-    w.agents = None;
-    w.advance(&r.id).await.unwrap();
-    let mut r = e.store.borrow().report_run(&r.id).unwrap();
-    assert_eq!(r.status, "failed");
-    assert_eq!(r.outputs["analysis"].status, "failed");
-    assert_eq!(r.outputs["analysis"].value["submission"], evidence);
+    let w = Worker::new(e.clone());
     r.status = "delivering".into();
     r.deliveries = vec![Delivery {
         destination: "mail".into(),
@@ -415,5 +302,146 @@ async fn http_inputs_and_multipart_smtp_delivery() {
         )
         .is_err());
     http.verify().await;
+    std::fs::remove_dir_all(dir).unwrap();
+}
+
+#[tokio::test]
+async fn retired_integration_migration_preserves_history_and_delivery() {
+    let dir = tmp();
+    let db = dir.join("engine.db");
+    let mut s = Store::open(&db).unwrap();
+    s.report_save(&definition(), 0, 1000).unwrap();
+    let r = s.report_start("morning", "operator", false, 1000).unwrap();
+    let legacy_step = json!({"id":"analysis","kind":"simple_agents","provider":"old-profile","instructions":"Assess","inputs":["check"]});
+    let mut old_definition = serde_json::to_value(definition()).unwrap();
+    old_definition["steps"]
+        .as_array_mut()
+        .unwrap()
+        .push(legacy_step.clone());
+    old_definition["enabled"] = json!(true);
+    s.conn
+        .execute(
+            "UPDATE report_definitions SET body=?,next_due=2000 WHERE id='morning'",
+            [old_definition.to_string()],
+        )
+        .unwrap();
+    for (id, status) in [
+        ("pending", "running"),
+        ("done", "complete"),
+        ("delivery", "delivering"),
+    ] {
+        let mut old_run = serde_json::to_value(&r).unwrap();
+        old_run["id"] = json!(id);
+        old_run["definition"] = old_definition.clone();
+        old_run["status"] = json!(status);
+        old_run["agent"] = json!({"session_id":"old-session","request":{"key":"original"}});
+        old_run["outputs"] = json!({"analysis":{"status":"succeeded","value":{"result":{"summary":"Kept evidence"}},"error":null}});
+        old_run["content"] =
+            json!({"subject":"Kept report","summary":"Already composed","sections":[]});
+        s.conn
+            .execute(
+                "INSERT INTO report_runs VALUES(?,?,?,1000,?)",
+                params![id, "morning", status, old_run.to_string()],
+            )
+            .unwrap();
+    }
+    s.conn.execute("INSERT INTO telegram_config VALUES(1,?)",[json!({"version":4,"enabled":true,"bot_id":123,"username":"bot","token":"encrypted-token","offset":71,"observer":"old-profile","sources":["prometheus"],"last_poll":1000,"error":null}).to_string()]).unwrap();
+    s.conn.execute("INSERT INTO telegram_peers VALUES(42,?)",[json!({"chat":42,"name":"Private","kind":"private","delivery":true,"investigate":true}).to_string()]).unwrap();
+    s.conn
+        .execute(
+            "INSERT INTO telegram_jobs VALUES(7,42,42,'running',?)",
+            [json!({"pending":{"session_id":"old-session"}}).to_string()],
+        )
+        .unwrap();
+    s.conn.execute("INSERT INTO telegram_history(chat,user,epoch,role,body) VALUES(42,42,0,'assistant','Past answer')",[]).unwrap();
+    s.conn.execute("INSERT INTO telegram_outbox(id,chat,kind,status,body) VALUES('chat',42,'chat','pending','Old answer'),('report',42,'report','pending','Composed report')",[]).unwrap();
+    s.conn.execute_batch("CREATE TABLE telegram_observer(id INTEGER PRIMARY KEY,hash TEXT); INSERT INTO telegram_observer VALUES(1,'old-secret-hash'); PRAGMA user_version=14;").unwrap();
+    drop(s);
+    let mut s = Store::open(&db).unwrap();
+    assert_eq!(
+        s.conn
+            .query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
+            .unwrap(),
+        15
+    );
+    let d = s.report_definition("morning").unwrap();
+    assert!(!d.enabled);
+    assert_eq!(d.version, 2);
+    match &d.steps[1].action {
+        Action::Unavailable { original, .. } => assert_eq!(original, &legacy_step),
+        _ => panic!("step was not retired"),
+    }
+    assert!(s.report_start("morning", "operator", false, 3000).is_err());
+    assert!(d.validate(&s).is_err());
+    assert!(serde_json::from_value::<Step>(legacy_step).is_err());
+    let pending = s.report_run("pending").unwrap();
+    assert_eq!(pending.status, "failed");
+    assert_eq!(
+        pending.retired_execution.unwrap()["session_id"],
+        "old-session"
+    );
+    assert_eq!(
+        s.report_run("done").unwrap().content.unwrap().summary,
+        "Already composed"
+    );
+    assert_eq!(
+        s.report_run("done").unwrap().outputs["analysis"].value["result"]["summary"],
+        "Kept evidence"
+    );
+    assert_eq!(s.report_run("delivery").unwrap().status, "delivering");
+    // A normal run is unaffected and remains executable.
+    assert_eq!(s.report_run(&r.id).unwrap().status, "queued");
+    let c = s.telegram_config().unwrap();
+    assert_eq!(c.token, "encrypted-token");
+    assert_eq!(c.offset, 71);
+    assert!(c.enabled);
+    assert_eq!(
+        s.conn
+            .query_row("SELECT status FROM telegram_jobs WHERE id=7", [], |r| {
+                r.get::<_, String>(0)
+            })
+            .unwrap(),
+        "cancelled"
+    );
+    assert_eq!(
+        s.conn
+            .query_row("SELECT body FROM telegram_history", [], |r| r
+                .get::<_, String>(0))
+            .unwrap(),
+        "Past answer"
+    );
+    assert_eq!(
+        s.conn
+            .query_row(
+                "SELECT status FROM telegram_outbox WHERE id='report'",
+                [],
+                |r| r.get::<_, String>(0)
+            )
+            .unwrap(),
+        "pending"
+    );
+    assert_eq!(
+        s.conn
+            .query_row(
+                "SELECT status FROM telegram_outbox WHERE id='chat'",
+                [],
+                |r| r.get::<_, String>(0)
+            )
+            .unwrap(),
+        "failed"
+    );
+    assert!(s.conn.prepare("SELECT * FROM telegram_observer").is_err());
+    drop(s);
+    // Reopening does not repeat the version bump or lose the archived step.
+    let s = Store::open(&db).unwrap();
+    assert_eq!(s.report_definition("morning").unwrap().version, 2);
+    let w = Worker::new(Engine::with_clock(s, Rc::new(|| 3000)));
+    w.advance(&r.id).await.unwrap();
+    w.advance(&r.id).await.unwrap();
+    assert_eq!(
+        w.engine.store.borrow().report_run(&r.id).unwrap().status,
+        "complete"
+    );
+    drop(w);
     std::fs::remove_dir_all(dir).unwrap();
 }

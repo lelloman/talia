@@ -1,4 +1,4 @@
-//! Server-owned Telegram delivery and observer conversations. No editing authority.
+//! Server-owned Telegram report and alert delivery.
 use crate::{
     runtime::Engine,
     store::{Result, Store},
@@ -7,8 +7,7 @@ use rusqlite::{params, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{cell::Cell, rc::Rc, time::Duration};
-mod conversation;
-pub mod observer;
+mod ingest;
 pub mod transport;
 use transport::{random, Bot};
 fn err(e: impl std::fmt::Display) -> String {
@@ -23,9 +22,6 @@ pub struct Config {
     pub username: String,
     pub token: String,
     pub offset: i64,
-    pub observer: String,
-    #[serde(default)]
-    pub sources: Vec<String>,
     pub last_poll: Option<i64>,
     pub error: Option<String>,
 }
@@ -233,7 +229,6 @@ impl Worker {
             current.last_poll = Some(self.engine.now());
             s.telegram_put(&current)?;
         }
-        self.conversation().await?;
         self.dispatch(&bot, c.version).await?;
         updates.map(|_| ())
     }
@@ -319,7 +314,6 @@ impl Worker {
         self.require_admin(subject)?;
         let op = args["op"].as_str().ok_or("operation required")?;
         if op == "telegramStatus" {
-            let profiles = observer::profiles().await.unwrap_or_default();
             self.require_admin(subject)?;
             let s = self.engine.store.borrow();
             let c = s.telegram_config()?;
@@ -356,7 +350,7 @@ impl Worker {
             let mut jobs=s.conn.prepare("SELECT id,status,json_extract(body,'$.error'),json_extract(body,'$.pending.session_id') FROM telegram_jobs ORDER BY id DESC LIMIT 20").map_err(err)?;
             let jobs=jobs.query_map([],|r|Ok(json!({"id":r.get::<_,i64>(0)?,"status":r.get::<_,String>(1)?,"error":r.get::<_,Option<String>>(2)?,"session":r.get::<_,Option<String>>(3)?}))).map_err(err)?.collect::<std::result::Result<Vec<_>,_>>().map_err(err)?;
             return Ok(
-                json!({"jobs":jobs,"version":c.version,"enabled":c.enabled,"bot":c.username,"observer":c.observer,"sources":c.sources,"profiles":profiles,"lastPoll":c.last_poll,"error":c.error,"peers":peers,"users":users,"pairs":pairs,"deliveries":deliveries}),
+                json!({"jobs":jobs,"version":c.version,"enabled":c.enabled,"bot":c.username,"investigationsAvailable":false,"lastPoll":c.last_poll,"error":c.error,"peers":peers,"users":users,"pairs":pairs,"deliveries":deliveries}),
             );
         }
         if op == "telegramConnect" {
@@ -405,30 +399,14 @@ impl Worker {
             return Ok(json!({"connected":true}));
         }
         if op == "telegramSettings" {
-            let name = args["observer"].as_str().ok_or("observer required")?;
-            if !name.is_empty() {
-                observer::provider(name).await?;
+            if args.get("observer").is_some() || args.get("sources").is_some() {
+                return Err("Investigation configuration is no longer supported".into());
             }
-            self.require_admin(subject)?;
             let s = self.engine.store.borrow();
             let mut c = s.telegram_config()?;
             if args["expected"].as_u64() != Some(c.version) {
                 return Err("Telegram configuration changed; refresh".into());
             }
-            let sources: Vec<String> = serde_json::from_value(args["sources"].clone())
-                .map_err(|_| "source IDs required")?;
-            if sources.len() > 32 {
-                return Err("too many sources".into());
-            }
-            for source in &sources {
-                s.monitoring_config()?.source(source)?;
-            }
-            if c.observer != name {
-                s.conn.execute("UPDATE telegram_jobs SET status='cancelled' WHERE status IN ('queued','running')",[]).map_err(err)?;
-                s.conn.execute("UPDATE telegram_outbox SET status='failed' WHERE kind='chat' AND status='pending'",[]).map_err(err)?;
-            }
-            c.observer = name.into();
-            c.sources = sources;
             c.enabled = args["enabled"].as_bool().ok_or("enabled required")?;
             if c.enabled && c.token.is_empty() {
                 return Err("Connect a bot first".into());
@@ -439,26 +417,106 @@ impl Worker {
         }
         let mut s = self.engine.store.borrow_mut();
         match op {
-            "telegramPair"=>{let code=random()?;s.conn.execute("DELETE FROM telegram_pairs WHERE expires<=?",[self.engine.now()]).map_err(err)?;let n:i64=s.conn.query_row("SELECT count(*) FROM telegram_pairs",[],|r|r.get(0)).map_err(err)?;if n>=10{return Err("pairing limit".into());}s.conn.execute("INSERT INTO telegram_pairs VALUES(?,?,NULL)",params![code,self.engine.now()+600000]).map_err(err)?;Ok(json!({"code":code}))},
-            "telegramApprove"=>s.alert_atomic(|s|{
-                let code=args["code"].as_str().ok_or("code required")?;
-                let body:String=s.conn.query_row("SELECT body FROM telegram_pairs WHERE code=? AND expires>?",params![code,self.engine.now()],|r|r.get(0)).map_err(|_|"pairing expired or not claimed")?;
-                let candidate:Value=serde_json::from_str(&body).map_err(err)?;
-                let chat=candidate["chat"].as_i64().ok_or("chat missing")?;
-                let delivery=args["delivery"].as_bool().ok_or("delivery required")?;
-                let investigate=args["investigate"].as_bool().ok_or("investigate required")?;
-                if investigate&&candidate["user"].as_i64().is_none(){return Err("Channels are delivery-only; pair a personal account separately".into());}
-                let p=Peer{chat,name:candidate["name"].as_str().unwrap_or("").chars().take(128).collect(),kind:candidate["kind"].as_str().unwrap_or("").into(),delivery,investigate};
-                s.telegram_save_peer(&p,self.engine.now())?;
-                if investigate{let user=candidate["user"].as_i64().unwrap();s.conn.execute("INSERT INTO telegram_users VALUES(?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name",params![user,candidate["user_name"].as_str().unwrap_or("")]).map_err(err)?;}
-                s.conn.execute("DELETE FROM telegram_pairs WHERE code=?",[code]).map_err(err)?;Ok(json!({"approved":true}))
+            "telegramPair" => {
+                let code = random()?;
+                s.conn
+                    .execute(
+                        "DELETE FROM telegram_pairs WHERE expires<=?",
+                        [self.engine.now()],
+                    )
+                    .map_err(err)?;
+                let n: i64 = s
+                    .conn
+                    .query_row("SELECT count(*) FROM telegram_pairs", [], |r| r.get(0))
+                    .map_err(err)?;
+                if n >= 10 {
+                    return Err("pairing limit".into());
+                }
+                s.conn
+                    .execute(
+                        "INSERT INTO telegram_pairs VALUES(?,?,NULL)",
+                        params![code, self.engine.now() + 600000],
+                    )
+                    .map_err(err)?;
+                Ok(json!({"code":code}))
+            }
+            "telegramApprove" => s.alert_atomic(|s| {
+                let code = args["code"].as_str().ok_or("code required")?;
+                let body: String = s
+                    .conn
+                    .query_row(
+                        "SELECT body FROM telegram_pairs WHERE code=? AND expires>?",
+                        params![code, self.engine.now()],
+                        |r| r.get(0),
+                    )
+                    .map_err(|_| "pairing expired or not claimed")?;
+                let candidate: Value = serde_json::from_str(&body).map_err(err)?;
+                let chat = candidate["chat"].as_i64().ok_or("chat missing")?;
+                let delivery = args["delivery"].as_bool().ok_or("delivery required")?;
+                let investigate = args["investigate"].as_bool().unwrap_or(false);
+                if investigate {
+                    return Err("Investigations are currently unavailable".into());
+                }
+                let p = Peer {
+                    chat,
+                    name: candidate["name"]
+                        .as_str()
+                        .unwrap_or("")
+                        .chars()
+                        .take(128)
+                        .collect(),
+                    kind: candidate["kind"].as_str().unwrap_or("").into(),
+                    delivery,
+                    investigate,
+                };
+                s.telegram_save_peer(&p, self.engine.now())?;
+                s.conn
+                    .execute("DELETE FROM telegram_pairs WHERE code=?", [code])
+                    .map_err(err)?;
+                Ok(json!({"approved":true}))
             }),
-            "telegramPeer"=>{let mut p:Peer=serde_json::from_value(args["peer"].clone()).map_err(|_|"invalid destination")?;let old=s.telegram_peers()?.into_iter().find(|v|v.chat==p.chat).ok_or("pair the destination first")?;p.kind=old.kind;p.name=old.name;if p.kind=="channel"&&p.investigate{return Err("channel investigations unavailable".into());}s.telegram_save_peer(&p,self.engine.now())?;Ok(json!({"saved":true}))},
-            "telegramRevokeUser"=>{let user=args["id"].as_i64().ok_or("numeric user ID required")?;s.conn.execute("DELETE FROM telegram_users WHERE id=?",[user]).map_err(err)?;s.conn.execute("UPDATE telegram_jobs SET status='cancelled' WHERE user=? AND status IN ('queued','running')",[user]).map_err(err)?;s.conn.execute("UPDATE telegram_outbox SET status='failed' WHERE kind='chat' AND reference=? AND status='pending'",[user.to_string()]).map_err(err)?;Ok(json!({"revoked":true}))},
-            "telegramTest"=>{let chat=args["chat"].as_i64().ok_or("chat required")?;if !s.telegram_peers()?.iter().any(|p|p.chat==chat&&p.delivery){return Err("delivery destination not enabled".into());}let id=random()?;s.telegram_enqueue(&id,chat,"test",None,"Talìa Telegram connection test.")?;Ok(json!({"queued":true}))},
-            "telegramObserverKey"=>{let token=format!("to_{}",random()?);s.conn.execute("INSERT INTO telegram_observer VALUES(1,?) ON CONFLICT(id) DO UPDATE SET hash=excluded.hash",[transport::hash(&token)]).map_err(err)?;Ok(json!({"token":token}))},
-            "telegramObserverRevoke"=>{s.conn.execute("DELETE FROM telegram_observer",[]).map_err(err)?;Ok(json!({"revoked":true}))},
-            _=>Err("unknown Telegram operation".into())
+            "telegramPeer" => {
+                let mut p: Peer = serde_json::from_value(args["peer"].clone())
+                    .map_err(|_| "invalid destination")?;
+                let old = s
+                    .telegram_peers()?
+                    .into_iter()
+                    .find(|v| v.chat == p.chat)
+                    .ok_or("pair the destination first")?;
+                if p.investigate && !old.investigate {
+                    return Err("Investigations are currently unavailable".into());
+                }
+                p.kind = old.kind;
+                p.name = old.name;
+                if p.kind == "channel" && p.investigate {
+                    return Err("channel investigations unavailable".into());
+                }
+                s.telegram_save_peer(&p, self.engine.now())?;
+                Ok(json!({"saved":true}))
+            }
+            "telegramRevokeUser" => {
+                let user = args["id"].as_i64().ok_or("numeric user ID required")?;
+                s.conn
+                    .execute("DELETE FROM telegram_users WHERE id=?", [user])
+                    .map_err(err)?;
+                s.conn.execute("UPDATE telegram_jobs SET status='cancelled' WHERE user=? AND status IN ('queued','running')",[user]).map_err(err)?;
+                s.conn.execute("UPDATE telegram_outbox SET status='failed' WHERE kind='chat' AND reference=? AND status='pending'",[user.to_string()]).map_err(err)?;
+                Ok(json!({"revoked":true}))
+            }
+            "telegramTest" => {
+                let chat = args["chat"].as_i64().ok_or("chat required")?;
+                if !s
+                    .telegram_peers()?
+                    .iter()
+                    .any(|p| p.chat == chat && p.delivery)
+                {
+                    return Err("delivery destination not enabled".into());
+                }
+                let id = random()?;
+                s.telegram_enqueue(&id, chat, "test", None, "Talìa Telegram connection test.")?;
+                Ok(json!({"queued":true}))
+            }
+            _ => Err("unknown Telegram operation".into()),
         }
     }
     fn require_admin(&self, subject: &str) -> Result<()> {

@@ -3,7 +3,7 @@
 Implementation is tracked by [TALIA-47](https://crumbles.lelloman.com/w/LLPR/TALIA/47).
 This contract captures the accepted design; qualification records separately state
 which paths have implementation evidence. Alerts precede deployment and homelab
-migration. Simple Agents and Crumbles delegation follow migration.
+migration. LLM investigations and Crumbles delegation follow migration.
 
 ## Identity, lifecycle and authority
 

@@ -34,7 +34,7 @@ flowchart TD
     MCP <-->|Direct engine access| E
     E <--> P[Prometheus]
     E <--> D[Direct probes]
-    E <--> S[Simple Agents]
+    E <--> S[simple-ai completions — planned]
     E <--> C[Crumbles]
     E --> N[Notifications]
 ```
@@ -113,8 +113,8 @@ checks, schedules and alerts through MCP; humans interact with the resulting UI.
 P4 exposes MCP to external agents. Embedded chat is outside this stage.
 
 Prometheus supplies current and historical metrics. Direct probes supply further
-observations. Talìa-managed LLM-assisted checks, analyses and investigations run
-through Simple Agents, without a direct SimpleAI integration. Crumbles provides
+observations. Planned LLM-assisted checks, analyses and investigations use a Talìa-owned
+harness calling simple-ai completions. Talìa owns tool permissions and execution. Crumbles provides
 ticket workflows whose lifecycle and outcomes Talìa follows and acts upon.
 
 Engine checks and task workflows are distinct from dashboard-local UI behavior;
@@ -136,24 +136,18 @@ These are concepts, not a database schema:
 | Watch definition / instance | Shared JS behavior, per-instance parameters and durable state |
 | Shared definition / reference | Reuse across Watches, UI elements, ViewModel elements and functions |
 | Scheduled task and run | Recurring work and a particular execution |
-| Delegated work reference | Simple Agents session or Crumbles ticket, progress and outcome |
+| Delegated work reference | Crumbles ticket, progress and outcome |
 | Alert rule and occurrence | Condition/actions and an instance of that condition |
 | Outcome trigger | Action selected from monitored work's result or lifecycle |
 | Notification or follow-up action | Delivery or execution caused by a rule/trigger |
 
 ## Existing integration evidence
 
-The inspected [Simple Agents public contract](../../simple-agents/contracts/v1/README.md)
-supports repository-free sessions, bounded execution, progress events, results,
-controls, and caller-scoped idempotency. Its
-[client documentation](../../simple-agents/docs/CLIENT.md) describes replay and
-reconciliation. These are available mechanisms, not a choice of client language
-or polling transport.
-
-Crumbles' Talìa-facing contract has not been investigated or defined. Ticket
-creation, lifecycle observation, result retrieval and outcome semantics require
-that work. Do not infer these operations from Simple Agents' contract or assume
-that a closed ticket proves a successful check.
+simple-ai exposes `/v1/chat/completions`. The planned Talìa harness will own
+bounded model/tool execution, permissions, context and persisted outcomes. Its
+implementation is separate from the removal of the external agent integration.
+Crumbles lifecycle and result semantics still require a dedicated contract;
+a closed ticket alone does not prove a successful check.
 
 ## Decisions still to make
 
@@ -207,7 +201,7 @@ Client-owned connection state survives dashboard failure. A new server incarnati
 
 See [configurable alerts](alerts.md) for the accepted staged-policy, acknowledgement,
 silence, destination and durable delivery model. Android push, browser Web Push, email and Telegram
-alert delivery precede deployment and homelab migration; Simple Agents and Crumbles
+alert delivery precede deployment and homelab migration; LLM investigations and Crumbles
 delegation follow migration. The original alert workstream is tracked in TALIA-47; browser destinations in TALIA-66.
 
 
@@ -248,13 +242,12 @@ and transient accessible controls, with sibling content inert until exit.
 ## Report execution
 
 `engine/src/reports` owns versioned workflow definitions, pinned run snapshots,
-step outcomes, agent submission identity and email delivery state in SQLite
+step outcomes and email delivery state in SQLite
 migration 13. The server scheduler admits non-overlapping executions; the local
 async worker advances bounded steps without holding a database transaction during
 I/O. Existing engine reads, source adapters, calendar schedules and SMTP provider
 configuration are reused. Report scripts are pure bounded QuickJS transformations;
-external LLM execution uses the pinned public Simple Agents client/protocol bundle.
-Exact persisted submissions reconcile by key across restart. HTML generation
+LLM analysis is planned through the local harness. HTML generation
 escapes model/source content; unknown SMTP acceptance is retained without automatic
 resend. The `reports_*` MCP tools require global authoring/admin authority and use
 persistent request IDs. See [reports](reports.md) for lifecycle and limits.
@@ -265,7 +258,8 @@ The server owns Telegram polling, atomic update admission, pairing and independe
 chat/user permissions. Bot tokens use authenticated encryption with a private
 sidecar key. A durable outbox tracks each plain-text message part and records
 unknown acceptance without retry. Reports use this outbox and retain reply links
-outside conversation history. Observer jobs reuse the pinned Simple Agents client
-and exact-key recovery, with explicit bounded context and summary runs. A separate
-service credential on HTTP MCP exposes only cached reads and approved source
-probes; browser authoring authority is not inherited. See [Telegram](telegram.md).
+outside conversation history. The external observer executor and service MCP
+credential have been removed. Migration 15 cancels pending investigations,
+disables affected report definitions and retains historical evidence. Telegram
+currently handles pairing and delivery; future chat uses the Talìa-owned harness.
+See [Telegram](telegram.md).

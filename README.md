@@ -10,14 +10,15 @@ Its three purposes are:
 1. **Dashboards for humans.** Agents define interactive interfaces through MCP,
    using Prometheus metrics, probe results, and delegated task status and outcomes.
    Web and native Android clients render the same UI and logic definitions.
-2. **Periodic checks and tasks.** Run direct probes or delegate structured work
-   to Simple Agents and Crumbles, following that work through completion.
+2. **Periodic checks and tasks.** Run direct probes and report workflows. Planned
+   LLM assistance uses a Talìa-owned harness; Crumbles delegation remains future work.
 3. **Anomaly detection and alerts.** Agents configure conditions and actions
    through MCP, including notifications and follow-up work.
 
 Prometheus continues collecting and storing metrics; Talìa consumes them.
-Simple Agents executes all LLM-assisted work. Crumbles supplies ticket workflows.
-Talìa has no direct SimpleAI integration.
+The planned LLM harness will call simple-ai completion endpoints. Talìa will own
+its tools, permissions, context and execution lifecycle. Crumbles supplies future
+ticket workflows.
 
 Dashboards use restricted JSX-like UI definitions and separate JavaScript
 ViewModels, backed by a stable engine interface for read, write and subscribe
@@ -82,10 +83,11 @@ destinations. SMTP email, Telegram, FCM Android push and browser Web Push have p
 web and native Android expose alert controls independently of dashboard failures.
 See [alert qualification](docs/alert-qualification.md) for test evidence and limits.
 Live provider credentials, deployment preparation and homelab migration remain next;
-General Simple Agents investigations and Crumbles integration follow migration;
-[scheduled reports](docs/reports.md) already support Simple Agents runs, composed
+LLM investigations and Crumbles integration remain separate work;
+[scheduled reports](docs/reports.md) support data collection, scripts, composed
 HTML email, manual previews and retained execution/delivery history.
 
 Network deployment packaging and access controls: [deployment guide](deploy/README.md).
 
-Telegram bot setup, report delivery and read-only investigations are managed in web Settings. See [Telegram integration](docs/telegram.md).
+Telegram bot setup and report delivery are managed in web Settings. Investigations
+are currently unavailable following removal of the external agent integration. See [Telegram integration](docs/telegram.md).

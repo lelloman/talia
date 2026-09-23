@@ -79,10 +79,6 @@ impl Service {
     }
     async fn agent_execute(&self, credential:&str, connection:&str, call:&str, body:Value, http_mcp:bool)->talia_engine::authority::Result<Value> {
         use talia_engine::authority::ErrorCode;
-        if http_mcp && credential.starts_with("to_") {
-            if body["name"]=="_key_auth" {return self.engine.store.borrow().telegram_observer_auth(credential).map_err(|_|ErrorCode::Unauthenticated);}
-            return Ok(talia_engine::telegram::observer::execute(&self.engine,credential,body["name"].as_str().unwrap_or(""),body["arguments"].clone()).await.unwrap_or_else(|error|json!({"error":error})));
-        }
         if http_mcp && body["name"]=="_key_auth" {let store=self.engine.store.borrow();let mut info=store.user_key_info(credential)?;info["admin"]=json!(store.user_admin(info["subject"].as_str().unwrap())?);return Ok(info)}
         let session=if http_mcp {self.engine.store.borrow().user_agent_authenticate(credential)?}else{self.engine.store.borrow().agent_authenticate(credential)?};
         if http_mcp {self.engine.store.borrow().agent_require_dashboard_admin(&session)?;}

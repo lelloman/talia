@@ -50,8 +50,7 @@ Dashboards combine:
 
 - Current values and historical time series queried from Prometheus.
 - Results from Talìa's own probes and checks.
-- Status and outcomes of Simple Agents sessions and Crumbles tickets tracked
-  by Talìa.
+- Status and outcomes of Talìa checks and future Crumbles tickets.
 
 Prometheus remains responsible for scraping services and storing metrics. Talìa
 consumes that data for dashboards, checks, anomaly evaluation, and investigation
@@ -70,18 +69,16 @@ use any of these mechanisms:
 | Mechanism | Purpose |
 |---|---|
 | Direct check | Query Prometheus, hit an endpoint, or perform a Talìa probe |
-| Simple Agents session | Execute structured LLM-assisted checks, analysis, and investigations, including tool-using work |
+| Talìa LLM harness (planned) | Execute bounded checks, analysis and investigations using simple-ai completions |
 | Crumbles ticket | Delegate work that benefits from a ticket and its workflow |
 
-Talìa-managed LLM-assisted monitoring execution goes through Simple Agents. Talìa does not call
-SimpleAI directly or implement its own LLM tool loop. Simple Agents sessions
-can be submitted directly without creating a Crumbles ticket first.
+Talìa will own its LLM harness and call simple-ai completion endpoints directly.
+Tool permissions, context, compaction and outcome tracking belong to Talìa. The
+previous external-agent integration has been removed; the new harness is not yet
+implemented. Deterministic probes and report scripts remain available.
 
-Delegation includes lifecycle tracking, not just submission. Talìa follows
-Simple Agents sessions and Crumbles tickets through progress and completion,
-consumes their results, and supports configurable outcome triggers. Crumbles
-integration remains part of the product scope, with implementation scheduled after
-homelab migration. Alert delivery is implemented first.
+Crumbles delegation includes lifecycle tracking and outcome triggers, not just
+submission. Its implementation remains scheduled after homelab migration.
 
 Illustrative triggers include notifying on a failed outcome, starting a
 follow-up investigation, or issuing another check or ticket based on a result.
@@ -100,7 +97,7 @@ when it fires or recovers. Available action categories are:
 
 - Present alert state to dashboards and optionally deliver Android push, browser Web Push, email,
   or Telegram notifications using staged, reusable response policies.
-- Start a structured task in Simple Agents (post-migration integration).
+- Start a bounded Talìa investigation (future harness work).
 - Issue a Crumbles ticket and track its lifecycle and outcome (post-migration integration).
 
 Alerts and outcome triggers connect monitoring to follow-up work. For example,
@@ -165,11 +162,10 @@ shared-reader cancellation and other open details.
 |---|---|
 | Talìa | Dashboard and alert configuration, Prometheus consumption, probes, scheduling, delegated-work tracking, outcome triggers, alerts |
 | Prometheus | Metrics scraping, storage, and queries consumed by Talìa |
-| Simple Agents | Structured execution of all LLM-assisted checks, analysis, and investigations |
+| simple-ai | Completion inference for the planned Talìa-owned harness |
 | Crumbles | Tickets and workflows whose progress and outcomes Talìa follows |
 
-SimpleAI may be used internally by other systems; that creates no direct Talìa
-integration. Existing homelab use of Grafana, Loki and Alertmanager is background
+Talìa owns the LLM tool loop and its authority; simple-ai supplies completions. Existing homelab use of Grafana, Loki and Alertmanager is background
 context, not a decision to make those services required Talìa dependencies.
 
 ## Scope examples for later acceptance criteria
@@ -181,8 +177,8 @@ implementation or release sequence:
    endpoint check result, controls, and delegated monitoring work status. The
    shared UI and JavaScript logic run on both web and native Android clients.
 2. A scheduled endpoint check records its result for dashboard and rule use.
-3. A scheduled Simple Agents task analyses monitoring data; Talìa follows the
-   session and makes its result available to an outcome trigger.
+3. A scheduled Talìa harness run analyses monitoring data and makes its result
+   available to an outcome trigger.
 4. A scheduled operation issues a Crumbles ticket; Talìa follows it to completion
    and executes the configured action for its outcome.
 5. An agent defines an alert through MCP with a persistence condition and
@@ -213,7 +209,7 @@ implementation or release sequence:
   missed schedules, retries, and deadlines.
 - Crumbles lifecycle mapping and result contract; how results are tested by
   triggers, including reopening and changed outcomes.
-- Simple Agents task templates, tool permissions, budgets, human input, and
+- Talìa harness prompts, tool permissions, budgets, human input, and
   result contracts.
 - Alert evaluation and anomaly methods; missing/stale data behavior, severity,
   grouping, acknowledgements, suppression, repeat and recovery behavior.
@@ -238,7 +234,7 @@ questions above are not silently resolved by the plan.
 
 See [configurable alerts](alerts.md) for the accepted staged-policy, acknowledgement,
 silence, destination and durable delivery model. Android push, browser Web Push, email and Telegram
-alert delivery precede deployment and homelab migration; Simple Agents and Crumbles
+alert delivery precede deployment and homelab migration; LLM investigations and Crumbles
 delegation follow migration. The original alert workstream is tracked in TALIA-47; browser destinations in TALIA-66.
 
 ## Web monitoring display
@@ -270,20 +266,14 @@ increments, not included in TALIA-67.
 ## Scheduled reports
 
 Talìa can compose recurrent reports from engine Variables, configured data sources,
-read-only endpoint checks, sandboxed JavaScript and tracked Simple Agents sessions,
-then retain and email formatted summaries. Simple Agents reporting is included now;
-it is not deferred behind homelab migration. Report definitions and manual previews
-are MCP-managed and execute on the server independently of clients. See
-[scheduled reports](reports.md) for the implemented workflow, scheduling,
-permissions, failure handling, durable recovery and configuration contract.
+read-only endpoint checks and sandboxed JavaScript, then retain and deliver formatted
+summaries. LLM report steps are planned through the new harness, not yet implemented.
+See [report workflows](reports.md) for current behavior and migration details.
 
-## Telegram reporting and observer investigations
+## Telegram reporting and future investigations
 
-Administrators configure the bot, pair destinations and approve numeric Telegram
-user identities through the web shell. Delivery and investigation permissions are
-independent. Telegram supports reports, alerts and read-only investigations via an
-operator-selected Simple Agents observer; editing Talìa is never exposed there.
-Reports remain separate from chat context, entering it only through explicit
-reply references or retrieval. Conversations persist per chat/account, support
-/new and manual/automatic compaction, and retain original history. See
-[implemented contract and setup](telegram.md).
+Web Settings supports bot setup, destination pairing and report/alert delivery.
+Investigations are currently unavailable after removal of the external agent
+integration. The planned Talìa harness will support read-only investigation and
+chat compaction, keeping report content separate from conversation history.
+Telegram must never expose Talìa editing. See [Telegram](telegram.md).

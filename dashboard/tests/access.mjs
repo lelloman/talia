@@ -114,18 +114,14 @@ try{
  let reportRun;for(let attempt=0;attempt<30;attempt++){reportRun=(await sdkTool('reports_run_get',{id:reportStart.run_id})).run;if(reportRun.status==='complete')break;assert.notEqual(reportRun.status,'failed',JSON.stringify(reportRun));await new Promise(r=>setTimeout(r,200));}
  assert.equal(reportRun.status,'complete');assert.equal(reportRun.content.summary,'healthy');assert.match(reportRun.html,/<h1>Morning fixture<\/h1>/);assert.equal(reportRun.deliveries.length,0);
  assert.equal((await sdkTool('reports_runs',{report:'morning-fixture'})).runs.length,1);
- // Observer service credentials never inherit the browser administrator's editing tools.
+ // Retired observer credentials/configuration have no route back into MCP.
  await a.locator('#telegram-settings').evaluate(e=>e.open=true);
- await a.locator('#telegram-observer-key').click();
- await a.waitForFunction(()=>document.querySelector('#telegram-key').value.startsWith('to_'));
- const observerKey=await a.locator('#telegram-key').inputValue();
- const observerTools=(await(await mcp(observerKey,'tools/list')).json()).result.tools;
- assert.deepEqual(observerTools.map(t=>t.name),['observer_snapshot','observer_read','observer_probe']);
- const observation=(await(await mcp(observerKey,'tools/call',{name:'observer_snapshot',arguments:{}})).json()).result;
- assert.equal(observation.isError,false);
- assert.ok((await(await mcp(observerKey,'tools/call',{name:'reports_save',arguments:{}})).json()).error);
+ assert.equal(await a.locator('#telegram-profile').count(),0);
+ assert.equal(await a.locator('#telegram-observer-key').count(),0);
+ assert.equal((await api(a,{op:'telegramStatus'})).investigationsAvailable,false);
+ assert.ok((await api(a,{op:'telegramObserverKey'})).error);
  assert.ok((await api(v,{op:'telegramStatus'})).error);
- await api(a,{op:'telegramObserverRevoke'});assert.equal((await mcp(observerKey,'tools/list')).status(),401);
+ assert.equal((await mcp('to_'+'a'.repeat(64),'tools/list')).status(),401);
 
  const metric=await sdkTool('engine_read',{id:'value'});assert.equal(metric.sample.value.version,1);
  const subscription=await sdkTool('engine_subscribe',{ids:['value']});
@@ -233,5 +229,5 @@ try{
  execFileSync('python3',['-c',"import sqlite3,sys; c=sqlite3.connect(sys.argv[1]); c.execute('UPDATE user_agent_keys SET expires=0 WHERE id=?',(sys.argv[2],)); c.commit()",tmp+'/engine.db',expiring.id]);
  assert.equal((await mcp(expiring.key,'tools/list')).status(),401);
  const logoutKey=await api(a,{op:'agentKeyCreate'});await a.evaluate(()=>fetch('/auth/logout',{method:'POST'}));assert.equal((await mcp(logoutKey.key,'tools/list')).status(),401);
-  console.log(JSON.stringify({passed:true,checks:['web Telegram settings and read-only observer HTTP MCP credential, write denial and revocation','server-side report authoring, preview execution and retained HTML over HTTP MCP','fullscreen retains live dashboard and monitoring selection preserves dirty edits','browser Web Push enrollment, disable, endpoint rejection, viewer isolation and real worker authenticated detail fetch','HTTP MCP engine read and key-scoped subscriptions survive reconnect','HTTP MCP live inspect/execute/reload and dirty guards','browser remains signed in past initial token expiry with rotated refresh token','persistent 30-day HttpOnly session cookie','official SDK HTTP MCP authoring with user-attributed audit','HTTP MCP initialize/list/call','one-time key UI and clipboard configuration','navigation during key creation revokes the unseen key','expiry/revocation/logout enforcement','viewer MCP isolation','Origin/protocol validation','shared LelloDesign responsive shell','theme and sidebar preserve live runtime','polling preserves sharing drafts','keyboard theme focus','mobile account placement','real OIDC boundary with local provider','viewer starts empty','admin shares from shell','viewer loads public dashboard','server rejects writes and config','account default opens on new installation','reload retains selection','mobile layout fits viewport','unsharing blocks active viewer']}));
+  console.log(JSON.stringify({passed:true,checks:['web Telegram delivery settings, retired credentials rejected, viewer isolation','server-side report authoring, preview execution and retained HTML over HTTP MCP','fullscreen retains live dashboard and monitoring selection preserves dirty edits','browser Web Push enrollment, disable, endpoint rejection, viewer isolation and real worker authenticated detail fetch','HTTP MCP engine read and key-scoped subscriptions survive reconnect','HTTP MCP live inspect/execute/reload and dirty guards','browser remains signed in past initial token expiry with rotated refresh token','persistent 30-day HttpOnly session cookie','official SDK HTTP MCP authoring with user-attributed audit','HTTP MCP initialize/list/call','one-time key UI and clipboard configuration','navigation during key creation revokes the unseen key','expiry/revocation/logout enforcement','viewer MCP isolation','Origin/protocol validation','shared LelloDesign responsive shell','theme and sidebar preserve live runtime','polling preserves sharing drafts','keyboard theme focus','mobile account placement','real OIDC boundary with local provider','viewer starts empty','admin shares from shell','viewer loads public dashboard','server rejects writes and config','account default opens on new installation','reload retains selection','mobile layout fits viewport','unsharing blocks active viewer']}));
 }finally{await browser?.close();if(engine?.pid){try{process.kill(-engine.pid,'SIGTERM');}catch{}}proxy?.close();provider?.close();rmSync(tmp,{recursive:true,force:true});}

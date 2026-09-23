@@ -13,13 +13,6 @@ pub fn random() -> Result<String> {
         .map_err(|_| "randomness unavailable")?;
     Ok(bytes.iter().map(|b| format!("{b:02x}")).collect())
 }
-pub fn hash(s: &str) -> String {
-    ring::digest::digest(&ring::digest::SHA256, s.as_bytes())
-        .as_ref()
-        .iter()
-        .map(|b| format!("{b:02x}"))
-        .collect()
-}
 pub async fn key(path: String, create: bool) -> Result<aead::LessSafeKey> {
     let bytes = tokio::task::spawn_blocking(move || -> Result<Vec<u8>> {
         if create && !std::path::Path::new(&path).exists() {

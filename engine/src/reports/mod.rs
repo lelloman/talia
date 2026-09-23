@@ -7,7 +7,6 @@ use rusqlite::{params, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
-pub mod agent;
 pub mod api;
 pub mod email;
 pub mod worker;
@@ -69,10 +68,10 @@ pub enum Action {
     Script {
         source: String,
     },
-    SimpleAgents {
-        provider: String,
-        instructions: String,
-        inputs: Vec<String>,
+    /// Historical step retained by a migration; never executable.
+    Unavailable {
+        reason: String,
+        original: Value,
     },
 }
 #[derive(Clone, Serialize, Deserialize)]
@@ -115,7 +114,8 @@ pub struct Run {
     pub send: bool,
     pub index: usize,
     pub outputs: BTreeMap<String, Output>,
-    pub agent: Option<agent::Pending>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub retired_execution: Option<Value>,
     pub content: Option<Content>,
     pub html: Option<String>,
     pub text: Option<String>,
@@ -187,28 +187,15 @@ impl Definition {
                 Action::Script { source } => script.eval(&format!(
                     "if(typeof ({source})!=='function')throw Error('script must be a function');"
                 ))?,
-                Action::SimpleAgents {
-                    provider,
-                    instructions,
-                    inputs,
-                } => {
-                    id(provider)?;
-                    if instructions.trim().is_empty()
-                        || instructions.len() > 16384
-                        || inputs.iter().any(|i| !names.contains(i))
-                    {
-                        return Err("agent inputs must reference previous steps".into());
-                    }
-                }
+                Action::Unavailable { reason, .. } => return Err(reason.clone()),
             }
             names.insert(step.id.clone());
         }
         let destinations = store.alert_destinations()?;
         for target in &self.destinations {
-            if !destinations
-                .iter()
-                .any(|d| &d.id == target && ["email", "telegram"].contains(&d.channel.as_str()) && d.enabled)
-            {
+            if !destinations.iter().any(|d| {
+                &d.id == target && ["email", "telegram"].contains(&d.channel.as_str()) && d.enabled
+            }) {
                 return Err("enabled email or Telegram destination required".into());
             }
         }
@@ -295,6 +282,14 @@ impl Store {
         now: i64,
     ) -> Result<Run> {
         let d = self.report_definition(definition)?;
+        if d.steps
+            .iter()
+            .any(|s| matches!(s.action, Action::Unavailable { .. }))
+        {
+            return Err(
+                "Report contains a retired step; update its definition before running".into(),
+            );
+        }
         if send && d.destinations.is_empty() {
             return Err("email or Telegram destination required for sending".into());
         }
@@ -330,7 +325,7 @@ impl Store {
             send,
             index: 0,
             outputs: BTreeMap::new(),
-            agent: None,
+            retired_execution: None,
             content: None,
             html: None,
             text: None,

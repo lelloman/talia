@@ -13,7 +13,6 @@ use std::{
 #[derive(Clone)]
 pub struct Worker {
     pub engine: Engine,
-    pub agents: Option<String>,
     pub providers: Option<String>,
     active: Rc<RefCell<BTreeSet<String>>>,
     last: Rc<Cell<i64>>,
@@ -22,7 +21,6 @@ impl Worker {
     pub fn new(engine: Engine) -> Self {
         Self {
             engine,
-            agents: std::env::var("TALIA_REPORT_AGENTS").ok(),
             providers: std::env::var("TALIA_ALERT_PROVIDERS").ok(),
             active: Default::default(),
             last: Rc::new(Cell::new(i64::MIN)),
@@ -42,13 +40,12 @@ impl Worker {
             }
             let r = self.engine.store.borrow().report_run(&id)?;
             if now < r.deadline
-                && (r.agent.as_ref().is_some_and(|a| a.next_poll > now)
-                    || r.status == "delivering"
-                        && r.deliveries.iter().any(|d| d.status == "pending")
-                        && !r
-                            .deliveries
-                            .iter()
-                            .any(|d| d.status == "pending" && d.next_at <= now))
+                && (r.status == "delivering"
+                    && r.deliveries.iter().any(|d| d.status == "pending")
+                    && !r
+                        .deliveries
+                        .iter()
+                        .any(|d| d.status == "pending" && d.next_at <= now))
             {
                 continue;
             }
@@ -80,7 +77,7 @@ impl Worker {
         }
         if now >= run.deadline {
             run.status = "failed".into();
-            run.error=Some("report deadline exceeded; any agent session remains recorded for operator reconciliation".into());
+            run.error = Some("report deadline exceeded".into());
             return self.engine.store.borrow().report_put(&run);
         }
         run.status = "running".into();
@@ -108,20 +105,7 @@ impl Worker {
                 .and_then(|v| serde_json::to_value(v).map_err(err)),
             Action::Script { source } => evaluate(source, &run.context()),
             Action::Source { source, request } => self.source(source, request, &run).await,
-            Action::SimpleAgents {
-                provider,
-                instructions,
-                inputs,
-            } => {
-                match self
-                    .agent_step(&mut run, &step, provider, instructions, inputs, now)
-                    .await
-                {
-                    Ok(None) => return Ok(()),
-                    Ok(Some(value)) => Ok(value),
-                    Err(error) => Err(error),
-                }
-            }
+            Action::Unavailable { reason, .. } => Err(reason.clone()),
         };
         let result = result.and_then(|v| {
             if serde_json::to_vec(&v).map_err(err)?.len() > 32768 {
@@ -131,28 +115,14 @@ impl Worker {
             }
         });
         let output = match result {
-            Ok(value)
-                if !matches!(step.action, Action::SimpleAgents { .. })
-                    || value["state"] == "succeeded" =>
-            {
-                Output {
-                    status: "succeeded".into(),
-                    value,
-                    error: None,
-                }
-            }
             Ok(value) => Output {
-                status: "failed".into(),
+                status: "succeeded".into(),
                 value,
-                error: Some("Simple Agents did not succeed".into()),
+                error: None,
             },
             Err(error) => Output {
                 status: "failed".into(),
-                value: run
-                    .agent
-                    .as_ref()
-                    .map(|a| json!({"submission":a}))
-                    .unwrap_or(Value::Null),
+                value: Value::Null,
                 error: Some(error),
             },
         };
@@ -162,36 +132,7 @@ impl Worker {
         }
         run.outputs.insert(step.id, output);
         run.index += 1;
-        run.agent = None;
         self.engine.store.borrow().report_put(&run)
-    }
-    async fn agent_step(
-        &self,
-        run: &mut Run,
-        step: &Step,
-        provider: &str,
-        instructions: &str,
-        inputs: &[String],
-        now: i64,
-    ) -> Result<Option<Value>> {
-        if run.agent.as_ref().is_some_and(|a| now < a.next_poll) {
-            return Ok(None);
-        }
-        let config = agent::config(
-            self.agents
-                .as_deref()
-                .ok_or("TALIA_REPORT_AGENTS is not configured")?,
-            provider,
-        )
-        .await?;
-        if run.agent.is_none() {
-            run.agent = Some(config.prepare(provider, run, step, instructions, inputs)?);
-            self.engine.store.borrow().report_put(run)?;
-            return Ok(None);
-        }
-        let result = agent::progress(&config, run.agent.as_mut().unwrap(), now).await;
-        self.engine.store.borrow().report_put(run)?;
-        result
     }
     async fn source(&self, id: &str, script: &str, run: &Run) -> Result<Value> {
         let request: SourceRequest = serde_json::from_value(evaluate(script, &run.context())?)

@@ -53,7 +53,7 @@ once external delivery when provider acceptance is uncertain.
 
 See [alert configuration and operational limits](alerts.md) and the
 [implementation plan](implementation-plan.md). Release/deployment preparation
-precedes homelab migration; Simple Agents and Crumbles integrations follow that
+precedes homelab migration; LLM investigations and Crumbles integrations follow that
 migration.
 
 ## Browser Web Push fixture coverage (TALIA-66)

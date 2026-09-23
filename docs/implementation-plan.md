@@ -15,7 +15,7 @@ subtasks belong in its Stories. This file is a navigation index, not a second pl
 | P5 — Complete development-release demonstration | [LLPR/TALIA-6](https://crumbles.lelloman.com/w/LLPR/TALIA/6) |
 | Production qualification | [LLPR/TALIA-8](https://crumbles.lelloman.com/w/LLPR/TALIA/8) |
 | Homelab migration and cutover | [LLPR/TALIA-9](https://crumbles.lelloman.com/w/LLPR/TALIA/9) |
-| Simple Agents and Crumbles integration (after migration) | [LLPR/TALIA-7](https://crumbles.lelloman.com/w/LLPR/TALIA/7) |
+| Crumbles integration (after migration; scope revised in story comments) | [LLPR/TALIA-7](https://crumbles.lelloman.com/w/LLPR/TALIA/7) |
 
 ## Working agreement
 
@@ -50,10 +50,9 @@ Its stage scopes, acceptance scenario and unresolved planning topics were migrat
 to the Stories above on 2026-09-19. No production deployment, migration or legacy
 service retirement is authorized by this planning migration.
 
-Scheduled reporting workflows, including direct Simple Agents execution for report
-composition, are implemented in [TALIA-68](https://crumbles.lelloman.com/w/LLPR/TALIA/68).
-This advances the reporting subset of agent integration; general investigations,
-outcome triggers and Crumbles delegation remain in the later integration workstream.
-See [report contract and setup](reports.md).
-
-TALIA-69 adds web-managed Telegram destinations/accounts, report delivery and observer conversations with compaction. This advances the read-only Simple Agents integration; Crumbles and mutating workflows remain separate. Deployment and real bot/profile qualification are operator steps; see [Telegram](telegram.md).
+[TALIA-68](https://crumbles.lelloman.com/w/LLPR/TALIA/68) introduced scheduled
+reports, and TALIA-69 added managed Telegram delivery and investigations.
+[TALIA-70](https://crumbles.lelloman.com/w/LLPR/TALIA/70) removes their external
+agent integration. Reports and Telegram delivery remain; investigations are
+unavailable pending a minimal Talìa-owned harness using simple-ai completions.
+See [reports](reports.md) and [Telegram](telegram.md) for upgrade behavior.

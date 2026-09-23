@@ -164,5 +164,5 @@ chain is bounded to depth 16; each evaluation can request at most 32 action alia
 
 See [configurable alerts](alerts.md) for the accepted staged-policy, acknowledgement,
 silence, destination and durable delivery model. Android push, email and Telegram
-alert delivery precede deployment and homelab migration; Simple Agents and Crumbles
+alert delivery precede deployment and homelab migration; LLM investigations and Crumbles
 delegation follow migration. Current work is tracked in TALIA-47.

@@ -114,23 +114,20 @@ After deployment, an administrator enables browser notifications in Settings and
 an alert policy targets the displayed destination ID. Real vendor delivery and
 OS permission must be qualified on that browser; local fixtures do not prove it.
 
-## Scheduled reports and Simple Agents
+## Scheduled reports
 
-Reports use the existing SMTP destinations/provider file plus an optional private
-`TALIA_REPORT_AGENTS=/run/talia/report-agents.json` map and Simple Agents token file.
-Provision the caller/profile on Simple Agents, mount those files read-only for UID
-65532, and recreate the container to add the environment variable. Configure and
-preview workflows through MCP. See [scheduled reports](../docs/reports.md) for the
-provider format, complete example and restart/delivery semantics. Migration 13
-adds report tables; retain a database backup before upgrading.
+Reports reuse email/Telegram destinations and the private SMTP provider file.
+Configure and preview workflows through MCP. See [scheduled reports](../docs/reports.md).
+Migration 15 retires external agent steps: affected definitions are disabled,
+pending execution fails explicitly, and historical results remain available.
+Remove obsolete `TALIA_REPORT_AGENTS` and `TALIA_TELEGRAM_OBSERVERS` environment
+settings and their secret mounts when recreating the container. No replacement
+LLM connection is required for report collection, composition or delivery.
 
 ## Telegram
 
-After upgrading (schema 14), administrators connect a bot and pair chats in web
-Settings → Telegram. No provider-file edits are needed for this managed bot.
-The encrypted bot token lives in SQLite; its automatically generated private
-key lives beside the database (`talia.sqlite3.telegram-key`). Back up both.
-For investigations, mount a private observer provider map and set
-`TALIA_TELEGRAM_OBSERVERS=/run/talia/telegram-observers.json`; configure the matching
-Simple Agents profile/template and its read-only Talìa MCP credential. Reports
-and alerts work without enabling investigations. See [Telegram setup](../docs/telegram.md).
+Administrators connect a bot and pair chats in web Settings → Telegram. No
+provider-file edits are needed for this managed bot. The encrypted token lives
+in SQLite; its private key lives beside it (`talia.sqlite3.telegram-key`). Back up
+both. Existing bot setup and delivery destinations survive migration 15.
+Investigations are currently unavailable. See [Telegram setup](../docs/telegram.md).

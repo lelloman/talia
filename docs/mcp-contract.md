@@ -14,7 +14,7 @@ mutations and Pipeline actions. [Live control](mcp-live.md) now implements disco
 and dedicated reload; [TALIA-46 qualification](p4-qualification.md) records the integrated acceptance evidence. P1–P3 qualification remains historical evidence.
 
 External MCP agents author Talìa. Embedded chat, production deployment and actual
-Crumbles/Simple Agents task execution are outside P4. Web and native Android use
+Crumbles delegation and LLM harness execution are outside P4. Web and native Android use
 the same contracts; Android qualification uses an emulator only.
 
 The [user access contract](user-access.md) defines admin-only authoring/sharing,
