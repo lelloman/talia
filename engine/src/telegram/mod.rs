@@ -255,7 +255,7 @@ impl Worker {
     async fn dispatch(&self, bot: &Bot, version: u64) -> Result<()> {
         let pending: Option<(String, i64, String, String, Option<String>)> = {
             let s = self.engine.store.borrow();
-            s.conn.query_row("SELECT id,chat,body,kind,reference FROM telegram_outbox WHERE status='pending' ORDER BY rowid LIMIT 1",[],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?,r.get(4)?))).optional().map_err(err)?
+            s.conn.query_row("SELECT id,chat,body,kind,reference FROM telegram_outbox WHERE status='pending' ORDER BY CASE WHEN kind='chat' AND id GLOB 'ack-*' THEN 0 ELSE 1 END, rowid LIMIT 1",[],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?,r.get(4)?))).optional().map_err(err)?
         };
         let Some((id, chat, text, kind, reference)) = pending else {
             return Ok(());

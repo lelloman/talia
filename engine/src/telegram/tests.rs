@@ -397,11 +397,16 @@ async fn inference_does_not_block_bot_delivery_and_revocation_suppresses_answer(
     Mock::given(path("/v1/chat/completions"))
         .respond_with(
             ResponseTemplate::new(200)
-                .set_delay(Duration::from_millis(200))
+                .set_delay(Duration::from_millis(4200))
                 .set_body_json(crate::ai::tests::answer("LATE-ANSWER")),
         )
         .expect(1)
         .mount(&ai)
+        .await;
+    Mock::given(path("/bot123:fixture/sendChatAction"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({"ok":true,"result":true})))
+        .expect(1)
+        .mount(&bot_server)
         .await;
     Mock::given(path("/bot123:fixture/getUpdates"))
         .respond_with(ResponseTemplate::new(200).set_body_json(json!({"ok":true,"result":[]})))
@@ -456,6 +461,131 @@ async fn inference_does_not_block_bot_delivery_and_revocation_suppresses_answer(
         0
     );
     drop(s);
+    drop(w);
+    std::fs::remove_dir_all(dir).unwrap();
+    std::fs::remove_dir_all(ai_dir).unwrap();
+}
+
+#[tokio::test]
+async fn requests_acknowledge_once_and_refresh_typing_until_complete() {
+    let bot = bot_fixture().await;
+    let (w, dir) = fixture();
+    connect(&w).await;
+    pair(&w, 55, 55, true).await;
+    let ai = MockServer::start().await;
+    let ai_dir = crate::ai::tests::config(&ai.uri());
+    w.admin("admin", json!({"op":"telegramSettings","expected":1,"enabled":true,"investigations":true,"sources":[]})).await.unwrap();
+    Mock::given(path("/v1/chat/completions"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_delay(Duration::from_millis(4500))
+                .set_body_json(crate::ai::tests::answer("All checked")),
+        )
+        .expect(1)
+        .mount(&ai)
+        .await;
+    // Even failed typing requests must be refreshed and must not fail the job.
+    Mock::given(path("/bot123:fixture/sendChatAction"))
+        .and(wiremock::matchers::body_json(
+            json!({"chat_id":55,"action":"typing"}),
+        ))
+        .respond_with(ResponseTemplate::new(500))
+        .expect(2)
+        .mount(&bot)
+        .await;
+    Mock::given(path("/bot123:fixture/sendMessage"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_body_json(json!({"ok":true,"result":{"message_id":123}})),
+        )
+        .expect(1)
+        .mount(&bot)
+        .await;
+    let update = json!({"update_id":60,"message":{"chat":{"id":55,"type":"private"},"from":{"id":55,"is_bot":false},"text":"Check things"}});
+    {
+        let mut s = w.engine.store.borrow_mut();
+        s.telegram_enqueue("older-report", 55, "report", None, "Report backlog")
+            .unwrap();
+        s.telegram_ingest(&update, 1000).unwrap();
+        s.telegram_ingest(&update, 1000).unwrap();
+        assert_eq!(
+            s.conn
+                .query_row(
+                    "SELECT count(*) FROM telegram_outbox WHERE id GLOB 'ack-*'",
+                    [],
+                    |r| r.get::<_, i64>(0)
+                )
+                .unwrap(),
+            1
+        );
+    }
+    let finished = Cell::new(false);
+    let (result, _) = tokio::join!(
+        async {
+            let result = w.conversation().await;
+            finished.set(true);
+            result
+        },
+        async {
+            tokio::time::sleep(Duration::from_millis(50)).await;
+            let (c, transport) = Bot::load(&w.engine).await.unwrap();
+            w.dispatch(&transport, c.version).await.unwrap();
+            assert!(!finished.get());
+            let s = w.engine.store.borrow();
+            assert_eq!(
+                s.conn
+                    .query_row(
+                        "SELECT status FROM telegram_outbox WHERE id='ack-60-000'",
+                        [],
+                        |r| r.get::<_, String>(0)
+                    )
+                    .unwrap(),
+                "sent"
+            );
+            assert_eq!(
+                s.conn
+                    .query_row(
+                        "SELECT status FROM telegram_outbox WHERE id='older-report-000'",
+                        [],
+                        |r| r.get::<_, String>(0)
+                    )
+                    .unwrap(),
+                "pending"
+            );
+        }
+    );
+    result.unwrap();
+    // No detached heartbeat survives the completed request.
+    tokio::time::sleep(Duration::from_secs(4)).await;
+    bot.verify().await;
+    {
+        let s = w.engine.store.borrow();
+        assert_eq!(
+            s.conn
+                .query_row("SELECT status FROM telegram_jobs WHERE id=60", [], |r| {
+                    r.get::<_, String>(0)
+                })
+                .unwrap(),
+            "done"
+        );
+        assert_eq!(
+            s.conn
+                .query_row("SELECT count(*) FROM telegram_history", [], |r| r
+                    .get::<_, i64>(0))
+                .unwrap(),
+            2
+        );
+        assert_eq!(
+            s.conn
+                .query_row(
+                    "SELECT count(*) FROM telegram_history WHERE body LIKE 'Got it%'",
+                    [],
+                    |r| r.get::<_, i64>(0)
+                )
+                .unwrap(),
+            0
+        );
+    }
     drop(w);
     std::fs::remove_dir_all(dir).unwrap();
     std::fs::remove_dir_all(ai_dir).unwrap();

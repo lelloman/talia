@@ -49,6 +49,14 @@ recorded bot message. Replying to a report part selects only that report as cont
 Forwarded/quoted text is not trusted as a stored report reference. Full report
 content can be read through an explicit internal tool call.
 
+Accepted questions and `/compact` requests receive a short acknowledgement on
+the next bot poll (normally within two seconds), prioritized ahead of queued
+reports. Queued requests are identified as such. During active processing Talìa
+refreshes Telegram’s typing indicator every four seconds; it stops on completion,
+failure, cancellation or revoked access. Typing is best-effort: Telegram failures
+do not interrupt an investigation. Acknowledgements use the durable outgoing queue
+and its existing uncertain-delivery policy, and are never added to AI history.
+
 Conversation state is per chat/account. `/new` starts a fresh epoch and cancels
 older local work/replies. `/compact` requests a summary; automatic compaction runs
 before an answer at 16 messages or 16 KB of recent context. Summaries keep at most

@@ -52,7 +52,9 @@ impl Store {
             let epoch=s.conn.query_row("SELECT epoch FROM telegram_context WHERE chat=? AND user=?",params![chat,user],|r|r.get(0)).map_err(err)?;
             let report=reference.filter(|(kind,_)|kind=="report").and_then(|(_,id)|id);
             let job=Job{id:uid,chat,user,epoch,text:text.into(),report,created:now,deadline:now+900000,revision:c.version,phase:if command=="/compact"{"compact"}else{"answer"}.into(),through:0,ai_run:None,error:None};
-            s.conn.execute("INSERT INTO telegram_jobs VALUES(?,?,?,'queued',?)",params![uid,chat,user,serde_json::to_string(&job).map_err(err)?]).map_err(err)?;Ok(())
+            s.conn.execute("INSERT INTO telegram_jobs VALUES(?,?,?,'queued',?)",params![uid,chat,user,serde_json::to_string(&job).map_err(err)?]).map_err(err)?;
+            let acknowledgement=if command=="/compact"{"Got it — I’ll compact this conversation and let you know when it’s ready."}else if count>0{"Got it — your request is queued. I’ll reply here when it’s ready."}else{"Got it — I’ll look into it and reply here."};
+            s.telegram_enqueue(&format!("ack-{uid}"),chat,"chat",Some(&user.to_string()),acknowledgement)?;Ok(())
         })
     }
     fn telegram_job_put(&self, j: &Job, status: &str) -> Result<()> {
@@ -87,7 +89,15 @@ impl Worker {
                     .telegram_job_put(&job, "cancelled")?;
                 continue;
             }
-            let result = self.advance_job(&mut job).await;
+            let progress_job = job.clone();
+            let result = {
+                let advance = self.advance_job(&mut job);
+                tokio::pin!(advance);
+                tokio::select! {
+                    result = &mut advance => result,
+                    _ = self.typing(&progress_job) => advance.await,
+                }
+            };
             if let Err(error) = result {
                 if !self.job_allowed(&job)? {
                     continue;
@@ -105,6 +115,30 @@ impl Worker {
     }
     fn job_allowed(&self, j: &Job) -> Result<bool> {
         Ok(ai::permit(&self.engine, &j.scope()).is_ok())
+    }
+    // Owned by the active advance future: completion or cancellation drops the
+    // heartbeat, including any in-flight request. Telegram clears it on a reply.
+    async fn typing(&self, job: &Job) {
+        let Ok((_, bot)) = Bot::load(&self.engine).await else {
+            return;
+        };
+        let mut interval = tokio::time::interval(std::time::Duration::from_secs(4));
+        interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+        loop {
+            interval.tick().await;
+            if self.engine.now() >= job.deadline || !self.job_allowed(job).unwrap_or(false) {
+                return;
+            }
+            // Progress is best-effort and must never delay or fail inference.
+            let _ = tokio::time::timeout(
+                std::time::Duration::from_secs(3),
+                bot.call(
+                    "sendChatAction",
+                    json!({"chat_id":job.chat,"action":"typing"}),
+                ),
+            )
+            .await;
+        }
     }
     async fn advance_job(&self, j: &mut Job) -> Result<()> {
         if self.engine.now() >= j.deadline {
