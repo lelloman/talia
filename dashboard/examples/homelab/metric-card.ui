@@ -1,0 +1,5 @@
+<Column id="card" surface="card" gap="8dp" padding="20dp">
+  <Text id="label" text={params.label} tone="muted"/>
+  <Text id="value" text={params.value} variant="metric" tone={params.tone}/>
+  <Chart id="trend" values={params.history} label="Past hour · 5-minute samples" height="100dp"/>
+</Column>

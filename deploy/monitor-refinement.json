@@ -1,0 +1,37 @@
+[
+  {
+    "op": "put",
+    "key": {
+      "id": "monitor",
+      "kind": "dashboard"
+    },
+    "document": {
+      "grants": {
+        "reads": [
+          "homelab-summary"
+        ],
+        "runs": [],
+        "writes": []
+      },
+      "params": {},
+      "references": [
+        {
+          "id": "homelab-metric-card",
+          "kind": "ui"
+        }
+      ],
+      "ui": "<Dashboard id=\"monitor\"><Surface id=\"main\"><Scroll id=\"scroll\"><Column id=\"overview\" gap=\"24dp\">\n<Column id=\"health\" gap=\"4dp\"><Status id=\"status\" text={state.status} tone={state.statusTone}/><Text id=\"updated\" text={state.updated} variant=\"caption\" tone=\"muted\"/></Column>\n<Width id=\"metricswide\" min=\"640dp\"><Grid id=\"metricsGridwide\" columns={2} gap=\"16dp\"><Use id=\"cpuwide\" definition=\"homelab-metric-card\" params={state.cpu}/><Use id=\"memorywide\" definition=\"homelab-metric-card\" params={state.memory}/></Grid></Width>\n<Width id=\"metricsnarrow\" max=\"640dp\"><Grid id=\"metricsGridnarrow\" columns={1} gap=\"16dp\"><Use id=\"cpunarrow\" definition=\"homelab-metric-card\" params={state.cpu}/><Use id=\"memorynarrow\" definition=\"homelab-metric-card\" params={state.memory}/></Grid></Width>\n<Column id=\"storage\" gap=\"12dp\"><Text id=\"storageHeading\" text=\"Storage\" variant=\"heading\"/><Text id=\"storageNote\" text=\"Available disk space\" variant=\"caption\" tone=\"muted\"/>\n<Width id=\"storagewide\" min=\"800dp\"><For id=\"diskswide\" items={state.disks} key={item.id} columns={3} gap=\"12dp\"><Column id=\"diskwide\" surface=\"card\" padding=\"16dp\" gap=\"4dp\"><Text id=\"mountwide\" text={item.mount}/><Text id=\"freewide\" text={item.value} variant=\"metric\" tone={item.tone}/><Text id=\"devicewide\" text={item.device} variant=\"caption\" tone=\"muted\"/></Column></For></Width>\n<Width id=\"storagemedium\" min=\"480dp\" max=\"800dp\"><For id=\"disksmedium\" items={state.disks} key={item.id} columns={2} gap=\"12dp\"><Column id=\"diskmedium\" surface=\"card\" padding=\"16dp\" gap=\"4dp\"><Text id=\"mountmedium\" text={item.mount}/><Text id=\"freemedium\" text={item.value} variant=\"metric\" tone={item.tone}/><Text id=\"devicemedium\" text={item.device} variant=\"caption\" tone=\"muted\"/></Column></For></Width>\n<Width id=\"storagenarrow\" max=\"480dp\"><For id=\"disksnarrow\" items={state.disks} key={item.id} columns={1} gap=\"12dp\"><Column id=\"disknarrow\" surface=\"card\" padding=\"16dp\" gap=\"4dp\"><Text id=\"mountnarrow\" text={item.mount}/><Text id=\"freenarrow\" text={item.value} variant=\"metric\" tone={item.tone}/><Text id=\"devicenarrow\" text={item.device} variant=\"caption\" tone=\"muted\"/></Column></For></Width>\n</Column><Column id=\"services\" gap=\"12dp\"><Text id=\"servicesHeading\" text=\"Services\" variant=\"heading\"/><Text id=\"servicesSummary\" text={state.summary} tone=\"muted\"/>\n<Width id=\"serviceswide\" min=\"1100dp\"><For id=\"targetswide\" items={state.targets} key={item.id} columns={4} gap=\"12dp\"><Column id=\"targetwide\" surface=\"card\" padding=\"16dp\" gap=\"4dp\"><Text id=\"namewide\" text={item.name}/><Text id=\"statuswide\" text={item.status} tone={item.tone} variant=\"caption\"/><Text id=\"endpointwide\" text={item.endpoint} tone=\"muted\" variant=\"caption\"/></Column></For></Width>\n<Width id=\"servicesmedium\" min=\"720dp\" max=\"1100dp\"><For id=\"targetsmedium\" items={state.targets} key={item.id} columns={3} gap=\"12dp\"><Column id=\"targetmedium\" surface=\"card\" padding=\"16dp\" gap=\"4dp\"><Text id=\"namemedium\" text={item.name}/><Text id=\"statusmedium\" text={item.status} tone={item.tone} variant=\"caption\"/><Text id=\"endpointmedium\" text={item.endpoint} tone=\"muted\" variant=\"caption\"/></Column></For></Width>\n<Width id=\"servicessmall\" min=\"440dp\" max=\"720dp\"><For id=\"targetssmall\" items={state.targets} key={item.id} columns={2} gap=\"12dp\"><Column id=\"targetsmall\" surface=\"card\" padding=\"16dp\" gap=\"4dp\"><Text id=\"namesmall\" text={item.name}/><Text id=\"statussmall\" text={item.status} tone={item.tone} variant=\"caption\"/><Text id=\"endpointsmall\" text={item.endpoint} tone=\"muted\" variant=\"caption\"/></Column></For></Width>\n<Width id=\"servicesnarrow\" max=\"440dp\"><For id=\"targetsnarrow\" items={state.targets} key={item.id} columns={1} gap=\"12dp\"><Column id=\"targetnarrow\" surface=\"card\" padding=\"16dp\" gap=\"4dp\"><Text id=\"namenarrow\" text={item.name}/><Text id=\"statusnarrow\" text={item.status} tone={item.tone} variant=\"caption\"/><Text id=\"endpointnarrow\" text={item.endpoint} tone=\"muted\" variant=\"caption\"/></Column></For></Width>\n<Text id=\"scope\" text=\"Scrape reachability, not a full application health check.\" variant=\"caption\" tone=\"muted\"/></Column></Column></Scroll></Surface></Dashboard>\n",
+      "view_model": "defineVM({\n initial:()=>({status:'Waiting for monitoring data',statusTone:'muted',updated:'Collected every 30 seconds',summary:'Service status unavailable',\n  cpu:{label:'CPU usage',value:'—',history:[],tone:'muted'},memory:{label:'Memory usage',value:'—',history:[],tone:'muted'},disks:[],targets:[]}),\n async start(ctx){await ctx.subscribe('homelab-summary','snapshot');},\n actions:{snapshot(ctx,event){\n  const sample=event.value,v=sample.value,s=ctx.state();\n  if(!v||!Array.isArray(v.targets)||!Array.isArray(v.disks)){ctx.commit(s,{...s.value,status:'Waiting for valid monitoring data',statusTone:'warning'});return;}\n  const pct=n=>Number.isFinite(n)?n.toFixed(1)+'%':'Unavailable';\n  const good=sample.quality==='good';\n  const up=v.targets.filter(t=>t.status==='up').length;\n  const tone=n=>!good||!Number.isFinite(n)?'muted':n>=90?'warning':'neutral';\n  const targets=v.targets.map(t=>({id:t.id,name:t.name,endpoint:t.instance,status:!good?'Last known: '+t.status:t.status==='up'?'● Reachable':t.status==='down'?'● Unreachable':'○ No data',tone:!good?'muted':t.status==='up'?'success':t.status==='down'?'error':'warning',order:t.status==='up'?1:0})).sort((a,b)=>a.order-b.order||a.name.localeCompare(b.name));\n  ctx.commit(s,{...s.value,\n   status:!good?'Collection '+sample.quality+' · showing last known readings':up===targets.length&&targets.length>0?'All scrape targets reachable':'Some scrape targets need attention',\n   statusTone:!good?'warning':up===targets.length&&targets.length>0?'success':'warning',\n   updated:'Last sample: '+new Date(v.updated).toISOString().replace('T',' ').replace(/\\.\\d{3}Z$/,' UTC')+' · refreshes every 30s',\n   summary:up+' / '+targets.length+' reachable'+(!good?' at last collection':''),\n   cpu:{label:'CPU usage',value:pct(v.cpu),history:v.cpuHistory||[],tone:tone(v.cpu)},\n   memory:{label:'Memory usage',value:pct(v.memory),history:v.memoryHistory||[],tone:tone(v.memory)},\n   disks:v.disks.map(d=>({id:d.id,mount:d.mount,device:d.device,value:pct(d.free),tone:!good||!Number.isFinite(d.free)?'muted':d.free<10?'warning':'neutral'})),targets\n  });\n }}\n});\n"
+    }
+  },
+  {
+    "op": "put",
+    "key": {
+      "id": "homelab-metric-card",
+      "kind": "ui"
+    },
+    "document": {
+      "source": "<Column id=\"card\" surface=\"card\" gap=\"8dp\" padding=\"20dp\">\n  <Text id=\"label\" text={params.label} tone=\"muted\"/>\n  <Text id=\"value\" text={params.value} variant=\"metric\" tone={params.tone}/>\n  <Chart id=\"trend\" values={params.history} label=\"Past hour · 5-minute samples\" height=\"100dp\"/>\n</Column>\n"
+    }
+  }
+]

@@ -1,6 +1,8 @@
 package com.lelloman.talia.dashboard;
 import android.content.Context;
 import android.graphics.*;
+import android.graphics.drawable.GradientDrawable;
+import android.content.res.Configuration;
 import android.view.*;
 import android.widget.*;
 import org.json.*;
@@ -47,6 +49,22 @@ final class NativeRenderer {
   }cache.put(id,v);v.setTag(id);v.setId(View.generateViewId());}
   String visibility=p.optString("visibility","visible");v.setVisibility(visibility.equals("collapsed")?View.GONE:visibility.equals("hidden")?View.INVISIBLE:View.VISIBLE);
   v.setEnabled(p.optBoolean("enabled",true));int padding=pixels(p.optString("padding","0dp"));v.setPadding(padding,padding,padding,padding);
+  boolean dark=(context.getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK)==Configuration.UI_MODE_NIGHT_YES;
+  if(type.equals("Column")||type.equals("Row")||type.equals("Grid")){
+   if(p.optString("surface").equals("card")){GradientDrawable bg=new GradientDrawable();bg.setColor(Color.parseColor(dark?"#111827":"#ffffff"));bg.setCornerRadius(pixels("12dp"));bg.setStroke(pixels("1dp"),Color.parseColor(dark?"#374151":"#e5e7eb"));v.setBackground(bg);}else v.setBackground(null);
+  }
+  if(type.equals("Text")||type.equals("Status")){
+   TextView text=(TextView)v;String variant=p.optString("variant","body"),tone=p.optString("tone","neutral");
+   text.setTextSize(variant.equals("metric")?36:variant.equals("heading")?18:variant.equals("caption")?12:16);
+   text.setTypeface(null,variant.equals("metric")||variant.equals("heading")?Typeface.BOLD:Typeface.NORMAL);
+   if(android.os.Build.VERSION.SDK_INT>=28)v.setAccessibilityHeading(variant.equals("heading"));
+   String color=dark?"#f9fafb":"#111827";
+   if(tone.equals("muted"))color=dark?"#e5e7eb":"#374151";
+   if(tone.equals("success"))color=dark?"#86efac":"#166534";
+   if(tone.equals("warning"))color=dark?"#fcd34d":"#92400e";
+   if(tone.equals("error"))color=dark?"#fca5a5":"#b91c1c";
+   text.setTextColor(Color.parseColor(color));
+  }
   switch(type){
    case "Text":case "Status":case "Button":((TextView)v).setText(p.get("text").toString());if(p.has("label"))v.setContentDescription(p.getString("label"));if(type.equals("Status"))v.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);break;
    case "Switch":((Switch)v).setText(p.getString("label"));v.setContentDescription(p.getString("label"));((Switch)v).setChecked(p.getBoolean("value"));break;
@@ -75,6 +93,6 @@ final class NativeRenderer {
   final Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG);double[] values=new double[0];String label="";
   Chart(Context c){super(c);setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);setMinimumHeight(100);}
   void set(JSONArray data,String label,JSONArray labels)throws JSONException{this.label=label;values=new double[data.length()];StringBuilder text=new StringBuilder(label+": ");for(int i=0;i<values.length;i++){values[i]=data.isNull(i)?Double.NaN:data.getDouble(i);if(i>0)text.append(", ");text.append(labels==null?String.valueOf(values[i]):labels.getString(i));}if(values.length==0)text.append("No samples");setContentDescription(text.toString());invalidate();}
-  protected void onDraw(Canvas canvas){super.onDraw(canvas);double min=0,max=1;for(double v:values){if(Double.isFinite(v)){min=Math.min(min,v);max=Math.max(max,v);}}paint.setColor(Color.rgb(37,99,235));paint.setStrokeWidth(3);for(int i=1;i<values.length;i++)if(Double.isFinite(values[i-1])&&Double.isFinite(values[i]))canvas.drawLine((i-1)*getWidth()/(float)Math.max(1,values.length-1),(float)((getHeight()-24)*(1-(values[i-1]-min)/(max-min))),i*getWidth()/(float)Math.max(1,values.length-1),(float)((getHeight()-24)*(1-(values[i]-min)/(max-min))),paint);paint.setTextSize(24);canvas.drawText(getContentDescription().toString(),0,getHeight()-2,paint);}
+  protected void onDraw(Canvas canvas){super.onDraw(canvas);double min=0,max=1;for(double v:values){if(Double.isFinite(v)){min=Math.min(min,v);max=Math.max(max,v);}}paint.setColor(Color.rgb(37,99,235));paint.setStrokeWidth(3);for(int i=1;i<values.length;i++)if(Double.isFinite(values[i-1])&&Double.isFinite(values[i]))canvas.drawLine((i-1)*getWidth()/(float)Math.max(1,values.length-1),(float)((getHeight()-24)*(1-(values[i-1]-min)/(max-min))),i*getWidth()/(float)Math.max(1,values.length-1),(float)((getHeight()-24)*(1-(values[i]-min)/(max-min))),paint);paint.setTextSize(24);canvas.drawText(label+(values.length==0?" · No samples":""),0,getHeight()-2,paint);}
  }
 }

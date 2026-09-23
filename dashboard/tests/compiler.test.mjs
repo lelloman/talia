@@ -38,3 +38,12 @@ test('reusable definitions are validated, scoped and parameterized',()=>{
  const invalid={notice:{...definitions.notice,type:'Script'}};assert.throws(()=>resolve(t,{},{definitions:invalid}),/unknown component/);
  const cyclic={notice:TaliaUI.compileDefinition('<Use id="again" definition="notice" params={params.x}/>')};assert.throws(()=>resolve(t,{},{definitions:cyclic}),/reference cycle/);
 });
+test('semantic presentation is bounded and repeated grids preserve identity',()=>{
+ const tree=compile(wrap('<For id="cards" items={state.items} key={item.id} columns={2} gap="12dp"><Column id="card" surface="card"><Text id="value" text={item.label} variant="metric" tone={item.tone}/></Column></For>'));
+ const a={id:'a',label:'42%',tone:'warning'},b={id:'b',label:'10%',tone:'neutral'};
+ const rows=items=>resolve(tree,{items}).children[0].children[0];
+ assert.equal(rows([a,b]).type,'Grid');assert.equal(rows([a,b]).props.columns,2);
+ assert.equal(rows([a,b]).children[0].id,rows([b,a]).children[1].id);
+ assert.throws(()=>rows([{...a,tone:'red'}]),/expected tone/);
+ for(const source of ['<Text id="t" text="x" variant="giant"/>','<Column id="c" surface="html"/>','<For id="f" items={state.items} key={item.id} columns={1.5}><Text id="t" text={item.label}/></For>'])assert.throws(()=>resolve(compile(wrap(source)),{items:[a]}));
+});

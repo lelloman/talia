@@ -29,3 +29,14 @@ html,body{margin:0;height:100%;font-family:system-ui,sans-serif}#app{min-height:
 #alerts-panel article{overflow-wrap:anywhere}
 #agent-key-output pre{max-width:100%;overflow:auto}
 @media(max-width:759px){.agent-key-row{flex-wrap:wrap}.workspace-actions{max-width:none}}
+
+/* Declarative presentation roles use LelloDesign semantics, never author CSS. */
+.dashboard-canvas:has([data-surface=card]){background:transparent;border:0;padding:0}
+.dashboard-canvas [data-surface=card]{background:var(--ld-surface);border:1px solid var(--ld-border-subtle);border-radius:var(--ld-radius-panel)}
+.dashboard-canvas [data-variant=heading]{font-size:18px;line-height:28px;font-weight:650}
+.dashboard-canvas [data-variant=metric]{font-size:36px;line-height:44px;font-weight:650;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.dashboard-canvas [data-variant=caption]{font-size:12px;line-height:20px;overflow-wrap:anywhere}
+.dashboard-canvas [data-tone=muted]{color:var(--ld-text-secondary)}
+.dashboard-canvas [data-tone=success]{color:var(--ld-success)}
+.dashboard-canvas [data-tone=warning]{color:var(--ld-warning)}
+.dashboard-canvas [data-tone=error]{color:var(--ld-error)}

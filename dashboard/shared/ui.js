@@ -4,17 +4,17 @@
   const pathPattern = /^(state|params|item)\.[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*$/;
   const forbidden = new Set(['__proto__','prototype','constructor']);
   const base = {visibility:'visibility'};
-  const layout = {...base,gap:'length',padding:'length',width:'size',height:'size'};
+  const layout = {...base,gap:'length',padding:'length',width:'size',height:'size',surface:'surface'};
   const schema = {
     Dashboard:{}, Screen:{}, Surface:{}, ScreenRef:{screen:'string!'},
     Column:layout, Row:layout, Grid:{...layout,columns:'positive'},
     Scroll:{...base,width:'size',height:'size'},
-    Text:{...base,text:'text!',label:'string'}, Status:{...base,text:'text!',label:'string'},
+    Text:{...base,text:'text!',label:'string',variant:'variant',tone:'tone'}, Status:{...base,text:'text!',label:'string',variant:'variant',tone:'tone'},
     Chart:{...base,values:'numbers!',label:'string!',height:'length'},
     Button:{...base,text:'string!',enabled:'boolean',onClick:'action!'},
     Slider:{...base,value:'number!',min:'number!',max:'number!',step:'positive',label:'string!',enabled:'boolean',onChange:'action!'},
     Switch:{...base,value:'boolean!',label:'string!',enabled:'boolean',onChange:'action!'},
-    If:{when:'boolean!'}, For:{items:'array!',key:'key!'},
+    If:{when:'boolean!'}, For:{items:'array!',key:'key!',columns:'positive',gap:'length'},
     Use:{definition:'string!',params:'object!'}, Width:{min:'length',max:'length'}
   };
   function fail(node,message) {throw Error(`${node?.source?.line||1}:${node?.source?.column||1}: ${message}`);}
@@ -23,6 +23,7 @@
     type=type.replace('!','');
     const ok=({string:()=>typeof v==='string',text:()=>typeof v==='string'||typeof v==='number'&&Number.isFinite(v),
       number:()=>typeof v==='number'&&Number.isFinite(v),positive:()=>typeof v==='number'&&Number.isFinite(v)&&v>0,
+      variant:()=>['body','heading','metric','caption'].includes(v),tone:()=>['neutral','muted','success','warning','error'].includes(v),surface:()=>['plain','card'].includes(v),
       boolean:()=>typeof v==='boolean',length:()=>typeof v==='string'&&dimension.test(v),
       size:()=>['fill','auto'].includes(v)||typeof v==='string'&&dimension.test(v),
       visibility:()=>['visible','hidden','collapsed'].includes(v),
@@ -151,7 +152,7 @@
       if(n.type==='Switch'&&p.unavailable!==undefined){p.value=false;p.enabled=false;p.label+=': '+p.unavailable+' (unavailable)';}
       if(n.type==='Slider'&&p.unavailable!==undefined){p.value=p.min;p.enabled=false;p.label+=': '+p.unavailable+' (unavailable)';}
       if(n.type==='Slider'&&(p.max<=p.min||p.value<p.min||p.value>p.max))fail(n,'invalid slider range/value');
-      if(n.type==='Grid'&&p.columns!==undefined&&!Number.isInteger(p.columns))fail(n,'columns must be integral');
+      if(['Grid','For'].includes(n.type)&&p.columns!==undefined&&!Number.isInteger(p.columns))fail(n,'columns must be integral');
       if(n.type==='ScreenRef'){
         if(!screens.has(p.screen))fail(n,'unknown screen '+p.screen);
         if(stack.includes('screen:'+p.screen))fail(n,'screen reference cycle');
@@ -167,7 +168,7 @@
           if(!(typeof key==='string'&&key.length||typeof key==='number'&&Number.isFinite(key)))fail(n,'missing/invalid repeated key');
           const token=JSON.stringify([typeof key,key]);if(seen.has(token))fail(n,'duplicate repeated key');seen.add(token);
           return walk(n.children[0],inner,id+'/'+encodeURIComponent(token),stack);
-        });return {type:'Column',id,props:{},children};
+        });return {type:p.columns===undefined?'Column':'Grid',id,props:{...(p.columns===undefined?{}:{columns:p.columns}),...(p.gap===undefined?{}:{gap:p.gap})},children};
       }
       if(n.type==='If'&&!p.when||n.type==='Width'&&(('min'in p&&width<px(p.min,scale))||('max'in p&&width>=px(p.max,scale))))return {type:'Column',id,props:{visibility:'collapsed'},children:[]};
       const type=['Screen','Surface','If','Width'].includes(n.type)?'Column':n.type;

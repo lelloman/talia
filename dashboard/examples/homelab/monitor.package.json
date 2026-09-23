@@ -1,0 +1,1 @@
+{"id":"monitor","ui":"monitor.ui","viewModel":"monitor.vm.js","definitions":{"homelab-metric-card":"metric-card.ui"},"grants":{"reads":["homelab-summary"],"writes":[],"runs":[]}}

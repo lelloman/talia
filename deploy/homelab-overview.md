@@ -1,5 +1,8 @@
 # Homelab Overview
 
+The current dashboard presentation is maintained in [monitor refinement](monitor-refinement.md).
+Apply that UI update after this initial collection setup.
+
 [The authored changes](homelab-overview.json) contain the datasource, stored sample,
 30-second collection Pipeline, reusable metric card and private `monitor` dashboard
 published on 2026-09-22 through the signed-in administrator's temporary MCP key.

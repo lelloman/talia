@@ -45,16 +45,16 @@ Source diagnostics identify line and column. Source is parsed, never evaluated.
 | Screen | — | Named screen, one layout child |
 | Surface | — | One layout child composing ScreenRefs |
 | ScreenRef | screen | String screen ID, literal or binding |
-| Column, Row | gap, padding, width, height, visibility | Linear ViewGroups |
-| Grid | columns, gap, padding, width, height, visibility | Equal-width columns |
+| Column, Row | surface, gap, padding, width, height, visibility | Linear ViewGroups |
+| Grid | surface, columns, gap, padding, width, height, visibility | Equal-width columns |
 | Scroll | width, height, visibility | One child, vertical scrolling |
-| Text, Status | text, label, visibility | Wrapping text; Status is a live status |
+| Text, Status | text, label, variant, tone, visibility | Wrapping text; Status is a live status |
 | Chart | values, label, height, visibility | Finite numeric array, line chart and accessible summary |
 | Button | text, enabled, onClick, visibility | Named action |
 | Slider | value, min, max, step, label, enabled, onChange, visibility | Numeric event value, accessible label required |
 | Switch | value, label, enabled, onChange, visibility | Boolean event value, accessible label required |
 | If | when | Boolean condition; one child, collapsed when false |
-| For | items, key | Array binding, key is an item path; one child template |
+| For | items, key, columns, gap | Array binding, key is an item path; one child template |
 | Use | definition, params | UI definition reference and JSON-object binding |
 | Width | min, max | Conditional responsive branch; one child |
 
@@ -67,6 +67,17 @@ Keys must be nonempty strings or finite numbers and unique within the For.
 Identity is the ancestor instance path + definition node ID + typed repeat key.
 Reorder preserves the native/DOM control and focus. Different reference instances
 cannot collide. Hidden keeps space; collapsed removes space. Neither pauses VM.
+
+Presentation is semantic and shared across clients: layout `surface` is `plain`
+(default) or `card`; text `variant` is `body` (default), `heading`, `metric`, or
+`caption`; `tone` is `neutral` (default), `muted`, `success`, `warning`, or `error`.
+Hosts choose theme-aware native styling. Heading text exposes heading semantics;
+meaning must also appear in text, never solely in color. Optional positive integer
+`For.columns` lays repeated children out in a grid; without it For remains a
+column. `For.gap` controls spacing. Repeat identity is unchanged. Chart captions
+show the label; full sample values remain in the accessible description.
+These additive properties require updated hosts; older hosts reject unknown
+properties. Update the Android app before loading a package that uses them.
 
 Lengths are nonnegative strings with explicit `dp` or `px`. Layout width/height
 may also be `fill` or `auto`. Web px means CSS px. Web dp is multiplied by a

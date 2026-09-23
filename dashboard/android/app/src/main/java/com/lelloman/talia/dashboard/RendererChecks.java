@@ -18,7 +18,16 @@ final class RendererChecks {
    require(longText.getLineCount()>1,"long text wraps");
    View one=null,two=null;for(String id:renderer.cache.keySet()){if(id.endsWith("/one"))one=renderer.cache.get(id);if(id.endsWith("/two"))two=renderer.cache.get(id);}require(one!=null&&two!=null&&one.getWidth()>0&&Math.abs(one.getWidth()-two.getWidth())<=1&&one.getLeft()!=two.getLeft(),"grid equal columns");
    JSONObject result=new JSONObject().put("passed",true).put("checks",new JSONArray(new String[]{"native keyed identity", "focus survives reorder", "hidden retains space", "collapsed removes space", "long text wraps", "native switch accessibility", "equal grid columns"}));
-   require(a.getContentDescription().equals("A"),"accessible label");return result;
+   require(a.getContentDescription().equals("A"),"accessible label");
+   JSONObject metric=new JSONObject("{\"type\":\"Text\",\"id\":\"metric\",\"props\":{\"text\":\"24%\",\"variant\":\"metric\",\"tone\":\"warning\"},\"children\":[]}");
+   JSONObject card=new JSONObject().put("type","Column").put("id","card").put("props",new JSONObject().put("surface","card")).put("children",new JSONArray().put(metric));
+   renderer.render(card);TextView value=(TextView)renderer.cache.get("metric");
+   require(renderer.cache.get("card").getBackground() instanceof android.graphics.drawable.GradientDrawable,"card surface");
+   require(Math.abs(value.getTextSize()-android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_SP,36,activity.getResources().getDisplayMetrics()))<1,"metric typography");
+   metric.getJSONObject("props").put("variant","heading");renderer.render(card);require(value.isAccessibilityHeading(),"heading accessibility");
+   metric.getJSONObject("props").remove("variant");card.getJSONObject("props").remove("surface");renderer.render(card);
+   require(!value.isAccessibilityHeading()&&renderer.cache.get("card").getBackground()==null,"presentation reset");
+   result.getJSONArray("checks").put("semantic presentation and reset");return result;
   }finally{parent.removeView(root);}
  }
  static void measure(View root){root.measure(View.MeasureSpec.makeMeasureSpec(600,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(1600,View.MeasureSpec.AT_MOST));root.layout(0,0,600,root.getMeasuredHeight());}
