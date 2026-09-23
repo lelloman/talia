@@ -1,23 +1,24 @@
 # Shared host dashboards
 
 `node deploy/host-dashboards.mjs` emits catalog changes for `homelab`, `vps-eu`
-and `vps-us`. The existing `monitor` remains the service overview. No server or
+and `vps-us`. The obsolete `monitor` dashboard was removed after initial publication. No server or
 client binary change is required beyond the semantic renderer from TALIA-79.
 
 Each dashboard references **host-layout** (UI) and **host-present** (formatting
 function), with the same small subscription ViewModel. Its parameters are `host`
 (display name) and `summary` (the exact server Variable to subscribe to). The UI
-also references the existing **homelab-metric-card**. Edit these shared definitions
+also references the shared **host-metric-card**. Edit these shared definitions
 to change all three dashboards on their next explicit Reload. Changing one
 instance's parameters affects only that dashboard. Live state is not auto-reset.
 
 All three collection instances reference **host-collect**, with parameters `host`,
 `job`, and `instance`. Each has its own `host-HOST` Variable, output mapping,
-30-second schedule, 90-second stale threshold and one-hour retained history.
+30-second schedule, 90-second stale threshold and one-hour retained snapshot history (separate from the 24-hour Prometheus chart window).
 CPU, memory and filesystem selectors match the exact job and instance, including
-range queries. A down exporter clears current values; retained trends can still
+range queries. Charts query the past 24 hours from Prometheus at five-minute
+intervals (289 slots); missing samples remain gaps at their true position. A down exporter clears current values; retained trends can still
 show the earlier history. Newly added exporters need two scrapes for CPU rates
-and accumulate the one-hour chart naturally. Disk cards follow discovered mounts.
+and accumulate the 24-hour chart naturally. Disk cards follow discovered mounts.
 Host reachability means metrics collection works, not that every service is healthy.
 
 Homelab uses the existing `node-exporter` job. VPSes use `node-exporter-vps`, keeping

@@ -2,7 +2,7 @@ import {readFileSync,mkdirSync} from 'node:fs';import vm from 'node:vm';import a
 import {chromium} from '../../spikes/runtime/node_modules/playwright/index.mjs';import {spawn} from 'node:child_process';import {once} from 'node:events';
 import '../shared/ui.js';import {changes,hosts} from '../../deploy/host-dashboards.mjs';
 const source=id=>changes.find(c=>c.key.id===id).document.source,present=vm.runInNewContext('('+source('host-present')+')');
-const definitions={'host-layout':TaliaUI.compileDefinition(source('host-layout')),'homelab-metric-card':TaliaUI.compileDefinition(readFileSync('dashboard/examples/homelab/metric-card.ui','utf8'))};
+const definitions={'host-layout':TaliaUI.compileDefinition(source('host-layout')),'host-metric-card':TaliaUI.compileDefinition(readFileSync('dashboard/examples/host/metric-card.ui','utf8'))};
 const server=spawn('python3',['-u','-m','http.server','0','--bind','127.0.0.1'],{stdio:['ignore','pipe','ignore']});let browser;
 try{
  const port=Number(String((await once(server.stdout,'data'))[0]).match(/port (\d+)/)[1]);const origin=`http://127.0.0.1:${port}`;
@@ -16,7 +16,7 @@ try{
   for(const width of [390,1280]){
    await page.setViewportSize({width,height:900});await page.evaluate(({ui,definitions,state})=>renderer.render(TaliaUI.resolve(ui,state,{definitions,width:document.querySelector('#canvas').clientWidth})),{ui,definitions,state});
    await page.getByRole('heading',{name:p.host,exact:true}).waitFor();assert.equal(await page.evaluate(()=>document.querySelector('.lv-main').scrollWidth<=document.querySelector('.lv-main').clientWidth),true);
-   assert.equal(await page.locator('figcaption').filter({visible:true}).count(),2);
+   assert.equal(await page.locator('figcaption').filter({visible:true}).count(),2);assert.equal(await page.locator('figcaption').filter({visible:true}).first().textContent(),'Past 24 hours · 5-minute samples');
    await page.screenshot({path:'.local/host-template/'+p.host+'-'+width+'.png',fullPage:true});
   }
  }

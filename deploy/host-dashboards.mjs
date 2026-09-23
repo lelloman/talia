@@ -5,9 +5,10 @@ const load=p=>readFileSync(new URL('../dashboard/examples/'+p,import.meta.url),'
 export const hosts=[{host:'homelab',job:'node-exporter',instance:'node-exporter:9100'},{host:'vps-eu',job:'node-exporter-vps',instance:'vps-eu'},{host:'vps-us',job:'node-exporter-vps',instance:'vps-us'}];
 const put=(kind,id,document)=>({op:'put',key:{kind,id},document});
 export const changes=[
- put('ui','host-layout',{source:load('host/layout.ui'),references:[{kind:'ui',id:'homelab-metric-card'}]}),
+ put('ui','host-metric-card',{source:load('host/metric-card.ui')}),
+ put('ui','host-layout',{source:load('host/layout.ui'),references:[{kind:'ui',id:'host-metric-card'}]}),
  put('function','host-present',{source:load('host/present.js')}),
- put('monitor_definition','host-collect',{id:'host-collect',version:1,kind:'pipeline',source:load('host/collect.js')}),
+ put('monitor_definition','host-collect',{id:'host-collect',version:2,kind:'pipeline',source:load('host/collect.js')}),
  put('variable_definition','host-snapshot',{id:'host-snapshot',version:1,kind:'stored',source:'',value_schema:'any',state_schema:'any',dependencies:[]}),
  ...hosts.flatMap(p=>[
   put('variable','host-'+p.host,{id:'host-'+p.host,definition:'host-snapshot',params:TaliaValue.encode({}),history_count:120,history_age_ms:3600000}),
