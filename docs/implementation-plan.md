@@ -55,3 +55,5 @@ composition, are implemented in [TALIA-68](https://crumbles.lelloman.com/w/LLPR/
 This advances the reporting subset of agent integration; general investigations,
 outcome triggers and Crumbles delegation remain in the later integration workstream.
 See [report contract and setup](reports.md).
+
+TALIA-69 adds web-managed Telegram destinations/accounts, report delivery and observer conversations with compaction. This advances the read-only Simple Agents integration; Crumbles and mutating workflows remain separate. Deployment and real bot/profile qualification are operator steps; see [Telegram](telegram.md).

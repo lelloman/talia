@@ -231,8 +231,10 @@ impl Worker {
         for id in &run.definition.destinations {
             let d = destinations
                 .iter()
-                .find(|d| &d.id == id && d.enabled && d.channel == "email")
-                .ok_or("report email destination unavailable")?;
+                .find(|d| {
+                    &d.id == id && d.enabled && ["email", "telegram"].contains(&d.channel.as_str())
+                })
+                .ok_or("report email or Telegram destination unavailable")?;
             run.deliveries.push(Delivery {
                 destination: id.clone(),
                 version: d.version,
@@ -262,12 +264,34 @@ impl Worker {
                 .find(|d| {
                     d.id == run.deliveries[index].destination
                         && d.version == run.deliveries[index].version
-                        && d.channel == "email"
+                        && ["email", "telegram"].contains(&d.channel.as_str())
                         && d.enabled
                 });
             let outcome = if now >= run.deadline {
                 Outcome::Failed("report delivery deadline exceeded".into())
             } else if let Some(d) = dest {
+                if d.channel == "telegram" {
+                    if d.provider != crate::telegram::PROVIDER {
+                        return Err("Reports require the web-managed Telegram bot".into());
+                    }
+                    let delivery_id = format!("{}-{}", run.id, d.id);
+                    let status = self.engine.store.borrow_mut().telegram_report(
+                        &delivery_id,
+                        d.target.parse().map_err(|_| "invalid Telegram chat")?,
+                        run,
+                    )?;
+                    if status == "pending" {
+                        return Ok(());
+                    }
+                    run.deliveries[index].status = status;
+                    run.deliveries[index].error = if run.deliveries[index].status == "sent" {
+                        None
+                    } else {
+                        Some("Telegram delivery was not confirmed; not automatically resent".into())
+                    };
+                    self.engine.store.borrow().report_put(run)?;
+                    return Ok(());
+                }
                 let provider = match &self.providers {
                     Some(path) => {
                         crate::alerts::providers::configuration(std::path::Path::new(path))
@@ -289,7 +313,7 @@ impl Worker {
                     Err(e) => Outcome::Failed(e),
                 }
             } else {
-                Outcome::Failed("email destination disabled or changed".into())
+                Outcome::Failed("email or Telegram destination disabled or changed".into())
             };
             let delivery = &mut run.deliveries[index];
             match outcome {

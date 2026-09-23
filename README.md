@@ -87,3 +87,5 @@ General Simple Agents investigations and Crumbles integration follow migration;
 HTML email, manual previews and retained execution/delivery history.
 
 Network deployment packaging and access controls: [deployment guide](deploy/README.md).
+
+Telegram bot setup, report delivery and read-only investigations are managed in web Settings. See [Telegram integration](docs/telegram.md).

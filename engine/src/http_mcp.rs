@@ -26,6 +26,7 @@ struct Auth {
     token: String,
     connection: String,
     admin: bool,
+    observer: bool,
 }
 #[derive(Clone)]
 struct StateData {
@@ -64,6 +65,7 @@ async fn authenticate(state: &StateData, token: &str) -> Result<Value, StatusCod
     if info["error"] == "limit_exceeded" {
         return Err(StatusCode::SERVICE_UNAVAILABLE);
     }
+    if info["observer"] == true {return Ok(info);}
     let session = info["authSession"]
         .as_str()
         .ok_or(StatusCode::UNAUTHORIZED)?;
@@ -100,6 +102,7 @@ async fn gate(
         // and reconnects without using or exposing the bearer secret.
         connection: info["id"].as_str().unwrap().to_owned(),
         admin: info["admin"] == true,
+        observer: info["observer"] == true,
     });
     let mut response = next.run(req).await;
     // Do not release delayed data after expiry, revocation or provider-session revocation.
@@ -146,7 +149,7 @@ impl ServerHandler for Adapter {
         }
         let a = auth(&context)?;
         Ok(serde_json::from_value(
-            json!({"tools":if a.admin {talia_engine::mcp::tools()}else{vec![]}}),
+            json!({"tools":if a.observer {talia_engine::telegram::observer::tools()}else if a.admin {talia_engine::mcp::tools()}else{vec![]}}),
         )
         .unwrap())
     }
@@ -156,13 +159,14 @@ impl ServerHandler for Adapter {
         context: RequestContext<RoleServer>,
     ) -> Result<CallToolResponse, ErrorData> {
         let a = auth(&context)?;
-        if !a.admin {
+        if !a.admin && !a.observer {
             return Err(ErrorData::invalid_request(
                 "Viewer accounts cannot use authoring or engine tools",
                 None,
             ));
         }
-        if !talia_engine::mcp::tools()
+        let tools=if a.observer {talia_engine::telegram::observer::tools()}else{talia_engine::mcp::tools()};
+        if !tools
             .iter()
             .any(|t| t["name"] == request.name.as_ref())
         {

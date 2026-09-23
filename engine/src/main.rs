@@ -41,6 +41,7 @@ struct Service {
     alert_policies: talia_engine::alerts::policy::Policies,
     alert_sender: talia_engine::alerts::providers::Sender,
     reports: talia_engine::reports::worker::Worker,
+    telegram: talia_engine::telegram::Worker,
     pipelines: Pipelines,
     watches: Watches,
     live: talia_engine::mcp_live::Live,
@@ -78,6 +79,10 @@ impl Service {
     }
     async fn agent_execute(&self, credential:&str, connection:&str, call:&str, body:Value, http_mcp:bool)->talia_engine::authority::Result<Value> {
         use talia_engine::authority::ErrorCode;
+        if http_mcp && credential.starts_with("to_") {
+            if body["name"]=="_key_auth" {return self.engine.store.borrow().telegram_observer_auth(credential).map_err(|_|ErrorCode::Unauthenticated);}
+            return Ok(talia_engine::telegram::observer::execute(&self.engine,credential,body["name"].as_str().unwrap_or(""),body["arguments"].clone()).await.unwrap_or_else(|error|json!({"error":error})));
+        }
         if http_mcp && body["name"]=="_key_auth" {let store=self.engine.store.borrow();let mut info=store.user_key_info(credential)?;info["admin"]=json!(store.user_admin(info["subject"].as_str().unwrap())?);return Ok(info)}
         let session=if http_mcp {self.engine.store.borrow().user_agent_authenticate(credential)?}else{self.engine.store.borrow().agent_authenticate(credential)?};
         if http_mcp {self.engine.store.borrow().agent_require_dashboard_admin(&session)?;}
@@ -398,6 +403,7 @@ async fn run(args:Vec<String>)->Result<()> {
     engine.store.borrow_mut().alert_recover_policies(engine.now())?;
     engine.store.borrow_mut().alert_recover_deliveries(engine.now())?;
     engine.store.borrow().report_recover()?;
+    engine.store.borrow().telegram_recover()?;
     let pipelines = Pipelines::new(engine.clone())?;
     let watches = Watches::new(pipelines.clone());
     let agent_engine=talia_engine::mcp_engine::AgentEngine::new(engine.clone(),pipelines.clone(),watches.clone());
@@ -407,6 +413,7 @@ async fn run(args:Vec<String>)->Result<()> {
         alert_policies: talia_engine::alerts::policy::Policies::new(engine.clone()),
         alert_sender: talia_engine::alerts::providers::Sender::new(engine.clone()),
         reports: talia_engine::reports::worker::Worker::new(engine.clone()),
+        telegram: talia_engine::telegram::Worker::new(engine.clone()),
         engine,
         pipelines,
         watches,
@@ -453,6 +460,7 @@ async fn run(args:Vec<String>)->Result<()> {
       if let Err(e)=monitoring.engine.store.borrow_mut().alert_schedule(monitoring.engine.now()){errors.push(e);}
       if let Err(e)=monitoring.alert_sender.tick(){errors.push(e);}
       if let Err(e)=monitoring.reports.tick(){errors.push(e);}
+      if let Err(e)=monitoring.telegram.tick(){errors.push(e);}
       *monitoring.monitoring_error.borrow_mut()=if errors.is_empty(){None}else{Some(errors.join("; "))};
       tokio::time::sleep(Duration::from_millis(50)).await;
     }

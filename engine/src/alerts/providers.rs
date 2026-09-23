@@ -238,13 +238,19 @@ impl Sender {
                     .borrow_mut()
                     .alert_claim_delivery(&j.id, this.engine.now());
                 if let Ok(Some(dispatch)) = claim {
-                    let outcome = match config {
+                    let managed = if dispatch.destination.provider == crate::telegram::PROVIDER && dispatch.destination.channel == "telegram" {
+                        Some(match crate::telegram::transport::Bot::load(&this.engine).await {
+                            Ok((_,bot))=>send(&Provider::Telegram{token:bot.token,base_url:bot.base},&dispatch).await,
+                            Err(e)=>Outcome::Failed(e),
+                        })
+                    }else{None};
+                    let outcome = if let Some(outcome)=managed {outcome}else{match config {
                         Ok(config) => match config.get(&dispatch.destination.provider) {
                             Some(p) => send(p, &dispatch).await,
                             None => Outcome::Failed("provider not configured".into()),
                         },
                         Err(e) => Outcome::Failed(e),
-                    };
+                    }};
                     let result = this.engine.store.borrow_mut().alert_finish_delivery(
                         &j.id,
                         outcome,

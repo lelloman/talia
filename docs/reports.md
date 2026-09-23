@@ -2,7 +2,7 @@
 
 [TALIA-68](https://crumbles.lelloman.com/w/LLPR/TALIA/68) introduces server-owned
 reports: collect data, execute checks/scripts, run Simple Agents, compose a
-retained report, and send it as HTML plus plain-text email. No dashboard needs to
+retained report, and send it as HTML plus plain-text email or Telegram messages. No dashboard needs to
 be open. Simple Agents is a supported workflow step in this increment; general
 agent-driven alert investigations and Crumbles integration remain separate work.
 
@@ -10,7 +10,7 @@ agent-driven alert investigations and Crumbles integration remain separate work.
 
 Report definitions are versioned and editable through MCP without a service
 restart. A definition contains `id`, `version`, `enabled`, `schedule`, `steps`,
-`compose` and named email `destinations`. Optional `period_ms` defaults to 24 hours;
+`compose` and named email/Telegram `destinations`. Optional `period_ms` defaults to 24 hours;
 `timeout_ms` defaults to one hour. A run pins the entire definition and its
 reporting period. Definition changes affect future runs only.
 
@@ -60,13 +60,13 @@ metadata and results can contain operational data and should be treated accordin
   frozen definition, report HTML/text and per-destination delivery status.
 - `reports_runs`: `{report,limit?,before?}` lists bounded summaries; use the
   returned `next_before` as the exclusive run-ID cursor.
-- `reports_deliver`: `{id:run_id,requestId}` sends a completed, unsent preview
+- `reports_deliver`: `{id:run_id,requestId}` delivers a completed, unsent preview
   without rerunning its checks or agent. A second delivery request is rejected.
 - `reports_prune`: `{before:UTC_milliseconds,requestId}` removes terminal runs
   older than the cutoff; request tombstones remain to prevent duplicate execution.
 
 Use a new request ID for a new operation and the same ID/body for retries.
-`send:false` suppresses email only: it still runs checks and Simple Agents and
+`send:false` suppresses delivery only: it still runs checks and Simple Agents and
 therefore can consume agent resources. Preview via `reports_run_get`; delivering
 that preview is an explicit separate operation. Configure an existing enabled
 `email` destination with `alerts_destination_save`; reports reuse its SMTP provider.
@@ -182,3 +182,7 @@ by key after reopening SQLite (one submission, retained result used in compositi
 background preview execution and retained HTML through the official HTTP MCP SDK
 against the actual HTTPS/OIDC service. This is fixture evidence; no live agent run
 or email to a real recipient is sent by these tests.
+
+## Telegram destinations
+
+Use Settings → Telegram to pair a destination, then reference its `telegram-CHAT_ID` in a report. Managed Telegram delivery is tracked per message part; replying to a part selects that report as investigation context. See [Telegram](telegram.md).

@@ -154,7 +154,7 @@ impl Definition {
             }
         }
         if self.enabled && self.schedule.is_some() && self.destinations.is_empty() {
-            return Err("scheduled reports require email destinations".into());
+            return Err("scheduled reports require email or Telegram destinations".into());
         }
         if self
             .destinations
@@ -207,9 +207,9 @@ impl Definition {
         for target in &self.destinations {
             if !destinations
                 .iter()
-                .any(|d| &d.id == target && d.channel == "email" && d.enabled)
+                .any(|d| &d.id == target && ["email", "telegram"].contains(&d.channel.as_str()) && d.enabled)
             {
-                return Err("enabled email destination required".into());
+                return Err("enabled email or Telegram destination required".into());
             }
         }
         if serde_json::to_vec(self).map_err(err)?.len() > 131072 {
@@ -296,7 +296,7 @@ impl Store {
     ) -> Result<Run> {
         let d = self.report_definition(definition)?;
         if send && d.destinations.is_empty() {
-            return Err("email destination required for sending".into());
+            return Err("email or Telegram destination required for sending".into());
         }
         let active:bool=self.conn.query_row("SELECT EXISTS(SELECT 1 FROM report_runs WHERE report=? AND status IN ('queued','running'))",[definition],|r|r.get(0)).map_err(err)?;
         if active {

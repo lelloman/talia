@@ -276,3 +276,14 @@ it is not deferred behind homelab migration. Report definitions and manual previ
 are MCP-managed and execute on the server independently of clients. See
 [scheduled reports](reports.md) for the implemented workflow, scheduling,
 permissions, failure handling, durable recovery and configuration contract.
+
+## Telegram reporting and observer investigations
+
+Administrators configure the bot, pair destinations and approve numeric Telegram
+user identities through the web shell. Delivery and investigation permissions are
+independent. Telegram supports reports, alerts and read-only investigations via an
+operator-selected Simple Agents observer; editing Talìa is never exposed there.
+Reports remain separate from chat context, entering it only through explicit
+reply references or retrieval. Conversations persist per chat/account, support
+/new and manual/automatic compaction, and retain original history. See
+[implemented contract and setup](telegram.md).

@@ -14,6 +14,9 @@ impl Service {
                 .unwrap()
                 .to_string()
         };
+        if r.connection == "account" && r.body["request"]["op"].as_str().is_some_and(|op|op.starts_with("telegram")) {
+            return self.telegram.admin(subject,r.body["request"].clone()).await;
+        }
         if r.connection == "account" && r.body["request"]["op"].as_str().is_some_and(|op|op.starts_with("browserPush")) {
             use talia_engine::alerts::web_push;
             let body=&r.body["request"];

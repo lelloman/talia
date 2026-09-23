@@ -258,3 +258,14 @@ Exact persisted submissions reconcile by key across restart. HTML generation
 escapes model/source content; unknown SMTP acceptance is retained without automatic
 resend. The `reports_*` MCP tools require global authoring/admin authority and use
 persistent request IDs. See [reports](reports.md) for lifecycle and limits.
+
+## Managed Telegram integration
+
+The server owns Telegram polling, atomic update admission, pairing and independent
+chat/user permissions. Bot tokens use authenticated encryption with a private
+sidecar key. A durable outbox tracks each plain-text message part and records
+unknown acceptance without retry. Reports use this outbox and retain reply links
+outside conversation history. Observer jobs reuse the pinned Simple Agents client
+and exact-key recovery, with explicit bounded context and summary runs. A separate
+service credential on HTTP MCP exposes only cached reads and approved source
+probes; browser authoring authority is not inherited. See [Telegram](telegram.md).

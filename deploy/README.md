@@ -123,3 +123,14 @@ Provision the caller/profile on Simple Agents, mount those files read-only for U
 preview workflows through MCP. See [scheduled reports](../docs/reports.md) for the
 provider format, complete example and restart/delivery semantics. Migration 13
 adds report tables; retain a database backup before upgrading.
+
+## Telegram
+
+After upgrading (schema 14), administrators connect a bot and pair chats in web
+Settings → Telegram. No provider-file edits are needed for this managed bot.
+The encrypted bot token lives in SQLite; its automatically generated private
+key lives beside the database (`talia.sqlite3.telegram-key`). Back up both.
+For investigations, mount a private observer provider map and set
+`TALIA_TELEGRAM_OBSERVERS=/run/talia/telegram-observers.json`; configure the matching
+Simple Agents profile/template and its read-only Talìa MCP credential. Reports
+and alerts work without enabling investigations. See [Telegram setup](../docs/telegram.md).
