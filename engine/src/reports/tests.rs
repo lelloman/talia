@@ -362,7 +362,7 @@ async fn retired_integration_migration_preserves_history_and_delivery() {
         s.conn
             .query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
             .unwrap(),
-        15
+        16
     );
     let d = s.report_definition("morning").unwrap();
     assert!(!d.enabled);
@@ -444,4 +444,63 @@ async fn retired_integration_migration_preserves_history_and_delivery() {
     );
     drop(w);
     std::fs::remove_dir_all(dir).unwrap();
+}
+
+#[test]
+fn analysis_inspection_is_admin_only_and_pruning_preserves_active_work() {
+    let schema=api::tools().into_iter().find(|t|t["name"]=="reports_analysis_get").unwrap();
+    assert_eq!(schema["inputSchema"]["required"],json!(["id"]));
+    assert_eq!(schema["annotations"]["readOnlyHint"],true);
+    let mut s = Store::open(":memory:").unwrap();
+    let actor = operator(&mut s);
+    s.report_save(&definition(), 0, 1000).unwrap();
+    let mut parent = s.report_start("morning", "admin", false, 1000).unwrap();
+    let ai = crate::ai::Run {
+        id: "ai-result".into(),
+        scope: crate::ai::Scope::Report {
+            run: parent.id.clone(),
+        },
+        created: 1000,
+        deadline: 5000,
+        status: "complete".into(),
+        model: "fixture".into(),
+        messages: vec![],
+        turns: 1,
+        tools: false,
+        summary: Some("Result".into()),
+        error: None,
+        usage: vec![],
+    };
+    s.conn
+        .execute(
+            "INSERT INTO ai_runs VALUES('ai-result','complete',1000,?)",
+            [serde_json::to_string(&ai).unwrap()],
+        )
+        .unwrap();
+    assert_eq!(
+        s.report_api(&actor, "analysis_get", json!({"id":"ai-result"}), 2000)
+            .unwrap()["run"]["summary"],
+        "Result"
+    );
+    let viewer = s.browser_alert_session("viewer").unwrap();
+    assert!(s
+        .report_api(&viewer, "analysis_get", json!({"id":"ai-result"}), 2000)
+        .is_err());
+    assert_eq!(
+        s.report_api(
+            &actor,
+            "prune",
+            json!({"before":2000,"requestId":"keep-active"}),
+            2000
+        )
+        .unwrap()["ai_removed"],
+        0
+    );
+    parent.status = "complete".into();
+    s.report_put(&parent).unwrap();
+    let args = json!({"before":2000,"requestId":"remove-finished"});
+    let result = s.report_api(&actor, "prune", args.clone(), 2000).unwrap();
+    assert_eq!(result["ai_removed"], 1);
+    assert_eq!(result, s.report_api(&actor, "prune", args, 2000).unwrap());
+    assert!(s.ai_run("ai-result").unwrap().is_none());
 }

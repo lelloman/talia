@@ -34,7 +34,7 @@ flowchart TD
     MCP <-->|Direct engine access| E
     E <--> P[Prometheus]
     E <--> D[Direct probes]
-    E <--> S[simple-ai completions — planned]
+    E <--> S[simple-ai completions]
     E <--> C[Crumbles]
     E --> N[Notifications]
 ```
@@ -113,7 +113,7 @@ checks, schedules and alerts through MCP; humans interact with the resulting UI.
 P4 exposes MCP to external agents. Embedded chat is outside this stage.
 
 Prometheus supplies current and historical metrics. Direct probes supply further
-observations. Planned LLM-assisted checks, analyses and investigations use a Talìa-owned
+observations. LLM-assisted report analysis and Telegram investigations use a Talìa-owned
 harness calling simple-ai completions. Talìa owns tool permissions and execution. Crumbles provides
 ticket workflows whose lifecycle and outcomes Talìa follows and acts upon.
 
@@ -143,9 +143,9 @@ These are concepts, not a database schema:
 
 ## Existing integration evidence
 
-simple-ai exposes `/v1/chat/completions`. The planned Talìa harness will own
-bounded model/tool execution, permissions, context and persisted outcomes. Its
-implementation is separate from the removal of the external agent integration.
+simple-ai exposes `/v1/chat/completions`. The Talìa harness owns
+bounded model/tool execution, permissions, context and persisted outcomes. See
+[AI harness](ai.md) for the implemented contract.
 Crumbles lifecycle and result semantics still require a dedicated contract;
 a closed ticket alone does not prove a successful check.
 
@@ -247,7 +247,7 @@ migration 13. The server scheduler admits non-overlapping executions; the local
 async worker advances bounded steps without holding a database transaction during
 I/O. Existing engine reads, source adapters, calendar schedules and SMTP provider
 configuration are reused. Report scripts are pure bounded QuickJS transformations;
-LLM analysis is planned through the local harness. HTML generation
+LLM analysis uses the local harness. HTML generation
 escapes model/source content; unknown SMTP acceptance is retained without automatic
 resend. The `reports_*` MCP tools require global authoring/admin authority and use
 persistent request IDs. See [reports](reports.md) for lifecycle and limits.
@@ -261,5 +261,6 @@ unknown acceptance without retry. Reports use this outbox and retain reply links
 outside conversation history. The external observer executor and service MCP
 credential have been removed. Migration 15 cancels pending investigations,
 disables affected report definitions and retains historical evidence. Telegram
-currently handles pairing and delivery; future chat uses the Talìa-owned harness.
+handles pairing and delivery independently of inference; chat uses the Talìa-owned
+harness. Migration 16 adds durable AI runs.
 See [Telegram](telegram.md).

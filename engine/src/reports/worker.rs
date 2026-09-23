@@ -105,6 +105,27 @@ impl Worker {
                 .and_then(|v| serde_json::to_value(v).map_err(err)),
             Action::Script { source } => evaluate(source, &run.context()),
             Action::Source { source, request } => self.source(source, request, &run).await,
+            Action::Analysis {
+                instructions,
+                inputs,
+            } => {
+                let selected: BTreeMap<_, _> = inputs
+                    .iter()
+                    .map(|id| (id.clone(), run.outputs.get(id)))
+                    .collect();
+                crate::ai::execute(
+                    &self.engine,
+                    &format!("{}-{}", run.id, step.id),
+                    crate::ai::Scope::Report {
+                        run: run.id.clone(),
+                    },
+                    run.deadline,
+                    instructions,
+                    json!({"period":{"start":run.period_start,"end":run.created},"steps":selected}),
+                    false,
+                )
+                .await
+            }
             Action::Unavailable { reason, .. } => Err(reason.clone()),
         };
         let result = result.and_then(|v| {

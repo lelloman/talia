@@ -69,13 +69,13 @@ use any of these mechanisms:
 | Mechanism | Purpose |
 |---|---|
 | Direct check | Query Prometheus, hit an endpoint, or perform a Talìa probe |
-| Talìa LLM harness (planned) | Execute bounded checks, analysis and investigations using simple-ai completions |
+| Talìa LLM harness | Execute bounded checks, analysis and investigations using simple-ai completions |
 | Crumbles ticket | Delegate work that benefits from a ticket and its workflow |
 
-Talìa will own its LLM harness and call simple-ai completion endpoints directly.
+Talìa owns its LLM harness and calls simple-ai completion endpoints directly.
 Tool permissions, context, compaction and outcome tracking belong to Talìa. The
-previous external-agent integration has been removed; the new harness is not yet
-implemented. Deterministic probes and report scripts remain available.
+previous external-agent integration has been removed; the minimal new harness supports report analysis, read-only Telegram
+investigation and compaction. Deterministic probes and report scripts remain available.
 
 Crumbles delegation includes lifecycle tracking and outcome triggers, not just
 submission. Its implementation remains scheduled after homelab migration.
@@ -97,7 +97,7 @@ when it fires or recovers. Available action categories are:
 
 - Present alert state to dashboards and optionally deliver Android push, browser Web Push, email,
   or Telegram notifications using staged, reusable response policies.
-- Start a bounded Talìa investigation (future harness work).
+- Start a bounded Talìa investigation (automatic alert-triggered admission remains future work).
 - Issue a Crumbles ticket and track its lifecycle and outcome (post-migration integration).
 
 Alerts and outcome triggers connect monitoring to follow-up work. For example,
@@ -162,7 +162,7 @@ shared-reader cancellation and other open details.
 |---|---|
 | Talìa | Dashboard and alert configuration, Prometheus consumption, probes, scheduling, delegated-work tracking, outcome triggers, alerts |
 | Prometheus | Metrics scraping, storage, and queries consumed by Talìa |
-| simple-ai | Completion inference for the planned Talìa-owned harness |
+| simple-ai | Completion inference for the Talìa-owned harness |
 | Crumbles | Tickets and workflows whose progress and outcomes Talìa follows |
 
 Talìa owns the LLM tool loop and its authority; simple-ai supplies completions. Existing homelab use of Grafana, Loki and Alertmanager is background
@@ -267,13 +267,13 @@ increments, not included in TALIA-67.
 
 Talìa can compose recurrent reports from engine Variables, configured data sources,
 read-only endpoint checks and sandboxed JavaScript, then retain and deliver formatted
-summaries. LLM report steps are planned through the new harness, not yet implemented.
+summaries. LLM report steps use the new harness with explicitly selected inputs and no tools.
 See [report workflows](reports.md) for current behavior and migration details.
 
-## Telegram reporting and future investigations
+## Telegram reporting and investigations
 
-Web Settings supports bot setup, destination pairing and report/alert delivery.
-Investigations are currently unavailable after removal of the external agent
-integration. The planned Talìa harness will support read-only investigation and
-chat compaction, keeping report content separate from conversation history.
-Telegram must never expose Talìa editing. See [Telegram](telegram.md).
+Web Settings supports bot setup, destination pairing, report/alert delivery and
+read-only investigations through the [Talìa harness](ai.md). Administrators approve
+accounts/chats and diagnostic sources. The harness supports chat compaction and
+keeps report content separate from conversation history. Telegram must never
+expose Talìa editing. See [Telegram](telegram.md).

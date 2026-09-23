@@ -54,5 +54,6 @@ service retirement is authorized by this planning migration.
 reports, and TALIA-69 added managed Telegram delivery and investigations.
 [TALIA-70](https://crumbles.lelloman.com/w/LLPR/TALIA/70) removes their external
 agent integration. Reports and Telegram delivery remain; investigations are
-unavailable pending a minimal Talìa-owned harness using simple-ai completions.
+restored by [TALIA-71](https://crumbles.lelloman.com/w/LLPR/TALIA/71) through a
+minimal Talìa-owned harness using simple-ai completions.
 See [reports](reports.md) and [Telegram](telegram.md) for upgrade behavior.

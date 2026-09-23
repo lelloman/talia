@@ -33,3 +33,5 @@ pub mod users;
 pub mod reports;
 
 pub mod telegram;
+
+pub mod ai;

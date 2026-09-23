@@ -68,6 +68,10 @@ pub enum Action {
     Script {
         source: String,
     },
+    Analysis {
+        instructions: String,
+        inputs: Vec<String>,
+    },
     /// Historical step retained by a migration; never executable.
     Unavailable {
         reason: String,
@@ -187,6 +191,18 @@ impl Definition {
                 Action::Script { source } => script.eval(&format!(
                     "if(typeof ({source})!=='function')throw Error('script must be a function');"
                 ))?,
+                Action::Analysis {
+                    instructions,
+                    inputs,
+                } => {
+                    if instructions.trim().is_empty()
+                        || instructions.len() > 16384
+                        || inputs.len() > 16
+                        || inputs.iter().any(|i| !names.contains(i))
+                    {
+                        return Err("Analysis inputs must name previous steps and instructions must be bounded".into());
+                    }
+                }
                 Action::Unavailable { reason, .. } => return Err(reason.clone()),
             }
             names.insert(step.id.clone());

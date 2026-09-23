@@ -7,7 +7,7 @@ use rusqlite::{params, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{cell::Cell, rc::Rc, time::Duration};
-mod ingest;
+mod conversation;
 pub mod transport;
 use transport::{random, Bot};
 fn err(e: impl std::fmt::Display) -> String {
@@ -22,6 +22,10 @@ pub struct Config {
     pub username: String,
     pub token: String,
     pub offset: i64,
+    #[serde(default)]
+    pub investigations: bool,
+    #[serde(default)]
+    pub sources: Vec<String>,
     pub last_poll: Option<i64>,
     pub error: Option<String>,
 }
@@ -69,7 +73,7 @@ impl Store {
         rows.map(|v| serde_json::from_str(&v.map_err(err)?).map_err(err))
             .collect()
     }
-    fn telegram_authorized(&self, chat: i64, user: i64) -> Result<bool> {
+    pub(crate) fn telegram_authorized(&self, chat: i64, user: i64) -> Result<bool> {
         let allowed: bool = self
             .conn
             .query_row(
@@ -180,6 +184,7 @@ impl Store {
 pub struct Worker {
     pub engine: Engine,
     active: Rc<Cell<bool>>,
+    conversation_active: Rc<Cell<bool>>,
     last: Rc<Cell<i64>>,
 }
 impl Worker {
@@ -187,11 +192,26 @@ impl Worker {
         Self {
             engine,
             active: Default::default(),
+            conversation_active: Default::default(),
             last: Rc::new(Cell::new(i64::MIN)),
         }
     }
     pub fn tick(&self) -> Result<()> {
         let now = self.engine.now();
+        if !self.conversation_active.get() {
+            self.conversation_active.set(true);
+            let this = self.clone();
+            tokio::task::spawn_local(async move {
+                if let Err(e) = this.conversation().await {
+                    let s = this.engine.store.borrow();
+                    if let Ok(mut c) = s.telegram_config() {
+                        c.error = Some(e);
+                        let _ = s.telegram_put(&c);
+                    }
+                }
+                this.conversation_active.set(false);
+            });
+        }
         if self.active.get()
             || now.saturating_sub(self.last.get()) < 2000
             || !self.engine.store.borrow().telegram_config()?.enabled
@@ -314,6 +334,7 @@ impl Worker {
         self.require_admin(subject)?;
         let op = args["op"].as_str().ok_or("operation required")?;
         if op == "telegramStatus" {
+            let ai = crate::ai::status().await;
             self.require_admin(subject)?;
             let s = self.engine.store.borrow();
             let c = s.telegram_config()?;
@@ -347,10 +368,10 @@ impl Worker {
                 .map_err(err)?
                 .collect::<std::result::Result<Vec<_>, _>>()
                 .map_err(err)?;
-            let mut jobs=s.conn.prepare("SELECT id,status,json_extract(body,'$.error'),json_extract(body,'$.pending.session_id') FROM telegram_jobs ORDER BY id DESC LIMIT 20").map_err(err)?;
-            let jobs=jobs.query_map([],|r|Ok(json!({"id":r.get::<_,i64>(0)?,"status":r.get::<_,String>(1)?,"error":r.get::<_,Option<String>>(2)?,"session":r.get::<_,Option<String>>(3)?}))).map_err(err)?.collect::<std::result::Result<Vec<_>,_>>().map_err(err)?;
+            let mut jobs=s.conn.prepare("SELECT id,status,json_extract(body,'$.error'),json_extract(body,'$.ai_run') FROM telegram_jobs ORDER BY id DESC LIMIT 20").map_err(err)?;
+            let jobs=jobs.query_map([],|r|Ok(json!({"id":r.get::<_,i64>(0)?,"status":r.get::<_,String>(1)?,"error":r.get::<_,Option<String>>(2)?,"run":r.get::<_,Option<String>>(3)?}))).map_err(err)?.collect::<std::result::Result<Vec<_>,_>>().map_err(err)?;
             return Ok(
-                json!({"jobs":jobs,"version":c.version,"enabled":c.enabled,"bot":c.username,"investigationsAvailable":false,"lastPoll":c.last_poll,"error":c.error,"peers":peers,"users":users,"pairs":pairs,"deliveries":deliveries}),
+                json!({"jobs":jobs,"version":c.version,"enabled":c.enabled,"bot":c.username,"investigationsAvailable":ai["configured"],"ai":ai,"investigations":c.investigations,"sources":c.sources,"lastPoll":c.last_poll,"error":c.error,"peers":peers,"users":users,"pairs":pairs,"deliveries":deliveries}),
             );
         }
         if op == "telegramConnect" {
@@ -399,20 +420,41 @@ impl Worker {
             return Ok(json!({"connected":true}));
         }
         if op == "telegramSettings" {
-            if args.get("observer").is_some() || args.get("sources").is_some() {
+            if args.get("observer").is_some() {
                 return Err("Investigation configuration is no longer supported".into());
             }
-            let s = self.engine.store.borrow();
+            let investigations = args["investigations"].as_bool().unwrap_or(false);
+            if investigations {
+                crate::ai::configuration().await?;
+            }
+            self.require_admin(subject)?;
+            let mut s = self.engine.store.borrow_mut();
             let mut c = s.telegram_config()?;
             if args["expected"].as_u64() != Some(c.version) {
                 return Err("Telegram configuration changed; refresh".into());
             }
+            let sources: Vec<String> =
+                serde_json::from_value(args.get("sources").cloned().unwrap_or(json!([])))
+                    .map_err(|_| "source IDs required")?;
+            if sources.len() > 32 {
+                return Err("too many diagnostic sources".into());
+            }
+            for id in &sources {
+                s.monitoring_config()?.source(id)?;
+            }
+            c.investigations = investigations;
+            c.sources = sources;
             c.enabled = args["enabled"].as_bool().ok_or("enabled required")?;
             if c.enabled && c.token.is_empty() {
                 return Err("Connect a bot first".into());
             }
-            c.version += 1;
-            s.telegram_put(&c)?;
+            s.alert_atomic(|s| {
+                // A settings revision fences older work and pending replies atomically.
+                s.conn.execute("UPDATE telegram_jobs SET status='cancelled' WHERE status IN ('queued','running')",[]).map_err(err)?;
+                s.conn.execute("UPDATE telegram_outbox SET status='failed' WHERE kind='chat' AND status='pending'",[]).map_err(err)?;
+                c.version += 1;
+                s.telegram_put(&c)
+            })?;
             return Ok(json!({"saved":true}));
         }
         let mut s = self.engine.store.borrow_mut();
@@ -454,9 +496,7 @@ impl Worker {
                 let chat = candidate["chat"].as_i64().ok_or("chat missing")?;
                 let delivery = args["delivery"].as_bool().ok_or("delivery required")?;
                 let investigate = args["investigate"].as_bool().unwrap_or(false);
-                if investigate {
-                    return Err("Investigations are currently unavailable".into());
-                }
+                if investigate && candidate["user"].as_i64().is_none() {return Err("Pair a personal account for investigations; channels are delivery-only".into());}
                 let p = Peer {
                     chat,
                     name: candidate["name"]
@@ -470,6 +510,7 @@ impl Worker {
                     investigate,
                 };
                 s.telegram_save_peer(&p, self.engine.now())?;
+                if investigate {s.conn.execute("INSERT INTO telegram_users VALUES(?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name",params![candidate["user"].as_i64().unwrap(),candidate["user_name"].as_str().unwrap_or("")]).map_err(err)?;}
                 s.conn
                     .execute("DELETE FROM telegram_pairs WHERE code=?", [code])
                     .map_err(err)?;
@@ -483,9 +524,6 @@ impl Worker {
                     .into_iter()
                     .find(|v| v.chat == p.chat)
                     .ok_or("pair the destination first")?;
-                if p.investigate && !old.investigate {
-                    return Err("Investigations are currently unavailable".into());
-                }
                 p.kind = old.kind;
                 p.name = old.name;
                 if p.kind == "channel" && p.investigate {

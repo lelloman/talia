@@ -130,4 +130,7 @@ Administrators connect a bot and pair chats in web Settings → Telegram. No
 provider-file edits are needed for this managed bot. The encrypted token lives
 in SQLite; its private key lives beside it (`talia.sqlite3.telegram-key`). Back up
 both. Existing bot setup and delivery destinations survive migration 15.
-Investigations are currently unavailable. See [Telegram setup](../docs/telegram.md).
+For investigations and report analysis, mount the private connection and API-key
+files and set `TALIA_AI_CONFIG=/run/talia/ai.json`. See [AI setup](../docs/ai.md)
+for the exact format and [Telegram setup](../docs/telegram.md) for enabling access.
+Schema 16 adds durable inference records; interrupted inference is not repeated.

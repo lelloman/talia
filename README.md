@@ -10,13 +10,13 @@ Its three purposes are:
 1. **Dashboards for humans.** Agents define interactive interfaces through MCP,
    using Prometheus metrics, probe results, and delegated task status and outcomes.
    Web and native Android clients render the same UI and logic definitions.
-2. **Periodic checks and tasks.** Run direct probes and report workflows. Planned
-   LLM assistance uses a Talìa-owned harness; Crumbles delegation remains future work.
+2. **Periodic checks and tasks.** Run direct probes and report workflows. LLM
+   assistance uses a Talìa-owned harness; Crumbles delegation remains future work.
 3. **Anomaly detection and alerts.** Agents configure conditions and actions
    through MCP, including notifications and follow-up work.
 
 Prometheus continues collecting and storing metrics; Talìa consumes them.
-The planned LLM harness will call simple-ai completion endpoints. Talìa will own
+The LLM harness calls simple-ai completion endpoints. Talìa owns
 its tools, permissions, context and execution lifecycle. Crumbles supplies future
 ticket workflows.
 
@@ -83,11 +83,11 @@ destinations. SMTP email, Telegram, FCM Android push and browser Web Push have p
 web and native Android expose alert controls independently of dashboard failures.
 See [alert qualification](docs/alert-qualification.md) for test evidence and limits.
 Live provider credentials, deployment preparation and homelab migration remain next;
-LLM investigations and Crumbles integration remain separate work;
-[scheduled reports](docs/reports.md) support data collection, scripts, composed
+Crumbles integration remains separate work;
+[scheduled reports](docs/reports.md) support data collection, scripts, simple-ai analysis, composed
 HTML email, manual previews and retained execution/delivery history.
 
 Network deployment packaging and access controls: [deployment guide](deploy/README.md).
 
-Telegram bot setup and report delivery are managed in web Settings. Investigations
-are currently unavailable following removal of the external agent integration. See [Telegram integration](docs/telegram.md).
+Telegram bot setup and report delivery are managed in web Settings. Read-only investigations
+and chat compaction use the [simple-ai harness](docs/ai.md). See [Telegram integration](docs/telegram.md).

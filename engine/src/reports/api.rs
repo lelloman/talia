@@ -22,7 +22,7 @@ impl Store {
             "list" => &[],
             "get" => &["id"],
             "runs" => &["report", "before", "limit"],
-            "run_get" => &["id"],
+            "run_get" | "analysis_get" => &["id"],
             "save" => &["definition", "expected", "requestId"],
             "run" => &["id", "send", "requestId"],
             "deliver" => &["id", "requestId"],
@@ -35,7 +35,7 @@ impl Store {
         {
             return Err("unknown report fields".into());
         }
-        if ["list", "get", "runs", "run_get"].contains(&op) {
+        if ["list", "get", "runs", "run_get", "analysis_get"].contains(&op) {
             return self.report_inner(op, &args, session.principal(), now);
         }
         let request = text(&args, "requestId")?;
@@ -91,6 +91,9 @@ impl Store {
                     .ok_or("send boolean required; false previews without delivery")?;
                 let r = self.report_start(text(args, "id")?, actor, send, now)?;
                 Ok(json!({"run_id":r.id,"status":r.status}))
+            }
+            "analysis_get" => {
+                Ok(json!({"run":self.ai_run(text(args,"id")?)?.ok_or("AI run not found")?}))
             }
             "run_get" => Ok(json!({"run":self.report_run(text(args,"id")?)?})),
             "runs" => {
@@ -151,7 +154,8 @@ impl Store {
                     return Err("prune cutoff is in the future".into());
                 }
                 let n=self.conn.execute("DELETE FROM report_runs WHERE created<? AND status IN ('complete','partial','failed')",[before]).map_err(err)?;
-                Ok(json!({"removed":n,"request_tombstones_retained":true}))
+                let ai=self.conn.execute("DELETE FROM ai_runs WHERE created<? AND status IN ('complete','failed') AND NOT EXISTS(SELECT 1 FROM report_runs r WHERE r.id=json_extract(ai_runs.body,'$.scope.run') AND r.status IN ('queued','running','delivering')) AND NOT EXISTS(SELECT 1 FROM telegram_jobs j WHERE j.id=json_extract(ai_runs.body,'$.scope.job') AND j.status IN ('queued','running'))",[before]).map_err(err)?;
+                Ok(json!({"removed":n,"ai_removed":ai,"request_tombstones_retained":true}))
             }
             _ => Err("unknown report operation".into()),
         }
@@ -162,12 +166,13 @@ pub fn tools() -> Vec<Value> {
     for (op,description,properties,required) in [
   ("list","List server-side reporting workflow definitions. Requires global authoring/admin access.",json!({}),vec![]),
   ("get","Read one versioned reporting definition.",json!({"id":{"type":"string"}}),vec!["id"]),
-  ("save","Create/update a reporting workflow without restart. Ordered steps support read, source, script. JavaScript is a synchronous function(ctx), with ctx.steps, ctx.period, ctx.now and ctx.decode(wire). compose returns {subject,summary,sections:[{title,text}]}; HTML is escaped.",json!({"definition":{"type":"object","description":"{id,version,enabled,schedule:null|{kind:daily,time:HH:MM,zone:IANA,weekdays?:[1..7]}|{kind:interval,every_ms},period_ms?,timeout_ms?,steps:[{id,optional?,kind:read,variable}|{id,optional?,kind:source,source,request:JS}|{id,optional?,kind:script,source:JS}],compose:JS,destinations:[emailOrTelegramDestinationId]}"},"expected":{"type":"integer","minimum":0}}),vec!["definition","expected"]),
+  ("save","Create/update a reporting workflow without restart. Ordered steps support read, source, script, analysis. Analysis uses simple-ai with explicit previous-step inputs and no tools. JavaScript is a synchronous function(ctx), with ctx.steps, ctx.period, ctx.now and ctx.decode(wire). compose returns {subject,summary,sections:[{title,text}]}; HTML is escaped.",json!({"definition":{"type":"object","description":"{id,version,enabled,schedule:null|{kind:daily,time:HH:MM,zone:IANA,weekdays?:[1..7]}|{kind:interval,every_ms},period_ms?,timeout_ms?,steps:[{id,optional?,kind:read,variable}|{id,optional?,kind:source,source,request:JS}|{id,optional?,kind:script,source:JS}|{id,optional?,kind:analysis,instructions,inputs:[stepId]}],compose:JS,destinations:[emailOrTelegramDestinationId]}"},"expected":{"type":"integer","minimum":0}}),vec!["definition","expected"]),
   ("run","Run a report now. send:false executes all steps and saves a preview without delivery; send:true also delivers. One execution per report at a time. Reuse requestId only for an identical retry.",json!({"id":{"type":"string"},"send":{"type":"boolean"}}),vec!["id","send"]),
-  ("run_get","Read frozen definition, step results, tracked agent session, report HTML/text and per-destination delivery outcomes for one run.",json!({"id":{"type":"string"}}),vec!["id"]),
+  ("analysis_get","Inspect a retained Talìa AI run, including bounded messages, tool results, model, usage and errors. Administrator only. Includes report and Telegram runs.",json!({"id":{"type":"string"}}),vec!["id"]),
+  ("run_get","Read frozen definition, step results, report HTML/text and per-destination delivery outcomes for one run.",json!({"id":{"type":"string"}}),vec!["id"]),
   ("runs","List bounded run summaries for a report, paginated by exclusive run-ID cursor.",json!({"report":{"type":"string"},"before":{"type":"string"},"limit":{"type":"integer","minimum":1,"maximum":100}}),vec!["report"]),
   ("deliver","Deliver an already-composed unsent preview without rerunning checks. An already requested delivery cannot be replayed with a different key.",json!({"id":{"type":"string"}}),vec!["id"]),
-  ("prune","Delete terminal run content before UTC millisecond cutoff. Request tombstones remain to prevent replay starting new work.",json!({"before":{"type":"integer","minimum":0}}),vec!["before"]),
- ] {let read=["list","get","runs","run_get"].contains(&op);let mut props=properties;let mut req=required;if !read{props["requestId"]=json!({"type":"string","minLength":1,"maxLength":64});req.push("requestId");}tools.push(json!({"name":format!("reports_{op}"),"description":description,"inputSchema":{"type":"object","properties":props,"required":req,"additionalProperties":false},"annotations":{"readOnlyHint":read,"destructiveHint":op=="prune","idempotentHint":true,"openWorldHint":!read}}));}
+  ("prune","Delete terminal report content and AI runs before UTC millisecond cutoff. AI results owned by active workflows and request tombstones are retained.",json!({"before":{"type":"integer","minimum":0}}),vec!["before"]),
+ ] {let read=["list","get","runs","run_get","analysis_get"].contains(&op);let mut props=properties;let mut req=required;if !read{props["requestId"]=json!({"type":"string","minLength":1,"maxLength":64});req.push("requestId");}tools.push(json!({"name":format!("reports_{op}"),"description":description,"inputSchema":{"type":"object","properties":props,"required":req,"additionalProperties":false},"annotations":{"readOnlyHint":read,"destructiveHint":op=="prune","idempotentHint":true,"openWorldHint":!read}}));}
     tools
 }

@@ -2,8 +2,7 @@
 
 Server-owned reports collect data, execute checks/scripts, compose a retained
 summary and send HTML plus plain-text email or Telegram messages. No dashboard
-needs to be open. LLM analysis through a Talìa-owned harness using simple-ai
-completions is planned separately; it is not currently available.
+needs to be open. LLM analysis uses the [Talìa-owned harness](ai.md) with simple-ai completions.
 
 ## Definitions and steps
 
@@ -23,6 +22,7 @@ the final email, even if the composer omits them. Supported steps:
 | `read` | `variable`: existing engine Variable ID | Current Instance, including wire `value`, timestamp, quality and revision |
 | `source` | `source`: existing DataSource ID; `request`: JS function returning a SourceRequest | `{wire: ...}` from Prometheus query/range or HTTP GET/HEAD |
 | `script` | `source`: JS function | JSON result |
+| `analysis` | `instructions`, `inputs`: previous step IDs | `{run_id,summary,model,turns}` from simple-ai; no tools |
 
 Request and transformation functions receive `ctx.now` (run creation time in UTC
 milliseconds), `ctx.period.start/end`, `ctx.report`, `ctx.run`, `ctx.steps`, and
@@ -39,7 +39,7 @@ remote images and scripts are not accepted from scripts. Both HTML and plain
 text are retained with the run.
 
 The [morning homelab example](../reports/examples/morning-homelab.json) queries
-Prometheus, computes observations, and composes an email. Replace `prometheus`
+Prometheus, computes observations, asks simple-ai for analysis, and composes an email. Replace `prometheus`
 and `my-email` with configured names.
 It starts with scheduling disabled so it can be previewed first.
 
@@ -52,6 +52,7 @@ metadata and results can contain operational data and should be treated accordin
 - `reports_save`: `{definition,expected,requestId}`; expected zero creates.
 - `reports_list` / `reports_get`: discover and read definitions.
 - `reports_run`: `{id,send,requestId}` returns a durable `run_id` immediately.
+- `reports_analysis_get`: `{id:ai_run_id}` inspects retained model/tool messages and outcomes (admin only).
 - `reports_run_get`: `{id:run_id}` returns step outcomes,
   frozen definition, report HTML/text and per-destination delivery status.
 - `reports_runs`: `{report,limit?,before?}` lists bounded summaries; use the
@@ -59,10 +60,11 @@ metadata and results can contain operational data and should be treated accordin
 - `reports_deliver`: `{id:run_id,requestId}` delivers a completed, unsent preview
   without rerunning its checks. A second delivery request is rejected.
 - `reports_prune`: `{before:UTC_milliseconds,requestId}` removes terminal runs
-  older than the cutoff; request tombstones remain to prevent duplicate execution.
+  older than the cutoff, plus terminal AI runs whose owning workflows are inactive;
+  request tombstones remain to prevent duplicate execution.
 
 Use a new request ID for a new operation and the same ID/body for retries.
-`send:false` suppresses delivery only: it still runs all collection and script steps. Preview via `reports_run_get`; delivering
+`send:false` suppresses delivery only: it still runs all collection, script and inference steps. Preview via `reports_run_get`; delivering
 that preview is an explicit separate operation. Configure an existing enabled
 `email` destination with `alerts_destination_save`; reports reuse its SMTP provider.
 
@@ -101,6 +103,11 @@ a store borrow or SQLite transaction. Use prune for terminal retention; active
 work and idempotency tombstones are not pruned.
 
 ## Operator configuration
+
+Configure the [single simple-ai connection](ai.md#one-connection-and-model) for
+analysis steps. Interrupted inference fails without automatic resubmission; a
+completed local result can be reused after restart. Pure collection/scripts do
+not require AI configuration.
 
 Email uses the existing private `TALIA_ALERT_PROVIDERS` file; see
 [SMTP provider configuration](alerts.md#provider-configuration). No new provider

@@ -20,9 +20,17 @@
       "id": "facts",
       "kind": "script",
       "source": "ctx => { const data=ctx.decode(ctx.steps.availability.value.wire); return {series:data.result.map(s=>({labels:s.metric,availabilityPercent:Number.isFinite(s.samples[0]?.[1])?s.samples[0][1]*100:null})),warnings:data.warnings}; }"
+    },
+    {
+      "id": "analysis",
+      "kind": "analysis",
+      "instructions": "Summarize availability, outages, missing data and limitations. Distinguish observations from hypotheses.",
+      "inputs": [
+        "facts"
+      ]
     }
   ],
-  "compose": "ctx => ({subject:'Tal\u00eca \u00b7 Morning homelab report',summary:'Availability observations for the reporting period. '+ctx.steps.facts.value.series.length+' series collected.',sections:[{title:'Availability observations',text:JSON.stringify(ctx.steps.facts.value,null,2)}]})",
+  "compose": "ctx => ({subject:'Tal\u00eca \u00b7 Morning homelab report',summary:ctx.steps.analysis.value.summary,sections:[{title:'Availability observations',text:JSON.stringify(ctx.steps.facts.value,null,2)}]})",
   "destinations": [
     "my-email"
   ]

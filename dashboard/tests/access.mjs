@@ -118,7 +118,13 @@ try{
  await a.locator('#telegram-settings').evaluate(e=>e.open=true);
  assert.equal(await a.locator('#telegram-profile').count(),0);
  assert.equal(await a.locator('#telegram-observer-key').count(),0);
- assert.equal((await api(a,{op:'telegramStatus'})).investigationsAvailable,false);
+ const telegramStatus=await api(a,{op:'telegramStatus'});
+ assert.equal(telegramStatus.investigationsAvailable,false);
+ assert.equal(telegramStatus.investigations,false);
+ assert.deepEqual(telegramStatus.sources,[]);
+ assert.equal(await a.locator('#telegram-investigations').isDisabled(),true);
+ assert.ok((await api(a,{op:'telegramSettings',expected:telegramStatus.version,enabled:false,investigations:true,sources:[]})).error);
+
  assert.ok((await api(a,{op:'telegramObserverKey'})).error);
  assert.ok((await api(v,{op:'telegramStatus'})).error);
  assert.equal((await mcp('to_'+'a'.repeat(64),'tools/list')).status(),401);

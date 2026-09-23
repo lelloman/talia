@@ -91,7 +91,7 @@ async fn pairing_encryption_authority_and_revocation() {
     assert!(!w.engine.store.borrow().telegram_authorized(41, 41).unwrap());
     // Same username never grants access. Both the numeric account and chat must be approved.
     pair(&w, 42, 42, false).await;
-    // Existing permissions survive an upgrade, but new investigation grants are rejected.
+    // Existing numeric permissions survive an upgrade.
     {
         let store = w.engine.store.borrow();
         store.conn.execute("UPDATE telegram_peers SET body=json_set(body,'$.investigate',json('true')) WHERE chat=42",[]).unwrap();
@@ -100,7 +100,6 @@ async fn pairing_encryption_authority_and_revocation() {
             .execute("INSERT INTO telegram_users VALUES(42,'fixture')", [])
             .unwrap();
     }
-    assert!(w.admin("admin",json!({"op":"telegramPeer","peer":{"chat":41,"name":"Fixture","kind":"private","delivery":true,"investigate":true}})).await.is_err());
     w.engine.store.borrow_mut().telegram_ingest(&json!({"update_id":100,"message":{"chat":{"id":42,"type":"private"},"from":{"id":42,"is_bot":false},"text":"/ask check my server"}}),1000).unwrap();
     assert_eq!(
         w.engine
@@ -123,7 +122,7 @@ async fn pairing_encryption_authority_and_revocation() {
             |r| r.get::<_, String>(0)
         )
         .unwrap()
-        .contains("unavailable"));
+        .contains("not configured"));
     assert!(w.engine.store.borrow().telegram_authorized(42, 42).unwrap());
     assert!(!w.engine.store.borrow().telegram_authorized(41, 42).unwrap());
     assert!(!w.engine.store.borrow().telegram_authorized(42, 99).unwrap());
@@ -254,4 +253,210 @@ async fn delivery_chunks_are_tracked_and_never_replayed_after_uncertainty() {
     );
     drop(w);
     std::fs::remove_dir_all(dir).unwrap();
+}
+
+#[tokio::test]
+async fn conversations_select_reports_compact_and_start_fresh() {
+    let _bot = bot_fixture().await;
+    let (w, dir) = fixture();
+    connect(&w).await;
+    pair(&w, 55, 55, true).await;
+    let ai = MockServer::start().await;
+    let ai_dir = crate::ai::tests::config(&ai.uri());
+    w.admin("admin",json!({"op":"telegramSettings","expected":1,"enabled":true,"investigations":true,"sources":[]})).await.unwrap();
+    let contexts = Arc::new(Mutex::new(vec![]));
+    let copy = contexts.clone();
+    Mock::given(path("/v1/chat/completions"))
+        .respond_with(move |r: &wiremock::Request| {
+            let request: Value = serde_json::from_slice(&r.body).unwrap();
+            let compact = request["messages"][0]["content"]
+                .as_str()
+                .unwrap()
+                .contains("Compact this conversation");
+            copy.lock().unwrap().push(request);
+            ResponseTemplate::new(200).set_body_json(crate::ai::tests::answer(if compact {
+                "Concise prior conversation"
+            } else {
+                "Monitoring answer"
+            }))
+        })
+        .mount(&ai)
+        .await;
+    let mut run_ids = vec![];
+    {
+        let mut s = w.engine.store.borrow_mut();
+        for (id, text) in [
+            ("selected", "SELECTED-REPORT"),
+            ("other", "UNRELATED-REPORT"),
+        ] {
+            let d:crate::reports::Definition=serde_json::from_value(json!({"id":id,"version":1,"enabled":false,"steps":[{"id":"data","kind":"script","source":"()=>42"}],"compose":"()=>({subject:'Fixture',summary:'Report',sections:[]})","destinations":[]})).unwrap();
+            s.report_save(&d, 0, 1000).unwrap();
+            let mut r = s.report_start(id, "admin", false, 1000).unwrap();
+            r.status = "complete".into();
+            r.text = Some(text.into());
+            s.report_put(&r).unwrap();
+            run_ids.push(r.id);
+        }
+        s.conn.execute("INSERT INTO telegram_outbox(id,chat,kind,reference,status,body,message_id) VALUES('selected',55,'report',?,'sent','report',777)",[&run_ids[0]]).unwrap();
+    }
+    let ingest = |id, text: &str, reply: bool| {
+        let mut m =
+            json!({"chat":{"id":55,"type":"private"},"from":{"id":55,"is_bot":false},"text":text});
+        if reply {
+            m["reply_to_message"] = json!({"message_id":777,"text":"FORGED-QUOTED-REPORT"});
+        }
+        w.engine
+            .store
+            .borrow_mut()
+            .telegram_ingest(&json!({"update_id":id,"message":m}), 1000)
+            .unwrap();
+    };
+    ingest(60, "What is happening?", false);
+    w.conversation().await.unwrap();
+    ingest(61, "Explain this report", true);
+    w.conversation().await.unwrap();
+    ingest(62, "/compact", false);
+    w.conversation().await.unwrap();
+    {
+        let q = contexts.lock().unwrap();
+        let first: Value =
+            serde_json::from_str(q[0]["messages"][1]["content"].as_str().unwrap()).unwrap();
+        assert!(first["referenced_report"].is_null());
+        assert!(q[1].to_string().contains("SELECTED-REPORT"));
+        assert!(!q.iter().any(|v| v.to_string().contains("UNRELATED-REPORT")
+            || v.to_string().contains("FORGED-QUOTED-REPORT")));
+        assert!(q[2].get("tools").is_none());
+        assert!(!q[2].to_string().contains("SELECTED-REPORT"));
+    }
+    let history: i64 = w
+        .engine
+        .store
+        .borrow()
+        .conn
+        .query_row("SELECT count(*) FROM telegram_history", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(history, 4);
+    ingest(63, "/new", false);
+    ingest(64, "Fresh question", false);
+    w.conversation().await.unwrap();
+    let fresh: Value = serde_json::from_str(
+        contexts.lock().unwrap()[3]["messages"][1]["content"]
+            .as_str()
+            .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(fresh["summary"], "");
+    assert_eq!(fresh["messages"], json!([]));
+    {
+        let s = w.engine.store.borrow();
+        for i in 0..16 {
+            s.conn.execute("INSERT INTO telegram_history(chat,user,epoch,role,body) VALUES(55,55,1,'user',?)",[format!("observation {i}")]).unwrap();
+        }
+    }
+    ingest(65, "Check again", false);
+    w.conversation().await.unwrap();
+    assert_eq!(
+        w.engine
+            .store
+            .borrow()
+            .conn
+            .query_row("SELECT status FROM telegram_jobs WHERE id=65", [], |r| {
+                r.get::<_, String>(0)
+            })
+            .unwrap(),
+        "queued"
+    );
+    w.conversation().await.unwrap();
+    assert_eq!(
+        w.engine
+            .store
+            .borrow()
+            .conn
+            .query_row("SELECT status FROM telegram_jobs WHERE id=65", [], |r| {
+                r.get::<_, String>(0)
+            })
+            .unwrap(),
+        "done"
+    );
+    assert!(contexts.lock().unwrap()[4].get("tools").is_none());
+    assert!(contexts.lock().unwrap()[5].get("tools").is_some());
+    drop(w);
+    std::fs::remove_dir_all(dir).unwrap();
+    std::fs::remove_dir_all(ai_dir).unwrap();
+}
+
+#[tokio::test]
+async fn inference_does_not_block_bot_delivery_and_revocation_suppresses_answer() {
+    let bot_server = bot_fixture().await;
+    let (w, dir) = fixture();
+    connect(&w).await;
+    pair(&w, 55, 55, true).await;
+    let ai = MockServer::start().await;
+    let ai_dir = crate::ai::tests::config(&ai.uri());
+    w.admin("admin",json!({"op":"telegramSettings","expected":1,"enabled":true,"investigations":true,"sources":[]})).await.unwrap();
+    Mock::given(path("/v1/chat/completions"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_delay(Duration::from_millis(200))
+                .set_body_json(crate::ai::tests::answer("LATE-ANSWER")),
+        )
+        .expect(1)
+        .mount(&ai)
+        .await;
+    Mock::given(path("/bot123:fixture/getUpdates"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({"ok":true,"result":[]})))
+        .expect(1)
+        .mount(&bot_server)
+        .await;
+    Mock::given(path("/bot123:fixture/sendMessage"))
+        .respond_with(
+            ResponseTemplate::new(200).set_body_json(json!({"ok":true,"result":{"message_id":1}})),
+        )
+        .expect(1)
+        .mount(&bot_server)
+        .await;
+    w.engine.store.borrow_mut().telegram_ingest(&json!({"update_id":60,"message":{"chat":{"id":55,"type":"private"},"from":{"id":55,"is_bot":false},"text":"Investigate"}}),1000).unwrap();
+    w.admin("admin", json!({"op":"telegramTest","chat":55}))
+        .await
+        .unwrap();
+    let finished = Cell::new(false);
+    let (conversation, _) = tokio::join!(
+        async {
+            let r = w.conversation().await;
+            finished.set(true);
+            r
+        },
+        async {
+            tokio::time::sleep(Duration::from_millis(30)).await;
+            w.advance().await.unwrap();
+            assert!(!finished.get());
+            w.admin("admin", json!({"op":"telegramRevokeUser","id":55}))
+                .await
+                .unwrap();
+        }
+    );
+    conversation.unwrap();
+    let s = w.engine.store.borrow();
+    assert_eq!(
+        s.conn
+            .query_row("SELECT status FROM telegram_jobs WHERE id=60", [], |r| {
+                r.get::<_, String>(0)
+            })
+            .unwrap(),
+        "cancelled"
+    );
+    assert_eq!(
+        s.conn
+            .query_row(
+                "SELECT count(*) FROM telegram_outbox WHERE body LIKE '%LATE-ANSWER%'",
+                [],
+                |r| r.get::<_, i64>(0)
+            )
+            .unwrap(),
+        0
+    );
+    drop(s);
+    drop(w);
+    std::fs::remove_dir_all(dir).unwrap();
+    std::fs::remove_dir_all(ai_dir).unwrap();
 }
