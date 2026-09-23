@@ -602,7 +602,7 @@ fn restart_upgrade_preserves_catalog_and_credentials_are_not_sources() {
     s.catalog_save(&set).unwrap();
     let package = s.dashboard_package("one").unwrap();
     let revision = s.catalog_revision().unwrap();
-    s.conn.execute_batch("DROP TABLE agent_requests; DROP TABLE agent_audit; DROP TABLE agent_credentials; DROP TABLE agent_principals; DROP TABLE agent_security; DROP TABLE alert_entities; DROP TABLE alert_audit; DROP TABLE alert_requests; PRAGMA user_version=5;").unwrap();
+    s.conn.execute_batch("DROP TABLE ai_account; DROP TABLE agent_requests; DROP TABLE agent_audit; DROP TABLE agent_credentials; DROP TABLE agent_principals; DROP TABLE agent_security; DROP TABLE alert_entities; DROP TABLE alert_audit; DROP TABLE alert_requests; PRAGMA user_version=5;").unwrap();
     drop(s);
     let mut s = Store::open(&path).unwrap();
     assert_eq!(s.catalog_revision().unwrap(), revision);

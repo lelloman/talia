@@ -23,3 +23,9 @@ Accepted actions have durable identities. A restart marks unfinished accepted
 actions unknown. The engine never interprets that state as permission to retry an
 external effect. Action tombstones are retained without automatic expiry in v1;
 this prevents an expired identity from accidentally dispatching again.
+
+The installation AI account (schema 17) stores only encrypted OAuth credentials.
+Back up `DATABASE.ai-key` (or `TALIA_AI_KEY_FILE`) along with SQLite. Restoring an
+older database may restore already-rotated refresh tokens; reconnect the dedicated
+account after such a restore. Never run two installations from the same account
+session backup. See [AI account setup](ai.md).

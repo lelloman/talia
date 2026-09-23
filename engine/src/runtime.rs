@@ -28,6 +28,7 @@ pub type EffectGuard = Rc<dyn Fn(&str, &str) -> Result<()>>;
 #[derive(Clone)]
 pub struct Engine {
     pub store: Rc<RefCell<Store>>,
+    pub(crate) ai_auth_lock: Rc<tokio::sync::Mutex<()>>,
     pub evaluation: Rc<RefCell<HashMap<String, Evaluation>>>,
     shared: Rc<RefCell<HashMap<String, watch::Receiver<Option<Result<Instance>>>>>>,
     subscribers: Rc<RefCell<HashMap<String, usize>>>,
@@ -68,6 +69,7 @@ impl Engine {
             .collect();
         Self {
             store: Rc::new(RefCell::new(store)),
+            ai_auth_lock: Default::default(),
             evaluation: Rc::new(RefCell::new(recovered)),
             shared: Default::default(),
             subscribers: Default::default(),

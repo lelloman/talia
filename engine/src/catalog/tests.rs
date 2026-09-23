@@ -442,7 +442,7 @@ fn v4_upgrade_preserves_monitoring_and_variable_state() {
             .execute_batch(&format!("DROP TRIGGER {name}"))
             .unwrap();
     }
-    s.conn.execute_batch("DROP TABLE authored_definitions; DROP TABLE dashboard_packages; DELETE FROM metadata WHERE key='catalog_revision'; DROP TABLE alert_entities; DROP TABLE alert_audit; DROP TABLE alert_requests; PRAGMA user_version=4;").unwrap();
+    s.conn.execute_batch("DROP TABLE ai_account; DROP TABLE authored_definitions; DROP TABLE dashboard_packages; DELETE FROM metadata WHERE key='catalog_revision'; DROP TABLE alert_entities; DROP TABLE alert_audit; DROP TABLE alert_requests; PRAGMA user_version=4;").unwrap();
     drop(s);
     let mut s = Store::open(&path).unwrap();
     assert_eq!(s.instance("metric").unwrap(), original);

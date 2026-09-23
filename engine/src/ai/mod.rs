@@ -7,6 +7,10 @@ use rusqlite::{params, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::time::Duration;
+pub mod account;
+#[cfg(test)]
+mod account_tests;
+mod crypto;
 #[cfg(test)]
 pub(crate) mod tests;
 mod tools;
@@ -67,12 +71,6 @@ pub async fn configuration() -> Result<Config> {
         return Err("invalid AI origin, model or token file".into());
     }
     Ok(c)
-}
-pub async fn status() -> Value {
-    match configuration().await {
-        Ok(c) => json!({"configured":true,"model":c.model}),
-        Err(e) => json!({"configured":false,"error":e}),
-    }
 }
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "kind", rename_all = "snake_case")]
@@ -236,12 +234,9 @@ fn outcome(r: &Run) -> Result<Value> {
     }
 }
 async fn run(engine: &Engine, r: &mut Run) -> Result<String> {
-    let config = configuration().await?;
-    let token = file(config.token_file.clone(), 4096).await?;
-    let token = token.trim();
-    if !token.starts_with("sk-") || token.bytes().any(|c| c.is_ascii_whitespace()) {
-        return Err("simple-ai API key is invalid".into());
-    }
+    let mut session = account::session(engine).await?;
+    let revision = session.revision;
+    let config = session.config.clone();
     let client = reqwest::Client::builder()
         .redirect(reqwest::redirect::Policy::none())
         .no_proxy()
@@ -250,7 +245,12 @@ async fn run(engine: &Engine, r: &mut Run) -> Result<String> {
         .build()
         .map_err(|_| "AI HTTP client unavailable")?;
     r.model = config.model.clone();
-    for _ in 0..6 {
+    for turn in 0..6 {
+        account::check(engine, revision)?;
+        if turn > 0 && revision.is_some() {
+            session = account::session(engine).await?;
+            account::check(engine, revision)?;
+        }
         permit(engine, &r.scope)?;
         if engine.now() >= r.deadline {
             return Err("AI execution deadline exceeded".into());
@@ -270,7 +270,7 @@ async fn run(engine: &Engine, r: &mut Run) -> Result<String> {
                 "{}/v1/chat/completions",
                 config.origin.trim_end_matches('/')
             ))
-            .bearer_auth(token)
+            .bearer_auth(&session.token)
             .json(&request)
             .send()
             .await
@@ -292,6 +292,7 @@ async fn run(engine: &Engine, r: &mut Run) -> Result<String> {
             }
             bytes.extend_from_slice(&chunk);
         }
+        account::check(engine, revision)?;
         permit(engine, &r.scope)?;
         if engine.now() >= r.deadline {
             return Err("AI execution deadline exceeded".into());
@@ -350,8 +351,10 @@ async fn run(engine: &Engine, r: &mut Run) -> Result<String> {
                 json!({"role":"assistant","content":message["content"],"tool_calls":calls}),
             )?;
             for (id, name, args) in parsed {
+                account::check(engine, revision)?;
                 permit(engine, &r.scope)?;
                 let result = tools::execute(engine, name, args).await;
+                account::check(engine, revision)?;
                 permit(engine, &r.scope)?;
                 let value = match result {
                     Ok(v) => v,

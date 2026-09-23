@@ -355,14 +355,14 @@ async fn retired_integration_migration_preserves_history_and_delivery() {
         .unwrap();
     s.conn.execute("INSERT INTO telegram_history(chat,user,epoch,role,body) VALUES(42,42,0,'assistant','Past answer')",[]).unwrap();
     s.conn.execute("INSERT INTO telegram_outbox(id,chat,kind,status,body) VALUES('chat',42,'chat','pending','Old answer'),('report',42,'report','pending','Composed report')",[]).unwrap();
-    s.conn.execute_batch("CREATE TABLE telegram_observer(id INTEGER PRIMARY KEY,hash TEXT); INSERT INTO telegram_observer VALUES(1,'old-secret-hash'); PRAGMA user_version=14;").unwrap();
+    s.conn.execute_batch("DROP TABLE ai_account; CREATE TABLE telegram_observer(id INTEGER PRIMARY KEY,hash TEXT); INSERT INTO telegram_observer VALUES(1,'old-secret-hash'); PRAGMA user_version=14;").unwrap();
     drop(s);
     let mut s = Store::open(&db).unwrap();
     assert_eq!(
         s.conn
             .query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
             .unwrap(),
-        16
+        17
     );
     let d = s.report_definition("morning").unwrap();
     assert!(!d.enabled);

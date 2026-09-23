@@ -37,5 +37,6 @@ export async function startTelegram(account){
  $('telegram-refresh').onclick=()=>attempt(async()=>{});
  $('telegram-save').onclick=()=>attempt(()=>account({op:'telegramSettings',expected:state.version,enabled:$('telegram-enabled').checked,investigations:$('telegram-investigations').checked,sources:$('telegram-sources').value.split(',').map(v=>v.trim()).filter(Boolean)}));
  window.addEventListener('hashchange',()=>{if(location.hash==='#settings'&&!busy)attempt(async()=>{});else if(location.hash!=='#settings')$('telegram-token').value='';});
+ window.addEventListener('talia-ai-account-changed',()=>{if(!busy)attempt(async()=>{});});
  await attempt(async()=>{});
 }

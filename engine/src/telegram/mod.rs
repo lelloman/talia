@@ -334,7 +334,7 @@ impl Worker {
         self.require_admin(subject)?;
         let op = args["op"].as_str().ok_or("operation required")?;
         if op == "telegramStatus" {
-            let ai = crate::ai::status().await;
+            let ai = crate::ai::account::status(&self.engine).await;
             self.require_admin(subject)?;
             let s = self.engine.store.borrow();
             let c = s.telegram_config()?;
@@ -425,7 +425,7 @@ impl Worker {
             }
             let investigations = args["investigations"].as_bool().unwrap_or(false);
             if investigations {
-                crate::ai::configuration().await?;
+                crate::ai::account::configuration(&self.engine).await?;
             }
             self.require_admin(subject)?;
             let mut s = self.engine.store.borrow_mut();

@@ -6,6 +6,55 @@ runner profiles, external agent sessions or observer MCP credentials.
 
 ## One connection and model
 
+Administrators configure the installation in **Settings → simple-ai**:
+
+1. Enter the simple-ai server origin and model or model class.
+2. Choose **Connect LelloAuth account**. Open the authorization link and enter the
+   displayed code. Sign in as the dedicated Talìa account; use a private window if
+   LelloAuth currently has your personal account signed in.
+3. Return to Talìa, check the displayed identity, then choose **Use this account**.
+
+Talìa discovers the issuer and public client from `/.well-known/simple-ai` and uses
+LelloAuth's device authorization flow. Enable **device flow** on that advertised
+public client in LelloAuth (simple-ai advertises its Android/public client). Its
+client ID must be accepted by simple-ai; the browser's Talìa OIDC client is a
+separate application and is not reused. Give the dedicated account the appropriate
+simple-ai per-app model/class roles. Specific model selection requires
+`model:specific`; class selection uses its class permissions. Choose a model that
+supports function tool calls for investigations. Connecting verifies the provider
+identity, not model availability or inference permissions; inference failures are
+visible on the run.
+
+LelloAuth does not support password grants. Talìa saves the authorized account's
+renewable session, not its password. This is separate from the operator's browser
+login. Access/refresh tokens and pending device credentials are AES-256-GCM
+encrypted in SQLite. Back up the database **and** its `DATABASE.ai-key` sidecar
+(mode 0600); `TALIA_AI_KEY_FILE` can override the key path. No new mount is needed
+when the database directory is already persistent and writable by the service.
+Tokens never reach the web UI or MCP. Schema 17 adds this installation account.
+
+Account changes apply without restart. Reconnect to change account, origin or
+model. Starting a replacement connection stops use of the previous connection.
+A pending connection expires and requires the initiating administrator's explicit
+identity confirmation. Refresh is serialized across runs, rotates credentials
+durably, and checks that the provider identity stays the same. Tokens are saved
+before safe userinfo validation can be retried. An interrupted/ambiguous token
+exchange requires reconnecting; Talìa never blindly reuses an old refresh token.
+Restart recovery retains confirmed connections and fails interrupted exchanges.
+
+Disconnect immediately forgets local credentials and invalidates in-flight AI
+continuations, then attempts provider session revocation when advertised. A
+provider revocation failure is shown separately; local disconnection still holds.
+An already-sent model request or completed tool read cannot be undone. Changing
+connections also discards late results. Old provider sessions from replacement or
+ambiguous exchanges can be revoked through LelloAuth.
+
+### Optional file-based API key
+
+Existing installations can continue using this alternative **until a managed
+account is configured or explicitly disconnected**. A disconnected or broken
+managed account never silently falls back to a file credential.
+
 Set `TALIA_AI_CONFIG=/run/talia/ai.json` and mount this private file:
 
 ```json
@@ -28,10 +77,11 @@ a path, query or embedded credentials. Numeric loopback HTTP is allowed for test
 There is no automatic anonymous/LAN authentication fallback. Redirects are refused.
 Adding the environment variable or mount requires container recreation; replacing
 file contents atomically affects subsequent runs without a service restart.
-A run pins the connection/model/token it loaded until it finishes.
+A file-based run pins the connection/model/token it loaded until it finishes;
+creating a managed connection invalidates that run.
 
-Telegram settings show the configured model or configuration error. “Configured”
-means the file is valid, not that inference credentials or model availability have
+Telegram settings show the configured model or connection error. For file setup,
+“configured” means the file is valid, not that inference credentials or model availability have
 been checked remotely. Inference errors are retained with the run. The token,
 headers, private file paths and upstream HTTP error bodies are never returned in
 run results. Report/Telegram data sent to simple-ai may be retained by its own

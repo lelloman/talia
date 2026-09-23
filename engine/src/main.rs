@@ -401,6 +401,7 @@ async fn run(args:Vec<String>)->Result<()> {
     engine.store.borrow().report_recover()?;
     engine.store.borrow().telegram_recover()?;
     engine.store.borrow().ai_recover()?;
+    engine.store.borrow().ai_account_recover()?;
     let pipelines = Pipelines::new(engine.clone())?;
     let watches = Watches::new(pipelines.clone());
     let agent_engine=talia_engine::mcp_engine::AgentEngine::new(engine.clone(),pipelines.clone(),watches.clone());

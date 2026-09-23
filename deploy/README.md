@@ -130,7 +130,11 @@ Administrators connect a bot and pair chats in web Settings → Telegram. No
 provider-file edits are needed for this managed bot. The encrypted token lives
 in SQLite; its private key lives beside it (`talia.sqlite3.telegram-key`). Back up
 both. Existing bot setup and delivery destinations survive migration 15.
-For investigations and report analysis, mount the private connection and API-key
-files and set `TALIA_AI_CONFIG=/run/talia/ai.json`. See [AI setup](../docs/ai.md)
-for the exact format and [Telegram setup](../docs/telegram.md) for enabling access.
-Schema 16 adds durable inference records; interrupted inference is not repeated.
+For investigations and report analysis, connect the dedicated LelloAuth account
+in web Settings → simple-ai. Enable device flow for simple-ai’s advertised public
+client in LelloAuth. Talìa saves the renewable session encrypted in SQLite; back up
+`talia.sqlite3.ai-key` with the database. The existing writable data mount is
+sufficient. See [AI setup](../docs/ai.md) for account permissions and the optional
+legacy `TALIA_AI_CONFIG`/API-key setup, and [Telegram setup](../docs/telegram.md)
+for enabling access. Schema 17 adds account storage; schema 16 adds durable
+inference records. Interrupted inference/token exchanges are not repeated.

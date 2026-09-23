@@ -11,10 +11,20 @@ try{
  let issuer,origin,port;const codes=new Map(),tokens=new Map(),refreshTokens=new Map(),refreshCounts=new Map();
  const json=(res,v)=>{res.setHeader('Content-Type','application/json');res.end(JSON.stringify(v));};
  provider=http.createServer(async(req,res)=>{
-  const u=new URL(req.url,issuer);if(u.pathname==='/.well-known/openid-configuration')return json(res,{issuer,authorization_endpoint:issuer+'/authorize',token_endpoint:issuer+'/token',jwks_uri:issuer+'/jwks',introspection_endpoint:issuer+'/introspect',response_types_supported:['code'],id_token_signing_alg_values_supported:['RS256'],code_challenge_methods_supported:['S256'],token_endpoint_auth_methods_supported:['none','client_secret_basic']});
+  const u=new URL(req.url,issuer);if(u.pathname==='/.well-known/openid-configuration')return json(res,{issuer,authorization_endpoint:issuer+'/authorize',token_endpoint:issuer+'/token',jwks_uri:issuer+'/jwks',device_authorization_endpoint:issuer+'/ai-device',userinfo_endpoint:issuer+'/ai-userinfo',introspection_endpoint:issuer+'/introspect',response_types_supported:['code'],id_token_signing_alg_values_supported:['RS256'],code_challenge_methods_supported:['S256'],token_endpoint_auth_methods_supported:['none','client_secret_basic']});
+  if(u.pathname==='/.well-known/simple-ai')return json(res,{issuer,client_id:'simple-ai-public'});
+  if(u.pathname==='/ai-device')return json(res,{device_code:'SECRET-DEVICE-CODE',user_code:'SAFE-CODE',verification_uri:issuer+'/device',expires_in:600,interval:5});
+  if(u.pathname==='/ai-userinfo'){
+   assert.equal(req.headers.authorization,'Bearer SECRET-AI-ACCESS');
+   return json(res,{sub:'dedicated-talia',email:'talia@example.com'});
+  }
   if(u.pathname==='/jwks')return json(res,{keys:[jwk]});
   if(u.pathname==='/authorize'){const user=(req.headers.cookie||'').includes('fixture_admin=1')?'admin':'viewer';const code=crypto.randomUUID();codes.set(code,{user,nonce:u.searchParams.get('nonce'),challenge:u.searchParams.get('code_challenge')});const redirect=new URL(u.searchParams.get('redirect_uri'));redirect.searchParams.set('code',code);redirect.searchParams.set('state',u.searchParams.get('state'));res.writeHead(302,{Location:redirect.href});return res.end();}
   const chunks=[];for await(const c of req)chunks.push(c);const form=new URLSearchParams(Buffer.concat(chunks).toString());
+  if(u.pathname==='/token'&&form.get('client_id')==='simple-ai-public'){
+   assert.equal(form.get('device_code'),'SECRET-DEVICE-CODE');
+   return json(res,{access_token:'SECRET-AI-ACCESS',refresh_token:'SECRET-AI-REFRESH',token_type:'Bearer',expires_in:3600});
+  }
   if(req.headers.authorization!=='Basic '+Buffer.from('talia:fixture-secret-with-at-least-thirty-two-characters').toString('base64')){res.statusCode=401;return res.end();}
   if(u.pathname==='/token'){
    const refreshing=form.get('grant_type')==='refresh_token';
@@ -114,6 +124,14 @@ try{
  let reportRun;for(let attempt=0;attempt<30;attempt++){reportRun=(await sdkTool('reports_run_get',{id:reportStart.run_id})).run;if(reportRun.status==='complete')break;assert.notEqual(reportRun.status,'failed',JSON.stringify(reportRun));await new Promise(r=>setTimeout(r,200));}
  assert.equal(reportRun.status,'complete');assert.equal(reportRun.content.summary,'healthy');assert.match(reportRun.html,/<h1>Morning fixture<\/h1>/);assert.equal(reportRun.deliveries.length,0);
  assert.equal((await sdkTool('reports_runs',{report:'morning-fixture'})).runs.length,1);
+ // Dedicated AI account setup is admin-only and has no password/token fields.
+ await a.locator('#ai-account-settings').evaluate(e=>e.open=true);
+ assert.equal(await a.locator('#ai-account-connect').isVisible(),true);
+ assert.equal(await a.locator('#ai-account-settings input[type=password]').count(),0);
+ assert.equal((await api(a,{op:'aiAccountStatus'})).phase,'unconfigured');
+ assert.ok((await api(v,{op:'aiAccountStatus'})).error);
+ assert.ok((await api(v,{op:'aiAccountDisconnect',expected:0})).error);
+ assert.equal(await v.locator('#ai-account-settings').isVisible(),false);
  // Retired observer credentials/configuration have no route back into MCP.
  await a.locator('#telegram-settings').evaluate(e=>e.open=true);
  assert.equal(await a.locator('#telegram-profile').count(),0);
@@ -128,6 +146,25 @@ try{
  assert.ok((await api(a,{op:'telegramObserverKey'})).error);
  assert.ok((await api(v,{op:'telegramStatus'})).error);
  assert.equal((await mcp('to_'+'a'.repeat(64),'tools/list')).status(),401);
+ // Complete web account connection, confirmation and reload using the local provider.
+ await a.locator('#ai-account-origin').fill(issuer);
+ await a.locator('#ai-account-model').fill('class:fast');
+ await a.locator('#ai-account-connect').click();
+ await a.locator('#ai-account-pending:not([hidden])').waitFor();
+ assert.equal(await a.locator('#ai-account-code').textContent(),'SAFE-CODE');
+ await a.locator('#ai-account-confirm:not([hidden])').waitFor({timeout:20000});
+ assert.match(await a.locator('#ai-account-identity').textContent(),/talia@example.com/);
+ await a.locator('#ai-account-confirm').click();
+ await a.waitForFunction(()=>document.querySelector('#ai-account-status').textContent.startsWith('Connected'));
+ const aiStatus=await api(a,{op:'aiAccountStatus'});
+ assert.equal(aiStatus.phase,'connected');assert.equal(JSON.stringify(aiStatus).includes('SECRET-'),false);
+ assert.equal((await api(a,{op:'telegramStatus'})).investigationsAvailable,true);
+ await a.reload();await a.locator('#ai-account-settings').evaluate(e=>e.open=true);
+ await a.waitForFunction(()=>document.querySelector('#ai-account-status').textContent.startsWith('Connected'));
+ await a.locator('#ai-account-disconnect').click();
+ await a.waitForFunction(()=>document.querySelector('#ai-account-status').textContent==='Disconnected.');
+ assert.equal((await api(a,{op:'telegramStatus'})).investigationsAvailable,false);
+
 
  const metric=await sdkTool('engine_read',{id:'value'});assert.equal(metric.sample.value.version,1);
  const subscription=await sdkTool('engine_subscribe',{ids:['value']});
@@ -235,5 +272,5 @@ try{
  execFileSync('python3',['-c',"import sqlite3,sys; c=sqlite3.connect(sys.argv[1]); c.execute('UPDATE user_agent_keys SET expires=0 WHERE id=?',(sys.argv[2],)); c.commit()",tmp+'/engine.db',expiring.id]);
  assert.equal((await mcp(expiring.key,'tools/list')).status(),401);
  const logoutKey=await api(a,{op:'agentKeyCreate'});await a.evaluate(()=>fetch('/auth/logout',{method:'POST'}));assert.equal((await mcp(logoutKey.key,'tools/list')).status(),401);
-  console.log(JSON.stringify({passed:true,checks:['web Telegram delivery settings, retired credentials rejected, viewer isolation','server-side report authoring, preview execution and retained HTML over HTTP MCP','fullscreen retains live dashboard and monitoring selection preserves dirty edits','browser Web Push enrollment, disable, endpoint rejection, viewer isolation and real worker authenticated detail fetch','HTTP MCP engine read and key-scoped subscriptions survive reconnect','HTTP MCP live inspect/execute/reload and dirty guards','browser remains signed in past initial token expiry with rotated refresh token','persistent 30-day HttpOnly session cookie','official SDK HTTP MCP authoring with user-attributed audit','HTTP MCP initialize/list/call','one-time key UI and clipboard configuration','navigation during key creation revokes the unseen key','expiry/revocation/logout enforcement','viewer MCP isolation','Origin/protocol validation','shared LelloDesign responsive shell','theme and sidebar preserve live runtime','polling preserves sharing drafts','keyboard theme focus','mobile account placement','real OIDC boundary with local provider','viewer starts empty','admin shares from shell','viewer loads public dashboard','server rejects writes and config','account default opens on new installation','reload retains selection','mobile layout fits viewport','unsharing blocks active viewer']}));
+  console.log(JSON.stringify({passed:true,checks:['dedicated AI account device connection, identity confirmation, reload, disconnect and viewer isolation','web Telegram delivery settings, retired credentials rejected, viewer isolation','server-side report authoring, preview execution and retained HTML over HTTP MCP','fullscreen retains live dashboard and monitoring selection preserves dirty edits','browser Web Push enrollment, disable, endpoint rejection, viewer isolation and real worker authenticated detail fetch','HTTP MCP engine read and key-scoped subscriptions survive reconnect','HTTP MCP live inspect/execute/reload and dirty guards','browser remains signed in past initial token expiry with rotated refresh token','persistent 30-day HttpOnly session cookie','official SDK HTTP MCP authoring with user-attributed audit','HTTP MCP initialize/list/call','one-time key UI and clipboard configuration','navigation during key creation revokes the unseen key','expiry/revocation/logout enforcement','viewer MCP isolation','Origin/protocol validation','shared LelloDesign responsive shell','theme and sidebar preserve live runtime','polling preserves sharing drafts','keyboard theme focus','mobile account placement','real OIDC boundary with local provider','viewer starts empty','admin shares from shell','viewer loads public dashboard','server rejects writes and config','account default opens on new installation','reload retains selection','mobile layout fits viewport','unsharing blocks active viewer']}));
 }finally{await browser?.close();if(engine?.pid){try{process.kill(-engine.pid,'SIGTERM');}catch{}}proxy?.close();provider?.close();rmSync(tmp,{recursive:true,force:true});}
