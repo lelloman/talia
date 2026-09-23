@@ -444,6 +444,10 @@ pub async fn admin(e: &Engine, subject: &str, args: Value) -> Result<Value> {
         if doc["issuer"] != issuer {
             return Err("Provider issuer mismatch".into());
         }
+        if doc["device_account_link_endpoint"].is_null() {
+            return Err("Update LelloAuth to support signing in with a separate account for this connection".into());
+        }
+        let link_endpoint = endpoint(&doc, "device_account_link_endpoint", &issuer_url)?;
         let device = endpoint(&doc, "device_authorization_endpoint", &issuer_url)?;
         let token_endpoint = endpoint(&doc, "token_endpoint", &issuer_url)?;
         let userinfo = endpoint(&doc, "userinfo_endpoint", &issuer_url)?;
@@ -461,7 +465,11 @@ pub async fn admin(e: &Engine, subject: &str, args: Value) -> Result<Value> {
             return Err("Device authorization rejected: enable device flow for simple-ai’s advertised public LelloAuth client".into());
         }
         let device_code = text(&v, "device_code", 4096)?;
-        let verification = endpoint(&v, "verification_uri", &issuer_url)?;
+        let mut verification = safe_url(&link_endpoint)?;
+        verification
+            .query_pairs_mut()
+            .append_pair("user_code", &text(&v, "user_code", 128)?);
+        let verification = verification.to_string();
         let lifetime = v["expires_in"]
             .as_i64()
             .filter(|n| *n > 0 && *n <= 3600)

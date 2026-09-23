@@ -11,7 +11,7 @@ try{
  let issuer,origin,port;const codes=new Map(),tokens=new Map(),refreshTokens=new Map(),refreshCounts=new Map();
  const json=(res,v)=>{res.setHeader('Content-Type','application/json');res.end(JSON.stringify(v));};
  provider=http.createServer(async(req,res)=>{
-  const u=new URL(req.url,issuer);if(u.pathname==='/.well-known/openid-configuration')return json(res,{issuer,authorization_endpoint:issuer+'/authorize',token_endpoint:issuer+'/token',jwks_uri:issuer+'/jwks',device_authorization_endpoint:issuer+'/ai-device',userinfo_endpoint:issuer+'/ai-userinfo',introspection_endpoint:issuer+'/introspect',response_types_supported:['code'],id_token_signing_alg_values_supported:['RS256'],code_challenge_methods_supported:['S256'],token_endpoint_auth_methods_supported:['none','client_secret_basic']});
+  const u=new URL(req.url,issuer);if(u.pathname==='/.well-known/openid-configuration')return json(res,{issuer,authorization_endpoint:issuer+'/authorize',token_endpoint:issuer+'/token',jwks_uri:issuer+'/jwks',device_authorization_endpoint:issuer+'/ai-device',device_account_link_endpoint:issuer+'/device/link',userinfo_endpoint:issuer+'/ai-userinfo',introspection_endpoint:issuer+'/introspect',response_types_supported:['code'],id_token_signing_alg_values_supported:['RS256'],code_challenge_methods_supported:['S256'],token_endpoint_auth_methods_supported:['none','client_secret_basic']});
   if(u.pathname==='/.well-known/simple-ai')return json(res,{issuer,client_id:'simple-ai-public'});
   if(u.pathname==='/ai-device')return json(res,{device_code:'SECRET-DEVICE-CODE',user_code:'SAFE-CODE',verification_uri:issuer+'/device',expires_in:600,interval:5});
   if(u.pathname==='/ai-userinfo'){
@@ -152,6 +152,7 @@ try{
  await a.locator('#ai-account-connect').click();
  await a.locator('#ai-account-pending:not([hidden])').waitFor();
  assert.equal(await a.locator('#ai-account-code').textContent(),'SAFE-CODE');
+ assert.equal(await a.locator('#ai-account-link').getAttribute('href'),issuer+'/device/link?user_code=SAFE-CODE');
  await a.locator('#ai-account-confirm:not([hidden])').waitFor({timeout:20000});
  assert.match(await a.locator('#ai-account-identity').textContent(),/talia@example.com/);
  await a.locator('#ai-account-confirm').click();

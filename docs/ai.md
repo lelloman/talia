@@ -9,13 +9,15 @@ runner profiles, external agent sessions or observer MCP credentials.
 Administrators configure the installation in **Settings → simple-ai**:
 
 1. Enter the simple-ai server origin and model or model class.
-2. Choose **Connect LelloAuth account**. Open the authorization link and enter the
-   displayed code. Sign in as the dedicated Talìa account; use a private window if
-   LelloAuth currently has your personal account signed in.
+2. Choose **Connect LelloAuth account**. Open the authorization link and sign
+   in as the dedicated Talìa account. The separate account-linking sign-in preserves
+   your existing LelloAuth and Talìa browser sessions, including when using MFA.
 3. Return to Talìa, check the displayed identity, then choose **Use this account**.
 
 Talìa discovers the issuer and public client from `/.well-known/simple-ai` and uses
-LelloAuth's device authorization flow. Enable **device flow** on that advertised
+LelloAuth's device authorization flow with its advertised
+`device_account_link_endpoint` extension. Older providers must be upgraded; Talìa
+does not silently fall back to authorizing the current SSO identity. Enable **device flow** on that advertised
 public client in LelloAuth (simple-ai advertises its Android/public client). Its
 client ID must be accepted by simple-ai; the browser's Talìa OIDC client is a
 separate application and is not reused. Give the dedicated account the appropriate

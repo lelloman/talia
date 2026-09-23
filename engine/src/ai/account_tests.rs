@@ -56,7 +56,7 @@ async fn provider() -> MockServer {
         ),
         (
             "/.well-known/openid-configuration",
-            json!({"issuer":o,"device_authorization_endpoint":format!("{o}/device_authorization"),"token_endpoint":format!("{o}/token"),"userinfo_endpoint":format!("{o}/userinfo")}),
+            json!({"issuer":o,"device_account_link_endpoint":format!("{o}/device/link"),"device_authorization_endpoint":format!("{o}/device_authorization"),"token_endpoint":format!("{o}/token"),"userinfo_endpoint":format!("{o}/userinfo")}),
         ),
         (
             "/device_authorization",
@@ -104,6 +104,10 @@ async fn connect_confirm_encrypt_restart_disconnect_no_fallback() {
     let f = Fixture::new();
     let pending = begin(&f, &s).await;
     assert_eq!(pending["pending"]["code"], "PUBLIC-CODE");
+    assert_eq!(
+        pending["pending"]["url"],
+        format!("{}/device/link?user_code=PUBLIC-CODE", s.uri())
+    );
     assert!(!pending.to_string().contains("secret-device"));
     assert!(session(&f.e).await.is_err());
     assert!(admin(&f.e, "viewer", json!({"op":"aiAccountStatus"}))
@@ -349,7 +353,7 @@ async fn rejects_unsafe_discovery_and_provider_redirects() {
     }
     Mock::given(path("/.well-known/openid-configuration"))
         .respond_with(ResponseTemplate::new(200).set_body_json(
-            json!({"issuer":s.uri(),"device_authorization_endpoint":"https://evil.example/device"}),
+            json!({"issuer":s.uri(),"device_account_link_endpoint":format!("{}/device/link",s.uri()),"device_authorization_endpoint":"https://evil.example/device"}),
         ))
         .with_priority(1)
         .mount(&s)
@@ -463,7 +467,7 @@ async fn disconnect_revokes_provider_session_and_survives_revocation_failure() {
         let origin = server.uri();
         Mock::given(path("/.well-known/openid-configuration"))
             .respond_with(ResponseTemplate::new(200).set_body_json(json!({
-                "issuer":origin,"device_authorization_endpoint":format!("{origin}/device_authorization"),
+                "issuer":origin,"device_account_link_endpoint":format!("{origin}/device/link"),"device_authorization_endpoint":format!("{origin}/device_authorization"),
                 "token_endpoint":format!("{origin}/token"),"userinfo_endpoint":format!("{origin}/userinfo"),
                 "revocation_endpoint":format!("{origin}/revoke")
             }))).with_priority(1).mount(&server).await;
