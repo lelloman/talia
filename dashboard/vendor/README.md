@@ -1,11 +1,14 @@
 # LelloDesign dependency
 
-Talìa consumes the actual Vue package, including its header controls, from
-LelloDesign commit `76d8f662e4df130f4c127615dd6f4450966e1536`.
-The published npm 0.1.0 predates those controls. This local archive is built from
-that clean commit with `npm ci && npm pack` in `packages/vue`, as supported by the
-upstream adoption guide. Its package version remains upstream 0.1.0; the filename,
-lockfile integrity and commit identify this unpublished snapshot unambiguously.
+Talìa consumes Vue package **0.2.0**, built from upstream commit
+`dd796de7d7364f11cb724500701f4701bf88f12f`. This was verified against Fucina main
+on 2026-09-23. The snapshot includes the current fluid-workspace helpers, aligned
+64 px headers, native controls and scoped typography beyond the initial release.
+
+The archive is built without product-specific modifications. Export that commit
+into a temporary directory, run `npm ci` then `npm pack` in `packages/vue`, and
+copy the resulting archive to `lellodesign-vue-dd796de7.tgz`. `npm pack` runs the
+upstream token generation, Vite build and TypeScript checks. Vue stays external.
 
 No sibling checkout or private registry credential is needed to build Talìa.
 To upgrade: export the selected upstream commit to a temporary directory, build
@@ -14,4 +17,4 @@ and rerun the consumer browser checks. Do not modify generated package contents.
 
 Source: https://fucina.homelab/lelloman/lellodesign
 
-Archive SHA-256: `b28865da39b9473ed781d8c1080dfeaa0dd5478011028b765b1d5e0a9b971b82`.
+Archive SHA-256: `f2d3e4c1caf436214a5d12c78756178e37b9b6dbade0cf418e06c19eed3591c9`.

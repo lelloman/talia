@@ -27,7 +27,7 @@ export async function mountChrome(identity,{development=false,signOut=()=>{}}={}
    'nav-icon':({item})=>h('svg',{viewBox:'0 0 24 24',fill:'none',stroke:'currentColor','stroke-width':1.7,'stroke-linecap':'round','stroke-linejoin':'round'},[h('path',{d:paths[item.id]})]),
    account:({compact})=>h(LelloAccount,{name:identity.name,compact,label:development?'Local development':'Lello account',onActivate:()=>dialog.value=true}),
    'header-actions':()=>h('div',{class:'lv-header-controls'},[h(LelloConnectionStatus,{state:status.value,label:'Talìa connection'}),h(LelloThemeSelector,{modelValue:appearance.value,'onUpdate:modelValue':v=>appearance.value=v})]),
-   default:()=>h('div',{class:'talia-host',ref:el=>{if(el&&!islandRoot){islandRoot=el;el.append(island);}}})
+   default:()=>h('div',{class:'talia-host lv-workspace',ref:el=>{if(el&&!islandRoot){islandRoot=el;el.append(island);}}})
   }),
   h(LelloDialog,{title:development?'Development session':'Your Lello account',modelValue:dialog.value,'onUpdate:modelValue':v=>dialog.value=v},{default:()=>[h('p',{id:'account-name'},identity.name),h('p',{id:'account-role',class:'lv-muted'},development?'Development':admin.value?'Administrator':'Viewer')],actions:()=>[h(LelloButton,{variant:'neutral',onClick:()=>dialog.value=false},{default:()=> 'Close'}),...(!development?[h(LelloButton,{id:'sign-out',variant:'primary',onClick:signOut},{default:()=> 'Sign out'})]:[])]})
  ]});}});

@@ -228,6 +228,39 @@ try{
  assert.equal((await engineCall(v,'write',{id:'value'})).error,'forbidden');assert.equal((await engineCall(v,'monitoringConfig',{})).error,'forbidden');
  const another=await browser.newContext({ignoreHTTPSErrors:true});const v2=await login(another);await v2.waitForFunction(()=>window.dashboardReport?.registration?.connected);assert.equal(await v2.evaluate(()=>window.taliaDashboard.id),'monitor');
  await v.setViewportSize({width:390,height:844});assert.equal(await v.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);mkdirSync('.local/access-verification',{recursive:true});await v.getByRole('button',{name:'Open navigation',exact:true}).click();assert.equal(await v.locator('.lv-drawer .lv-account').count(),1);assert.equal(await v.locator('.lv-header .lv-account').count(),0);await v.keyboard.press('Escape');await v.screenshot({path:'.local/access-verification/viewer-mobile.png',fullPage:true});await a.locator('.lv-sidebar a[href="#dashboard"]').click();await a.locator('[data-shell-page=dashboard]').waitFor({state:'visible'});await a.screenshot({path:'.local/access-verification/admin-desktop.png',fullPage:true});
+ // Current LelloDesign: fluid operations, local form widths, aligned headers.
+ const layoutLiveId=await a.evaluate(()=>window.dashboardReport.registration.liveInstanceId);
+ await a.setViewportSize({width:1920,height:1080});
+ for(const mode of ['Dark','Light']){
+  await a.getByRole('button',{name:/^Change theme:/}).click();await a.getByRole('button',{name:mode,exact:true}).click();
+  const layout=await a.evaluate(()=>{const main=document.querySelector('.lv-main'),host=document.querySelector('.talia-host'),header=document.querySelector('.lv-header'),side=document.querySelector('.lv-sidebar-heading');return {width:host.getBoundingClientRect().width,available:main.clientWidth-parseFloat(getComputedStyle(main).paddingLeft)-parseFloat(getComputedStyle(main).paddingRight),header:header.getBoundingClientRect().height,side:side.getBoundingClientRect().height,title:getComputedStyle(document.querySelector('#dashboard-title')).fontSize};});
+  assert.ok(layout.width>1400);assert.ok(Math.abs(layout.width-layout.available)<2);assert.equal(layout.header,64);assert.equal(layout.side,64);assert.equal(layout.title,'24px');
+  await a.screenshot({path:'.local/access-verification/wide-'+mode.toLowerCase()+'.png',fullPage:true,animations:'disabled'});
+ }
+ await a.getByRole('button',{name:'Collapse sidebar',exact:true}).click();
+ await a.waitForFunction(()=>Math.round(document.querySelector('.lv-sidebar').getBoundingClientRect().width)===80);
+ assert.ok(await a.locator('.talia-host').evaluate(e=>e.clientWidth)>1700);
+ await a.getByRole('button',{name:'Expand sidebar',exact:true}).click();
+ await a.locator('.lv-sidebar a[href="#settings"]').click();
+ await a.locator('#client-name').fill('A long monitoring workstation name — an unsaved settings draft');
+ assert.ok(await a.locator('#client-name').evaluate(e=>e.getBoundingClientRect().width)<=480);
+ for(const width of [1280,390]){
+  await a.setViewportSize({width,height:844});
+  assert.equal(await a.evaluate(()=>document.documentElement.scrollWidth<=innerWidth&&document.querySelector('.lv-main').scrollWidth<=document.querySelector('.lv-main').clientWidth),true);
+  assert.equal(await a.locator('#client-name').inputValue(),'A long monitoring workstation name — an unsaved settings draft');
+ }
+ await a.locator('.lv-main').evaluate(e=>e.scrollTop=0);
+ await a.screenshot({path:'.local/access-verification/settings-mobile.png',fullPage:true,animations:'disabled'});
+ await a.setViewportSize({width:1920,height:1080});
+ // Check a narrower workspace and increased interface text independently.
+ await a.setViewportSize({width:960,height:540});
+ assert.equal(await a.evaluate(()=>document.documentElement.scrollWidth<=innerWidth&&document.querySelector('.lv-main').scrollWidth<=document.querySelector('.lv-main').clientWidth),true);
+ await a.locator('.lello-theme').evaluate(e=>{e.style.setProperty('--ld-font-body','32px');e.style.setProperty('--ld-line-body','48px');});
+ assert.equal(await a.evaluate(()=>document.documentElement.scrollWidth<=innerWidth&&document.querySelector('.lv-main').scrollWidth<=document.querySelector('.lv-main').clientWidth),true);
+ await a.locator('.lello-theme').evaluate(e=>{e.style.removeProperty('--ld-font-body');e.style.removeProperty('--ld-line-body');});
+ assert.equal(await a.evaluate(()=>window.dashboardReport.registration.liveInstanceId),layoutLiveId);
+ await a.setViewportSize({width:1280,height:800});
+ await a.locator('.lv-sidebar a[href="#dashboard"]').click();
  // Entering/exiting fullscreen retains the live dashboard instance and uses the full viewport.
  const beforeDisplay=await a.evaluate(()=>window.dashboardReport.registration.liveInstanceId);
  await a.locator('#monitoring-enter').click();await a.waitForFunction(()=>document.fullscreenElement?.id==='monitoring-surface');
@@ -273,5 +306,5 @@ try{
  execFileSync('python3',['-c',"import sqlite3,sys; c=sqlite3.connect(sys.argv[1]); c.execute('UPDATE user_agent_keys SET expires=0 WHERE id=?',(sys.argv[2],)); c.commit()",tmp+'/engine.db',expiring.id]);
  assert.equal((await mcp(expiring.key,'tools/list')).status(),401);
  const logoutKey=await api(a,{op:'agentKeyCreate'});await a.evaluate(()=>fetch('/auth/logout',{method:'POST'}));assert.equal((await mcp(logoutKey.key,'tools/list')).status(),401);
-  console.log(JSON.stringify({passed:true,checks:['dedicated AI account device connection, identity confirmation, reload, disconnect and viewer isolation','web Telegram delivery settings, retired credentials rejected, viewer isolation','server-side report authoring, preview execution and retained HTML over HTTP MCP','fullscreen retains live dashboard and monitoring selection preserves dirty edits','browser Web Push enrollment, disable, endpoint rejection, viewer isolation and real worker authenticated detail fetch','HTTP MCP engine read and key-scoped subscriptions survive reconnect','HTTP MCP live inspect/execute/reload and dirty guards','browser remains signed in past initial token expiry with rotated refresh token','persistent 30-day HttpOnly session cookie','official SDK HTTP MCP authoring with user-attributed audit','HTTP MCP initialize/list/call','one-time key UI and clipboard configuration','navigation during key creation revokes the unseen key','expiry/revocation/logout enforcement','viewer MCP isolation','Origin/protocol validation','shared LelloDesign responsive shell','theme and sidebar preserve live runtime','polling preserves sharing drafts','keyboard theme focus','mobile account placement','real OIDC boundary with local provider','viewer starts empty','admin shares from shell','viewer loads public dashboard','server rejects writes and config','account default opens on new installation','reload retains selection','mobile layout fits viewport','unsharing blocks active viewer']}));
+  console.log(JSON.stringify({passed:true,checks:['dedicated AI account device connection, identity confirmation, reload, disconnect and viewer isolation','web Telegram delivery settings, retired credentials rejected, viewer isolation','server-side report authoring, preview execution and retained HTML over HTTP MCP','fullscreen retains live dashboard and monitoring selection preserves dirty edits','browser Web Push enrollment, disable, endpoint rejection, viewer isolation and real worker authenticated detail fetch','HTTP MCP engine read and key-scoped subscriptions survive reconnect','HTTP MCP live inspect/execute/reload and dirty guards','browser remains signed in past initial token expiry with rotated refresh token','persistent 30-day HttpOnly session cookie','official SDK HTTP MCP authoring with user-attributed audit','HTTP MCP initialize/list/call','one-time key UI and clipboard configuration','navigation during key creation revokes the unseen key','expiry/revocation/logout enforcement','viewer MCP isolation','Origin/protocol validation','LelloDesign 0.2.0 fluid 1920px workspace, 64px headers, bounded fields, increased text and mobile layout','theme and sidebar preserve live runtime','polling preserves sharing drafts','keyboard theme focus','mobile account placement','real OIDC boundary with local provider','viewer starts empty','admin shares from shell','viewer loads public dashboard','server rejects writes and config','account default opens on new installation','reload retains selection','mobile layout fits viewport','unsharing blocks active viewer']}));
 }finally{await browser?.close();if(engine?.pid){try{process.kill(-engine.pid,'SIGTERM');}catch{}}proxy?.close();provider?.close();rmSync(tmp,{recursive:true,force:true});}

@@ -1,9 +1,9 @@
 # LelloDesign adoption
 
 The web host uses the actual `@lelloman/lellodesign-vue` components, built from
-LelloDesign commit `76d8f662e4df130f4c127615dd6f4450966e1536`. The published 0.1.0
-package predates its header controls, so a commit-pinned package archive is
-included with [provenance and upgrade instructions](../dashboard/vendor/README.md).
+LelloDesign commit `dd796de7d7364f11cb724500701f4701bf88f12f` (Vue 0.2.0),
+verified against upstream main on 2026-09-23. A commit-pinned package archive
+includes the latest layout refinements, with [provenance and upgrade instructions](../dashboard/vendor/README.md).
 Vue 3.5.13 and the archive are locked by `dashboard/web/package-lock.json`.
 Neither the sibling checkout nor registry credentials are needed to build Talìa.
 
@@ -20,7 +20,7 @@ The product uses Blue light/dark semantic palettes and these library components:
 
 Application navigation exposes Dashboard, Settings, permitted Alerts, and
 admin-only Sharing and Users. This navigation is separate from the screens and
-navigation authored inside a saved Dashboard. The sidebar is 224px expanded or
+navigation authored inside a saved Dashboard. The sidebar is 256px expanded or
 80px collapsed; below 760 CSS pixels it becomes a drawer. These dimensions and
 motion behavior come from the library. The real Talìa logo remains distinct from
 the shared account avatar. Account identity is never placed in the app header.
@@ -39,6 +39,13 @@ loaded it is account catalog connectivity. A static semantic dot is always
 available in the header, with its label on hover, keyboard focus or tap. Engine
 reconnection announcements remain available to assistive technology.
 
+Dashboard, Alerts and Users use fluid operational workspaces with no global
+editorial width cap. The library supplies 32 px desktop and 16 px mobile gutters
+and compact 24/32 px page titles. Settings and Sharing use locally constrained
+640 px task groups with fields up to 480 px; explanatory prose uses a 72ch limit.
+The host uses the library's `lv-workspace` helper. This follows upstream's product
+layout families instead of applying the editorial 1120 px width to every page.
+
 The declarative dashboard renderer still creates platform-independent widgets;
 its native HTML controls inherit the scoped library styles and charts use the
 primary color token. This is not a change to the Dashboard language or VM API.
@@ -48,7 +55,10 @@ primary color token. This is not a change to the Dashboard language or VM API.
 `dashboard/tests/access.mjs` exercises the actual Rust/OIDC boundary and checks
 shared shell rendering, runtime identity retention, sharing draft preservation,
 keyboard appearance selection, theme persistence/System changes, reduced motion,
-mobile drawer account placement, resizing and narrow viewport overflow. Existing
+mobile drawer account placement, resizing and narrow viewport overflow. Wide-screen checks cover 1920 px in light/dark,
+expanded/collapsed navigation, aligned 64 px headers, fluid workspace width and
+24 px titles. Settings fields remain locally bounded at 480 px and unsaved client
+settings survive viewport changes. Existing
 VM, renderer, responsive layout, delivery and update tests remain regression checks.
 
 This adoption covers the authenticated web shell. The server-rendered sign-in
