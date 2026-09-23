@@ -1,0 +1,143 @@
+[
+  {
+    "compose": "ctx => {\n  const f = ctx.steps.facts.value;\n  const pct = n => Number.isFinite(n) ? n.toFixed(1)+'%' : 'unavailable';\n  const line = s => '• '+s;\n  const up = f.targets.filter(t => t.status === 'up').length;\n  const attention = [];\n  if (f.stale || f.quality !== 'good') attention.push('Snapshot '+(f.stale?'stale':'quality: '+f.quality)+' — '+f.snapshotAgeSeconds+'s old');\n  for (const t of f.targets.filter(t => t.status !== 'up')) attention.push(t.name+': '+t.status);\n  for (const d of f.disks) {\n    if (!Number.isFinite(d.free)) attention.push(d.mount+': free space unavailable');\n    else if (d.free < 10) attention.push(d.mount+': '+pct(d.free)+' free (below 10%)');\n  }\n  for (const [label,value] of [['CPU',f.cpuPercent],['Memory',f.memoryPercent]]) {\n    if (!Number.isFinite(value)) attention.push(label+': unavailable');\n    else if (value >= 90) attention.push(label+': '+pct(value)+' (at least 90%)');\n  }\n  const reduced=f.availability24h.filter(x => Number.isFinite(x.percent) && x.percent<99);\n  for (const t of reduced) attention.push(t.job+': '+t.percent.toFixed(2)+'% scrape availability over 24h');\n  if (!f.availability24h.length) attention.push('24h scrape availability unavailable');\n  for (const t of f.availability24h.filter(x=>!Number.isFinite(x.percent))) attention.push(t.job+': 24h availability unavailable');\n  for (const warning of f.warnings || []) attention.push('Prometheus: '+warning);\n  const sections=[\n    {title:'🔎 ATTENTION',text:attention.length?attention.map(line).join('\\n'):'• No threshold breaches in these measurements.'},\n    {title:'🖥 HOST',text:line('CPU: '+pct(f.cpuPercent))+'\\n'+line('Memory: '+pct(f.memoryPercent))},\n    {title:'💾 DISK FREE',text:f.disks.map(d=>line(d.mount+': '+pct(d.free))).join('\\n')},\n    {title:'📡 SERVICES',text:line(up+'/'+f.targets.length+' scrape targets reachable now')+'\\n'+line('24h: '+reduced.length+' targets below 99% scrape availability')},\n  ];\n  let note=ctx.steps.analysis.status==='succeeded'?ctx.steps.analysis.value.summary.replace(/\\s+/g,' ').trim():'AI summary unavailable; measurements are shown above.';\n  if (note.length>260) note=note.slice(0,257).replace(/\\s+\\S*$/,'')+'…';\n  sections.push({title:'💬 INTERPRETATION',text:note});\n  sections.push({title:'ℹ DATA',text:'Snapshot '+f.snapshotAgeSeconds+'s old · '+f.quality+'\\nScrape reachability only; application events and Talìa alerts are not covered.'});\n  return {subject:'Talìa · Homelab report',summary:attention.length?'⚠ Items need attention':'✓ No issue flagged by these checks',sections};\n}\n",
+    "destinations": [
+      "telegram-CHAT_ID"
+    ],
+    "enabled": true,
+    "id": "homelab-telegram-09",
+    "period_ms": 86400000,
+    "schedule": {
+      "kind": "daily",
+      "time": "09:00",
+      "weekdays": [],
+      "zone": "Europe/Rome"
+    },
+    "steps": [
+      {
+        "id": "host",
+        "kind": "read",
+        "optional": false,
+        "variable": "homelab-summary"
+      },
+      {
+        "id": "availability",
+        "kind": "source",
+        "optional": false,
+        "request": "ctx=>({kind:'query',query:'avg_over_time(up[24h])',time:ctx.period.end/1000})",
+        "source": "homelab-prometheus"
+      },
+      {
+        "id": "facts",
+        "kind": "script",
+        "optional": false,
+        "source": "ctx => { const i=ctx.steps.host.value,s=ctx.decode(i.value); const a=ctx.decode(ctx.steps.availability.value.wire); return {asOfUtc:new Date(ctx.now).toISOString(),snapshotAgeSeconds:Math.round((ctx.now-s.updated)/1000),quality:i.quality,stale:ctx.now-s.updated>120000,cpuPercent:s.cpu,memoryPercent:s.memory,disks:s.disks,targets:s.targets,availability24h:a.result.map(x=>({job:x.metric.job,instance:x.metric.instance,percent:Number.isFinite(x.samples[0]?.[1])?Math.round(x.samples[0][1]*10000)/100:null})),warnings:a.warnings,limitations:'Scrape availability is not application health. No application event logs or Talia alert records are included.'}; }"
+      },
+      {
+        "id": "analysis",
+        "inputs": [
+          "facts"
+        ],
+        "instructions": "Provide one short interpretation sentence in English, maximum 35 words. Focus on the most important issue or say no issue is evident in the limited measurements. Do not repeat CPU/memory/disk numbers, enumerate healthy services, add headings, a preamble or recommendations without evidence. Distinguish historical scrape availability from current application health.",
+        "kind": "analysis",
+        "optional": true
+      }
+    ],
+    "timeout_ms": 300000,
+    "version": 3
+  },
+  {
+    "compose": "ctx => {\n  const f = ctx.steps.facts.value;\n  const pct = n => Number.isFinite(n) ? n.toFixed(1)+'%' : 'unavailable';\n  const line = s => '• '+s;\n  const up = f.targets.filter(t => t.status === 'up').length;\n  const attention = [];\n  if (f.stale || f.quality !== 'good') attention.push('Snapshot '+(f.stale?'stale':'quality: '+f.quality)+' — '+f.snapshotAgeSeconds+'s old');\n  for (const t of f.targets.filter(t => t.status !== 'up')) attention.push(t.name+': '+t.status);\n  for (const d of f.disks) {\n    if (!Number.isFinite(d.free)) attention.push(d.mount+': free space unavailable');\n    else if (d.free < 10) attention.push(d.mount+': '+pct(d.free)+' free (below 10%)');\n  }\n  for (const [label,value] of [['CPU',f.cpuPercent],['Memory',f.memoryPercent]]) {\n    if (!Number.isFinite(value)) attention.push(label+': unavailable');\n    else if (value >= 90) attention.push(label+': '+pct(value)+' (at least 90%)');\n  }\n  const reduced=f.availability24h.filter(x => Number.isFinite(x.percent) && x.percent<99);\n  for (const t of reduced) attention.push(t.job+': '+t.percent.toFixed(2)+'% scrape availability over 24h');\n  if (!f.availability24h.length) attention.push('24h scrape availability unavailable');\n  for (const t of f.availability24h.filter(x=>!Number.isFinite(x.percent))) attention.push(t.job+': 24h availability unavailable');\n  for (const warning of f.warnings || []) attention.push('Prometheus: '+warning);\n  const sections=[\n    {title:'🔎 ATTENTION',text:attention.length?attention.map(line).join('\\n'):'• No threshold breaches in these measurements.'},\n    {title:'🖥 HOST',text:line('CPU: '+pct(f.cpuPercent))+'\\n'+line('Memory: '+pct(f.memoryPercent))},\n    {title:'💾 DISK FREE',text:f.disks.map(d=>line(d.mount+': '+pct(d.free))).join('\\n')},\n    {title:'📡 SERVICES',text:line(up+'/'+f.targets.length+' scrape targets reachable now')+'\\n'+line('24h: '+reduced.length+' targets below 99% scrape availability')},\n  ];\n  let note=ctx.steps.analysis.status==='succeeded'?ctx.steps.analysis.value.summary.replace(/\\s+/g,' ').trim():'AI summary unavailable; measurements are shown above.';\n  if (note.length>260) note=note.slice(0,257).replace(/\\s+\\S*$/,'')+'…';\n  sections.push({title:'💬 INTERPRETATION',text:note});\n  sections.push({title:'ℹ DATA',text:'Snapshot '+f.snapshotAgeSeconds+'s old · '+f.quality+'\\nScrape reachability only; application events and Talìa alerts are not covered.'});\n  return {subject:'Talìa · Homelab report',summary:attention.length?'⚠ Items need attention':'✓ No issue flagged by these checks',sections};\n}\n",
+    "destinations": [
+      "telegram-CHAT_ID"
+    ],
+    "enabled": true,
+    "id": "homelab-telegram-14",
+    "period_ms": 86400000,
+    "schedule": {
+      "kind": "daily",
+      "time": "14:00",
+      "weekdays": [],
+      "zone": "Europe/Rome"
+    },
+    "steps": [
+      {
+        "id": "host",
+        "kind": "read",
+        "optional": false,
+        "variable": "homelab-summary"
+      },
+      {
+        "id": "availability",
+        "kind": "source",
+        "optional": false,
+        "request": "ctx=>({kind:'query',query:'avg_over_time(up[24h])',time:ctx.period.end/1000})",
+        "source": "homelab-prometheus"
+      },
+      {
+        "id": "facts",
+        "kind": "script",
+        "optional": false,
+        "source": "ctx => { const i=ctx.steps.host.value,s=ctx.decode(i.value); const a=ctx.decode(ctx.steps.availability.value.wire); return {asOfUtc:new Date(ctx.now).toISOString(),snapshotAgeSeconds:Math.round((ctx.now-s.updated)/1000),quality:i.quality,stale:ctx.now-s.updated>120000,cpuPercent:s.cpu,memoryPercent:s.memory,disks:s.disks,targets:s.targets,availability24h:a.result.map(x=>({job:x.metric.job,instance:x.metric.instance,percent:Number.isFinite(x.samples[0]?.[1])?Math.round(x.samples[0][1]*10000)/100:null})),warnings:a.warnings,limitations:'Scrape availability is not application health. No application event logs or Talia alert records are included.'}; }"
+      },
+      {
+        "id": "analysis",
+        "inputs": [
+          "facts"
+        ],
+        "instructions": "Provide one short interpretation sentence in English, maximum 35 words. Focus on the most important issue or say no issue is evident in the limited measurements. Do not repeat CPU/memory/disk numbers, enumerate healthy services, add headings, a preamble or recommendations without evidence. Distinguish historical scrape availability from current application health.",
+        "kind": "analysis",
+        "optional": true
+      }
+    ],
+    "timeout_ms": 300000,
+    "version": 2
+  },
+  {
+    "compose": "ctx => {\n  const f = ctx.steps.facts.value;\n  const pct = n => Number.isFinite(n) ? n.toFixed(1)+'%' : 'unavailable';\n  const line = s => '• '+s;\n  const up = f.targets.filter(t => t.status === 'up').length;\n  const attention = [];\n  if (f.stale || f.quality !== 'good') attention.push('Snapshot '+(f.stale?'stale':'quality: '+f.quality)+' — '+f.snapshotAgeSeconds+'s old');\n  for (const t of f.targets.filter(t => t.status !== 'up')) attention.push(t.name+': '+t.status);\n  for (const d of f.disks) {\n    if (!Number.isFinite(d.free)) attention.push(d.mount+': free space unavailable');\n    else if (d.free < 10) attention.push(d.mount+': '+pct(d.free)+' free (below 10%)');\n  }\n  for (const [label,value] of [['CPU',f.cpuPercent],['Memory',f.memoryPercent]]) {\n    if (!Number.isFinite(value)) attention.push(label+': unavailable');\n    else if (value >= 90) attention.push(label+': '+pct(value)+' (at least 90%)');\n  }\n  const reduced=f.availability24h.filter(x => Number.isFinite(x.percent) && x.percent<99);\n  for (const t of reduced) attention.push(t.job+': '+t.percent.toFixed(2)+'% scrape availability over 24h');\n  if (!f.availability24h.length) attention.push('24h scrape availability unavailable');\n  for (const t of f.availability24h.filter(x=>!Number.isFinite(x.percent))) attention.push(t.job+': 24h availability unavailable');\n  for (const warning of f.warnings || []) attention.push('Prometheus: '+warning);\n  const sections=[\n    {title:'🔎 ATTENTION',text:attention.length?attention.map(line).join('\\n'):'• No threshold breaches in these measurements.'},\n    {title:'🖥 HOST',text:line('CPU: '+pct(f.cpuPercent))+'\\n'+line('Memory: '+pct(f.memoryPercent))},\n    {title:'💾 DISK FREE',text:f.disks.map(d=>line(d.mount+': '+pct(d.free))).join('\\n')},\n    {title:'📡 SERVICES',text:line(up+'/'+f.targets.length+' scrape targets reachable now')+'\\n'+line('24h: '+reduced.length+' targets below 99% scrape availability')},\n  ];\n  let note=ctx.steps.analysis.status==='succeeded'?ctx.steps.analysis.value.summary.replace(/\\s+/g,' ').trim():'AI summary unavailable; measurements are shown above.';\n  if (note.length>260) note=note.slice(0,257).replace(/\\s+\\S*$/,'')+'…';\n  sections.push({title:'💬 INTERPRETATION',text:note});\n  sections.push({title:'ℹ DATA',text:'Snapshot '+f.snapshotAgeSeconds+'s old · '+f.quality+'\\nScrape reachability only; application events and Talìa alerts are not covered.'});\n  return {subject:'Talìa · Homelab report',summary:attention.length?'⚠ Items need attention':'✓ No issue flagged by these checks',sections};\n}\n",
+    "destinations": [
+      "telegram-CHAT_ID"
+    ],
+    "enabled": true,
+    "id": "homelab-telegram-19",
+    "period_ms": 86400000,
+    "schedule": {
+      "kind": "daily",
+      "time": "19:00",
+      "weekdays": [],
+      "zone": "Europe/Rome"
+    },
+    "steps": [
+      {
+        "id": "host",
+        "kind": "read",
+        "optional": false,
+        "variable": "homelab-summary"
+      },
+      {
+        "id": "availability",
+        "kind": "source",
+        "optional": false,
+        "request": "ctx=>({kind:'query',query:'avg_over_time(up[24h])',time:ctx.period.end/1000})",
+        "source": "homelab-prometheus"
+      },
+      {
+        "id": "facts",
+        "kind": "script",
+        "optional": false,
+        "source": "ctx => { const i=ctx.steps.host.value,s=ctx.decode(i.value); const a=ctx.decode(ctx.steps.availability.value.wire); return {asOfUtc:new Date(ctx.now).toISOString(),snapshotAgeSeconds:Math.round((ctx.now-s.updated)/1000),quality:i.quality,stale:ctx.now-s.updated>120000,cpuPercent:s.cpu,memoryPercent:s.memory,disks:s.disks,targets:s.targets,availability24h:a.result.map(x=>({job:x.metric.job,instance:x.metric.instance,percent:Number.isFinite(x.samples[0]?.[1])?Math.round(x.samples[0][1]*10000)/100:null})),warnings:a.warnings,limitations:'Scrape availability is not application health. No application event logs or Talia alert records are included.'}; }"
+      },
+      {
+        "id": "analysis",
+        "inputs": [
+          "facts"
+        ],
+        "instructions": "Provide one short interpretation sentence in English, maximum 35 words. Focus on the most important issue or say no issue is evident in the limited measurements. Do not repeat CPU/memory/disk numbers, enumerate healthy services, add headings, a preamble or recommendations without evidence. Distinguish historical scrape availability from current application health.",
+        "kind": "analysis",
+        "optional": true
+      }
+    ],
+    "timeout_ms": 300000,
+    "version": 2
+  }
+]

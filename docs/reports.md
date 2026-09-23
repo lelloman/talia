@@ -43,6 +43,10 @@ Prometheus, computes observations, asks simple-ai for analysis, and composes an 
 and `my-email` with configured names.
 It starts with scheduling disabled so it can be previewed first.
 
+The deployed [structured Telegram reports](../deploy/homelab-telegram-reports.md)
+provide a reproducible three-times-daily homelab configuration with compact
+sections, metric bullets and a short AI interpretation.
+
 ## MCP operations
 
 All `reports_*` operations require current global authoring/admin authority.
