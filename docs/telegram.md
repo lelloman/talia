@@ -72,6 +72,16 @@ history stays in SQLite. Reports are not appended to history or compaction input
 a user's question retains only its report ID reference, while the assistant's
 answer is ordinary conversation history.
 
+Failed and timed-out requests also retain their question (including any report ID)
+and a bounded outcome notice in conversation history, so follow-ups such as “try
+again” and later compaction retain the intent. Raw provider errors and incomplete
+tool transcripts are not added to chat context. This applies to failures recorded
+from this release onward; older failed jobs remain in execution records. `/new`
+still isolates the new conversation, and revoked/cancelled work adds no late result.
+Observer instructions request brief, relevant replies and explain that retention
+limits are not sample counts, internal state is independent of the exposed value,
+and an empty alert list is not proof of overall health.
+
 Compaction has no tools. Investigations only have the cached reads and approved
 probes described in [the harness contract](ai.md#read-only-telegram-tools).
 Revoking a user/chat, changing settings or starting a new conversation prevents

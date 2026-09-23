@@ -691,7 +691,7 @@ async fn active_request_uses_remaining_budget_and_discards_late_answer() {
                 .query_row("SELECT count(*) FROM telegram_history", [], |r| r
                     .get::<_, i64>(0))
                 .unwrap(),
-            0
+            2
         );
         assert_eq!(
             s.conn
@@ -703,6 +703,81 @@ async fn active_request_uses_remaining_budget_and_discards_late_answer() {
                 .unwrap(),
             0
         );
+    }
+    drop(w);
+    std::fs::remove_dir_all(dir).unwrap();
+    std::fs::remove_dir_all(ai_dir).unwrap();
+}
+
+#[tokio::test]
+async fn failed_questions_reach_followups_and_compaction_but_not_new_conversations() {
+    let _bot = bot_fixture().await;
+    let (w, dir) = fixture();
+    connect(&w).await;
+    pair(&w, 55, 55, true).await;
+    let ai = MockServer::start().await;
+    let ai_dir = crate::ai::tests::config(&ai.uri());
+    w.admin("admin", json!({"op":"telegramSettings","expected":1,"enabled":true,"investigations":true,"sources":[]})).await.unwrap();
+    let requests = Arc::new(Mutex::new(Vec::<Value>::new()));
+    let captured = requests.clone();
+    Mock::given(path("/v1/chat/completions"))
+        .respond_with(move |r: &wiremock::Request| {
+            let mut calls = captured.lock().unwrap();
+            calls.push(serde_json::from_slice(&r.body).unwrap());
+            if calls.len() == 1 {
+                ResponseTemplate::new(500).set_body_string("PRIVATE-PROVIDER-ERROR")
+            } else {
+                ResponseTemplate::new(200).set_body_json(crate::ai::tests::answer("Checked"))
+            }
+        })
+        .mount(&ai)
+        .await;
+    let ingest = |id, text: &str| {
+        w.engine.store.borrow_mut().telegram_ingest(&json!({"update_id":id,"message":{"chat":{"id":55,"type":"private"},"from":{"id":55,"is_bot":false},"text":text}}),1000).unwrap();
+    };
+    ingest(60, "Check the external disk free space");
+    w.conversation().await.unwrap();
+    w.conversation().await.unwrap(); // terminal jobs must not duplicate history
+    ingest(61, "Try again");
+    w.conversation().await.unwrap();
+    ingest(62, "/compact");
+    w.conversation().await.unwrap();
+    ingest(63, "/new");
+    ingest(64, "Hello");
+    w.conversation().await.unwrap();
+    {
+        let requests = requests.lock().unwrap();
+        assert_eq!(requests.len(), 4);
+        let retry: Value =
+            serde_json::from_str(requests[1]["messages"][1]["content"].as_str().unwrap()).unwrap();
+        assert_eq!(retry["question"], "Try again");
+        assert_eq!(retry["messages"].as_array().unwrap().len(), 2);
+        assert_eq!(
+            retry["messages"][0]["text"],
+            "Check the external disk free space"
+        );
+        assert!(retry["messages"][1]["text"]
+            .as_str()
+            .unwrap()
+            .contains("outcome: failed"));
+        assert!(!retry.to_string().contains("PRIVATE-PROVIDER-ERROR"));
+        let compact: Value =
+            serde_json::from_str(requests[2]["messages"][1]["content"].as_str().unwrap()).unwrap();
+        assert!(compact
+            .to_string()
+            .contains("Check the external disk free space"));
+        assert!(compact.to_string().contains("outcome: failed"));
+        let fresh: Value =
+            serde_json::from_str(requests[3]["messages"][1]["content"].as_str().unwrap()).unwrap();
+        assert_eq!(fresh["messages"], json!([]));
+        assert_eq!(fresh["summary"], "");
+        let tools = requests[1]["tools"].to_string();
+        assert!(tools.contains("retention limits"));
+        assert!(tools.contains("undefined state with a populated value is valid"));
+        assert!(requests[1]["messages"][0]["content"]
+            .as_str()
+            .unwrap()
+            .contains("2-5 short sentences"));
     }
     drop(w);
     std::fs::remove_dir_all(dir).unwrap();
