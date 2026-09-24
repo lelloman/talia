@@ -45,7 +45,7 @@ final class NativeRenderer {
    case "Chart":v=new Chart(context);break;
    case "Scroll":v=new ScrollView(context);break;
    case "Grid":v=new GridLayout(context);break;
-   default:LinearLayout box=new LinearLayout(context);box.setOrientation(type.equals("Row")?0:1);v=box;
+   default:LinearLayout box=new LinearLayout(context);box.setOrientation(type.equals("Row")||type.equals("SegmentedControl")?0:1);v=box;
   }cache.put(id,v);v.setTag(id);v.setId(View.generateViewId());}
   String visibility=p.optString("visibility","visible");v.setVisibility(visibility.equals("collapsed")?View.GONE:visibility.equals("hidden")?View.INVISIBLE:View.VISIBLE);
   v.setEnabled(p.optBoolean("enabled",true));int padding=pixels(p.optString("padding","0dp"));v.setPadding(padding,padding,padding,padding);
@@ -87,11 +87,11 @@ final class NativeRenderer {
     if(group instanceof GridLayout)((GridLayout)group).setColumnCount(p.optInt("columns",1));
     for(int i=0;i<children.length();i++){
      JSONObject child=children.getJSONObject(i);View cv=build(child);JSONObject cp=child.getJSONObject("props");
-     int width=cp.has("width")?pixels(cp.getString("width")):(type.equals("Row")?-2:-1),height=cp.has("height")?pixels(cp.getString("height")):-2;
+     int width=cp.has("width")?pixels(cp.getString("width")):((type.equals("Row")||type.equals("SegmentedControl"))?-2:-1),height=cp.has("height")?pixels(cp.getString("height")):-2;
      if(child.getString("type").equals("Chart")&&!cp.has("height"))height=pixels("120dp");
      ViewGroup.MarginLayoutParams lp;
      if(group instanceof GridLayout){GridLayout.LayoutParams g=new GridLayout.LayoutParams();int columns=p.optInt("columns",1);g.columnSpec=GridLayout.spec(i%columns,1f);g.rowSpec=GridLayout.spec(i/columns);g.width=0;g.height=height;g.setMargins(0,0,gap,gap);lp=g;}
-     else{lp=group instanceof LinearLayout?new LinearLayout.LayoutParams(width,height):new android.widget.FrameLayout.LayoutParams(width,height);if(i>0){if(type.equals("Row"))lp.leftMargin=gap;else lp.topMargin=gap;}}
+     else{lp=group instanceof LinearLayout?new LinearLayout.LayoutParams(width,height):new android.widget.FrameLayout.LayoutParams(width,height);if(i>0){if(type.equals("Row")||type.equals("SegmentedControl"))lp.leftMargin=gap;else lp.topMargin=gap;}}
      if(group.getChildCount()<=i||group.getChildAt(i)!=cv){detach(cv);group.addView(cv,i,lp);}else cv.setLayoutParams(lp);
     }
     while(group.getChildCount()>children.length())group.removeViewAt(group.getChildCount()-1);break;

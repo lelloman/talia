@@ -12,6 +12,7 @@
     Text:{...base,text:'text!',label:'string',variant:'variant',tone:'tone'}, Status:{...base,text:'text!',label:'string',variant:'variant',tone:'tone'},
     Chart:{...base,values:'numbers!',label:'string!',height:'length',min:'number',max:'number',unit:'string',threshold:'number',startLabel:'string',endLabel:'string'},
     Button:{...base,text:'string!',label:'string',enabled:'boolean',selected:'boolean',onClick:'action!'},
+    SegmentedControl:{...base,label:'string!'},
     Slider:{...base,value:'number!',min:'number!',max:'number!',step:'positive',label:'string!',enabled:'boolean',onChange:'action!'},
     Switch:{...base,value:'boolean!',label:'string!',enabled:'boolean',onChange:'action!'},
     If:{when:'boolean!'}, For:{items:'array!',key:'key!',columns:'positive',gap:'length'},
@@ -91,6 +92,7 @@
       }
       const leaf=['Text','Status','Chart','Button','Slider','Switch','ScreenRef','Use'];
       if(leaf.includes(n.type)&&n.children.length)fail(n,'leaf cannot have children');
+      if(n.type==='SegmentedControl'&&(!n.children.length||n.children.some(c=>c.type!=='Button'||!Object.hasOwn(c.props,'selected'))))fail(n,'segmented control needs selectable buttons');
       if(['Screen','Surface','Scroll','If','For','Width'].includes(n.type)&&n.children.length!==1)fail(n,'expected one child');
       if(n.type==='Width'&&!('min'in n.props)&&!('max'in n.props))fail(n,'width rule needs a bound');
       if(n.type==='Grid'&&typeof n.props.columns==='number'&&!Number.isInteger(n.props.columns))fail(n,'columns must be integral');

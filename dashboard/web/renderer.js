@@ -1,4 +1,5 @@
 // Trusted DOM renderer. Only validated resolved nodes enter this module.
+import {renderSegmentedControl} from './dist/chrome.js';
 function paintChart(canvas,p){
  const rect=canvas.getBoundingClientRect();if(rect.width<1||rect.height<1)return;
  const dpr=window.devicePixelRatio||1,width=rect.width,height=rect.height;
@@ -44,6 +45,9 @@ export class Renderer {
     const children=n.children.map(build);
     children.forEach((child,i)=>{if(el.children[i]!==child)el.insertBefore(child,el.children[i]||null);});
     while(el.children.length>children.length)el.lastElementChild.remove();
+   }else if(n.type==='SegmentedControl'){
+    for(const child of n.children)this.nodes.set(child.id,child);
+    renderSegmentedControl(el,{name:'talia-'+n.id,label:p.label,modelValue:n.children.find(c=>c.props.selected)?.id||'',options:n.children.map(c=>({value:c.id,label:c.props.text,accessibleLabel:c.props.label,disabled:c.props.enabled===false})),'onUpdate:modelValue':id=>this.emit(id,null)});
    }else if(n.type==='Text'||n.type==='Status'||n.type==='Button'){
     if(el.textContent!==String(p.text))el.textContent=String(p.text);
     if(p.variant==='heading'){el.setAttribute('role','heading');el.setAttribute('aria-level','2');}else{el.removeAttribute('aria-level');if(n.type==='Status')el.setAttribute('role','status');else el.removeAttribute('role');}
@@ -62,7 +66,7 @@ export class Renderer {
    return el;
   };
   const child=build(tree);if(this.root.firstChild!==child)this.root.replaceChildren(child);
-  for(const [id,el]of this.cache)if(!this.nodes.has(id)){const canvas=el.querySelector('canvas');if(canvas)this.chartResize.unobserve(canvas);el.remove();this.cache.delete(id);}
+  for(const [id,el]of this.cache)if(!this.nodes.has(id)){if(el.dataset.type==='SegmentedControl')renderSegmentedControl(el,null);const canvas=el.querySelector('canvas');if(canvas)this.chartResize.unobserve(canvas);el.remove();this.cache.delete(id);}
   for(const canvas of redraw)if(canvas.isConnected)paintChart(canvas,canvas.chartProps);
   if(active?.isConnected&&document.activeElement!==active)active.focus({preventScroll:true});
  }

@@ -1,8 +1,8 @@
 # LelloDesign adoption
 
 The web host uses the actual `@lelloman/lellodesign-vue` components, built from
-LelloDesign commit `dd796de7d7364f11cb724500701f4701bf88f12f` (Vue 0.2.0),
-verified against upstream main on 2026-09-23. A commit-pinned package archive
+LelloDesign commit `e95beaa352ff1ad8343f851d095b743b112d148b` (Vue 0.3.0),
+implemented in the sibling repository on 2026-09-24. A commit-pinned package archive
 includes the latest layout refinements, with [provenance and upgrade instructions](../dashboard/vendor/README.md).
 Vue 3.5.13 and the archive are locked by `dashboard/web/package-lock.json`.
 Neither the sibling checkout nor registry credentials are needed to build Talìa.
@@ -17,6 +17,7 @@ The product uses Blue light/dark semantic palettes and these library components:
 | Account details and sign-out dialog | LelloDialog, LelloButton |
 | Connection dot and accessible state label | LelloConnectionStatus |
 | Light, Dark and System appearance | LelloThemeSelector |
+| Single-choice CPU history range | LelloSegmentedControl |
 
 Application navigation exposes Dashboard, Settings, permitted Alerts, and
 admin-only Sharing and Users. This navigation is separate from the screens and
@@ -46,9 +47,12 @@ and compact 24/32 px page titles. Settings and Sharing use locally constrained
 The host uses the library's `lv-workspace` helper. This follows upstream's product
 layout families instead of applying the editorial 1120 px width to every page.
 
-The declarative dashboard renderer still creates platform-independent widgets;
-its native HTML controls inherit the scoped library styles and charts use the
-primary color token. This is not a change to the Dashboard language or VM API.
+The declarative `SegmentedControl` node groups selected Button choices under an
+accessible label. The web renderer mounts the actual LelloDesign Vue component
+and maps selection to the existing VM actions. The library owns markup, keyboard
+behavior and styling; Talìa owns state, chart data and placement. Removed controls
+are unmounted, and distinct radio names isolate multiple dashboard controls.
+Other native HTML controls inherit scoped library styles; charts use theme tokens.
 
 ## Verification and remaining clients
 

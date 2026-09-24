@@ -1,7 +1,9 @@
 // Framework-owned application chrome. The dashboard host owns one retained DOM island.
-import {createApp,h,ref,computed,nextTick,watch} from 'vue';
-import {LelloTheme,LelloScaffold,LelloAccount,LelloDialog,LelloButton,LelloConnectionStatus,LelloThemeSelector} from '@lelloman/lellodesign-vue';
+import {createApp,h,ref,computed,nextTick,watch,render} from 'vue';
+import {LelloSegmentedControl,LelloTheme,LelloScaffold,LelloAccount,LelloDialog,LelloButton,LelloConnectionStatus,LelloThemeSelector} from '@lelloman/lellodesign-vue';
 import '@lelloman/lellodesign-vue/style.css';
+// Thin adapter between the declarative dashboard and the library-owned control.
+export function renderSegmentedControl(root,props){render(props?h(LelloSegmentedControl,props):null,root);}
 const read=(key,fallback)=>{try{return localStorage.getItem(key)??fallback;}catch{return fallback;}};
 const save=(key,value)=>{try{localStorage.setItem(key,value);}catch{}};
 const paths={dashboard:'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z',alerts:'M12 3a6 6 0 0 0-6 6v5l-2 3h16l-2-3V9a6 6 0 0 0-6-6ZM9 21h6',settings:'M4 6h16M4 12h16M4 18h16M8 3v6M16 9v6M10 15v6',sharing:'M8 12l8-6M8 12l8 6M8 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM22 4a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM22 20a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z',users:'M9 10a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM2 22v-4a7 7 0 0 1 14 0v4M17 3a4 4 0 0 1 0 8M20 22v-4a7 7 0 0 0-2-5'};
