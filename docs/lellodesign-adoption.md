@@ -1,9 +1,9 @@
 # LelloDesign adoption
 
 The web host uses the actual `@lelloman/lellodesign-vue` components, built from
-LelloDesign commit `e95beaa352ff1ad8343f851d095b743b112d148b` (Vue 0.3.0),
-implemented in the sibling repository on 2026-09-24. A commit-pinned package archive
-includes the latest layout refinements, with [provenance and upgrade instructions](../dashboard/vendor/README.md).
+LelloDesign 0.3.1 commit
+`5f793aa56c66855b3c19109fef825bed22cae0b2`, updated on 2026-09-24.
+The archive includes the approved Material Design 3 segmented buttons. See [provenance and upgrade instructions](../dashboard/vendor/README.md).
 Vue 3.5.13 and the archive are locked by `dashboard/web/package-lock.json`.
 Neither the sibling checkout nor registry credentials are needed to build Talìa.
 

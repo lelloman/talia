@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@lelloman/lellodesign-vue": "file:../vendor/lellodesign-vue-e95beaa.tgz",
+    "@lelloman/lellodesign-vue": "file:../vendor/lellodesign-vue-0.3.1.tgz",
     "vue": "3.5.13"
   },
   "devDependencies": {
