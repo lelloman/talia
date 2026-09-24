@@ -17,7 +17,9 @@ at least 90%, and scrape availability below 99%. These are report presentation
 rules, not alert policies. Scrape reachability does not prove application health.
 Application events and Talìa alert records are outside this report's coverage.
 
-The deadline is five minutes. AI analysis is optional: failure leaves the measured
+The deadline is twenty minutes, including GPU wake-up and model loading.
+The AI HTTP request uses the remaining report deadline instead of a separate
+two-minute cutoff. AI analysis is optional: failure leaves the measured
 facts available and is explicitly shown in the report. Collection and composition
 are required. All reports use a rolling 24-hour window, not time since the previous
 report. The standard renderer adds the period and durable run ID as a footer.

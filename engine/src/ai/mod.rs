@@ -191,7 +191,7 @@ pub async fn execute(
         id: id.into(),
         scope,
         created: engine.now(),
-        deadline: deadline.min(engine.now().saturating_add(900000)),
+        deadline: deadline.min(engine.now().saturating_add(1_200_000)),
         status: "running".into(),
         model: String::new(),
         messages: vec![
@@ -241,7 +241,7 @@ async fn run(engine: &Engine, r: &mut Run) -> Result<String> {
         .redirect(reqwest::redirect::Policy::none())
         .no_proxy()
         .connect_timeout(Duration::from_secs(10))
-        .timeout(Duration::from_secs(120))
+        .timeout(Duration::from_millis(r.deadline.saturating_sub(engine.now()).max(1) as u64))
         .build()
         .map_err(|_| "AI HTTP client unavailable")?;
     r.model = config.model.clone();

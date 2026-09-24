@@ -43,7 +43,7 @@
         "optional": true
       }
     ],
-    "timeout_ms": 300000,
+    "timeout_ms": 1200000,
     "version": 3
   },
   {
@@ -90,7 +90,7 @@
         "optional": true
       }
     ],
-    "timeout_ms": 300000,
+    "timeout_ms": 1200000,
     "version": 2
   },
   {
@@ -137,7 +137,7 @@
         "optional": true
       }
     ],
-    "timeout_ms": 300000,
+    "timeout_ms": 1200000,
     "version": 2
   }
 ]

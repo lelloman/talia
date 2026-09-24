@@ -445,3 +445,24 @@ async fn input_response_and_deadline_limits_fail_explicitly() {
     .contains("response size"));
     std::fs::remove_dir_all(dir).unwrap();
 }
+
+#[tokio::test]
+async fn long_report_budget_is_preserved_and_short_deadline_still_cancels() {
+    let http = MockServer::start().await;
+    let _dir = config(&http.uri());
+    Mock::given(path("/v1/chat/completions"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(answer("Ready")))
+        .mount(&http).await;
+    let s = Store::open(":memory:").unwrap();
+    let scope = telegram(&s);
+    let e = Engine::with_clock(s, Rc::new(|| 1000));
+    execute(&e, "long-budget", scope.clone(), 1_201_000, "Inspect", json!({}), false).await.unwrap();
+    assert_eq!(e.store.borrow().ai_run("long-budget").unwrap().unwrap().deadline, 1_201_000);
+    http.reset().await;
+    Mock::given(path("/v1/chat/completions"))
+        .respond_with(ResponseTemplate::new(200).set_delay(Duration::from_millis(200)).set_body_json(answer("Too late")))
+        .mount(&http).await;
+    assert!(execute(&e, "short-budget", scope, 1020, "Inspect", json!({}), false).await.is_err());
+    assert_eq!(e.store.borrow().ai_run("short-budget").unwrap().unwrap().status, "failed");
+    assert_eq!(http.received_requests().await.unwrap().len(), 1);
+}
