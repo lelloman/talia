@@ -8,7 +8,7 @@ export const changes=[
  put('ui','host-metric-card',{source:load('host/metric-card.ui')}),
  put('ui','host-layout',{source:load('host/layout.ui'),references:[{kind:'ui',id:'host-metric-card'}]}),
  put('function','host-present',{source:load('host/present.js')}),
- put('monitor_definition','host-collect',{id:'host-collect',version:3,kind:'pipeline',source:load('host/collect.js')}),
+ put('monitor_definition','host-collect',{id:'host-collect',version:4,kind:'pipeline',source:load('host/collect.js')}),
  put('variable_definition','host-snapshot',{id:'host-snapshot',version:1,kind:'stored',source:'',value_schema:'any',state_schema:'any',dependencies:[]}),
  ...hosts.flatMap(p=>[
   put('variable','host-'+p.host,{id:'host-'+p.host,definition:'host-snapshot',params:TaliaValue.encode({}),history_count:120,history_age_ms:3600000}),

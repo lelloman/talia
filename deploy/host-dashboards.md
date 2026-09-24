@@ -15,8 +15,10 @@ All three collection instances reference **host-collect**, with parameters `host
 `job`, and `instance`. Each has its own `host-HOST` Variable, output mapping,
 30-second schedule, 90-second stale threshold and one-hour retained snapshot history (separate from the 24-hour Prometheus chart window).
 CPU, memory and filesystem selectors match the exact job and instance, including
-range queries. Charts query the past 24 hours from Prometheus at five-minute
-intervals (289 slots); missing samples remain gaps at their true position. A down exporter clears current values; retained trends can still
+range queries. The CPU card switches between a 24-hour view of five-minute CPU
+averages (289 slots) and a one-hour view of one-minute CPU averages (61 slots).
+Memory remains a 24-hour view with readings every five minutes. Missing samples
+remain gaps at their true position. A down exporter clears current values; retained trends can still
 show the earlier history. Newly added exporters need two scrapes for CPU rates
 and accumulate the 24-hour chart naturally. Disk cards follow discovered mounts.
 Host reachability means metrics collection works, not that every service is healthy.
