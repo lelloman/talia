@@ -1,5 +1,7 @@
 <Column id="card" surface="card" gap="8dp" padding="20dp">
   <Text id="label" text={params.label} tone="muted"/>
   <Text id="value" text={params.value} variant="metric" tone={params.tone}/>
-  <Chart id="trend" values={params.history} label="Past 24 hours · 5-minute samples" height="100dp"/>
+  <Text id="detail" text={params.detail} variant="caption" tone="muted"/>
+  <Chart id="trend" values={params.history} label="Past 24 hours · 5-minute samples" min={0} max={100} unit="%" threshold={90} startLabel="24h ago" endLabel="Now" height="160dp"/>
+  <Text id="note" text={params.note} variant="caption" tone="muted"/>
 </Column>

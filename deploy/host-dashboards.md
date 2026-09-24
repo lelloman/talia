@@ -21,6 +21,13 @@ show the earlier history. Newly added exporters need two scrapes for CPU rates
 and accumulate the 24-hour chart naturally. Disk cards follow discovered mounts.
 Host reachability means metrics collection works, not that every service is healthy.
 
+CPU and memory charts use a fixed 0–100% scale with quarter-grid labels, 24-hour
+endpoints, and a dashed 90% high-usage reference. The memory card also shows
+absolute used, total, and available memory. Used is `MemTotal − MemAvailable`,
+matching the percentage and excluding memory Linux considers readily reclaimable.
+If those exporter series are missing, absolute usage stays unavailable rather than
+showing a misleading zero.
+
 Homelab uses the existing `node-exporter` job. VPSes use `node-exporter-vps`, keeping
 existing homelab-only queries unchanged. Their distro exporters listen only on
 127.0.0.1:9100. Monitoring-stack SSH sidecars forward that endpoint on the internal
@@ -46,6 +53,12 @@ homelab repository under `monitoring/vps-metrics/`.
    These initial dashboards are private to the same owner as `monitor`.
 6. Verify each `host-HOST` sample has good quality, its matching host and fresh
    CPU/memory/filesystem values. Refresh the web page to discover the dashboards.
+
+For later metric-card revisions, save only the changed `host-metric-card` UI,
+`host-present` function, and `host-collect` monitor definition against the current
+catalog revision. Deploy the updated web renderer before saving UI with chart
+range properties. Running dashboards adopt the new saved package on explicit Reload;
+the collector updates server samples on its next scheduled run.
 
 Checks: `node dashboard/tests/host-template.mjs` covers selectors, independent
 subscriptions and grants, layout resolution and down/stale/missing data;

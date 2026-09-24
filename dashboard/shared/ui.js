@@ -10,7 +10,7 @@
     Column:layout, Row:layout, Grid:{...layout,columns:'positive'},
     Scroll:{...base,width:'size',height:'size'},
     Text:{...base,text:'text!',label:'string',variant:'variant',tone:'tone'}, Status:{...base,text:'text!',label:'string',variant:'variant',tone:'tone'},
-    Chart:{...base,values:'numbers!',label:'string!',height:'length'},
+    Chart:{...base,values:'numbers!',label:'string!',height:'length',min:'number',max:'number',unit:'string',threshold:'number',startLabel:'string',endLabel:'string'},
     Button:{...base,text:'string!',enabled:'boolean',onClick:'action!'},
     Slider:{...base,value:'number!',min:'number!',max:'number!',step:'positive',label:'string!',enabled:'boolean',onChange:'action!'},
     Switch:{...base,value:'boolean!',label:'string!',enabled:'boolean',onChange:'action!'},
@@ -96,6 +96,11 @@
       if(n.type==='Grid'&&typeof n.props.columns==='number'&&!Number.isInteger(n.props.columns))fail(n,'columns must be integral');
       if(n.type==='For'&&!(n.props.key?.bind?.startsWith('item.')))fail(n,'key must be item path');
       if(n.type==='Slider'&&typeof n.props.min==='number'&&typeof n.props.max==='number'&&n.props.max<=n.props.min)fail(n,'invalid slider range');
+      if(n.type==='Chart'){
+        if(('min' in n.props)!==('max' in n.props))fail(n,'chart range needs min and max');
+        if(typeof n.props.min==='number'&&typeof n.props.max==='number'&&n.props.max<=n.props.min)fail(n,'invalid chart range');
+        if(typeof n.props.threshold==='number'&&typeof n.props.min==='number'&&typeof n.props.max==='number'&&(n.props.threshold<n.props.min||n.props.threshold>n.props.max))fail(n,'chart threshold outside range');
+      }
       if(n.type==='Use'&&typeof n.props.definition!=='string')fail(n,'definition must be literal');
       for(const child of n.children){
         if(['Screen','Surface','Dashboard'].includes(child.type)&&n.type!=='Dashboard')fail(child,'invalid structural nesting');
@@ -152,6 +157,7 @@
       if(n.type==='Switch'&&p.unavailable!==undefined){p.value=false;p.enabled=false;p.label+=': '+p.unavailable+' (unavailable)';}
       if(n.type==='Slider'&&p.unavailable!==undefined){p.value=p.min;p.enabled=false;p.label+=': '+p.unavailable+' (unavailable)';}
       if(n.type==='Slider'&&(p.max<=p.min||p.value<p.min||p.value>p.max))fail(n,'invalid slider range/value');
+      if(n.type==='Chart'&&((p.min===undefined)!==(p.max===undefined)||p.min!==undefined&&p.max<=p.min||p.threshold!==undefined&&p.min!==undefined&&(p.threshold<p.min||p.threshold>p.max)))fail(n,'invalid chart range');
       if(['Grid','For'].includes(n.type)&&p.columns!==undefined&&!Number.isInteger(p.columns))fail(n,'columns must be integral');
       if(n.type==='ScreenRef'){
         if(!screens.has(p.screen))fail(n,'unknown screen '+p.screen);

@@ -49,7 +49,7 @@ Source diagnostics identify line and column. Source is parsed, never evaluated.
 | Grid | surface, columns, gap, padding, width, height, visibility | Equal-width columns |
 | Scroll | width, height, visibility | One child, vertical scrolling |
 | Text, Status | text, label, variant, tone, visibility | Wrapping text; Status is a live status |
-| Chart | values, label, height, visibility | Finite numeric array, line chart and accessible summary |
+| Chart | values, label, height, visibility, min, max, unit, threshold, startLabel, endLabel | Finite numeric array, optional fixed scale and high reference, accessible summary |
 | Button | text, enabled, onClick, visibility | Named action |
 | Slider | value, min, max, step, label, enabled, onChange, visibility | Numeric event value, accessible label required |
 | Switch | value, label, enabled, onChange, visibility | Boolean event value, accessible label required |
@@ -76,6 +76,12 @@ meaning must also appear in text, never solely in color. Optional positive integ
 `For.columns` lays repeated children out in a grid; without it For remains a
 column. `For.gap` controls spacing. Repeat identity is unchanged. Chart captions
 show the label; full sample values remain in the accessible description.
+Charts with `min` and `max` show a fixed scale with quarter-grid labels. Optional
+`startLabel` and `endLabel` identify the horizontal endpoints. Both bounds are
+required together, and `max` must exceed `min`.
+`unit` labels the scale; `threshold` draws a dashed high-usage reference and must
+fall inside the fixed range when one is supplied. Unset bounds retain automatic
+scaling.
 These additive properties require updated hosts; older hosts reject unknown
 properties. Update the Android app before loading a package that uses them.
 

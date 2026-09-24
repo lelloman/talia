@@ -47,3 +47,10 @@ test('semantic presentation is bounded and repeated grids preserve identity',()=
  assert.throws(()=>rows([{...a,tone:'red'}]),/expected tone/);
  for(const source of ['<Text id="t" text="x" variant="giant"/>','<Column id="c" surface="html"/>','<For id="f" items={state.items} key={item.id} columns={1.5}><Text id="t" text={item.label}/></For>'])assert.throws(()=>resolve(compile(wrap(source)),{items:[a]}));
 });
+test('chart reference ranges are explicit and bounded',()=>{
+ const chart='<Chart id="chart" values={state.values} label="CPU" min={0} max={100} unit="%" threshold={90}/>';
+ const tree=compile(wrap(chart));
+ const node=resolve(tree,{values:[0,25,null,95]}).children[0].children[0];
+ assert.equal(node.props.max,100);assert.equal(node.props.threshold,90);assert.deepEqual(node.props.values,[0,25,null,95]);
+ for(const invalid of [chart.replace(' max={100}',''),chart.replace('max={100}','max={0}'),chart.replace('threshold={90}','threshold={110}')])assert.throws(()=>compile(wrap(invalid)),/chart range|chart threshold/);
+});

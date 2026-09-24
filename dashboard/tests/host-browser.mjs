@@ -11,12 +11,15 @@ try{
  await page.goto(origin+'/preview');await page.evaluate(async()=>{await (await import('/dashboard/web/dist/chrome.js')).mountChrome({name:'Operator'},{development:true});window.renderer=new (await import('/dashboard/web/renderer.js')).Renderer(document.querySelector('#canvas'),()=>{});});
  mkdirSync('.local/host-template',{recursive:true});
  for(const [i,p] of hosts.entries()){
-  const sample={quality:'good',value:{updated:Date.now(),reachable:true,cpu:12+i*10,memory:20+i*5,cpuHistory:[10,14,12],memoryHistory:[18,19,20],disks:[{id:'root',mount:'/',device:'/dev/sda1',free:70-i*10}]}};
+  const sample={quality:'good',value:{updated:Date.now(),reachable:true,cpu:12+i*10,memory:100*(4+i)/16,memoryUsedBytes:(4+i)*1073741824,memoryTotalBytes:16*1073741824,memoryAvailableBytes:(12-i)*1073741824,cpuHistory:[10,14,12],memoryHistory:[18,19,25+i*6.25],disks:[{id:'root',mount:'/',device:'/dev/sda1',free:70-i*10}]}};
   const state=JSON.parse(JSON.stringify({ready:true,presentation:present(sample,p.host)}));const ui=TaliaUI.compile(changes.find(c=>c.key.kind==='dashboard'&&c.key.id===p.host).document.ui);
   for(const width of [390,1280]){
    await page.setViewportSize({width,height:900});await page.evaluate(({ui,definitions,state})=>renderer.render(TaliaUI.resolve(ui,state,{definitions,width:document.querySelector('#canvas').clientWidth})),{ui,definitions,state});
    await page.getByRole('heading',{name:p.host,exact:true}).waitFor();assert.equal(await page.evaluate(()=>document.querySelector('.lv-main').scrollWidth<=document.querySelector('.lv-main').clientWidth),true);
    assert.equal(await page.locator('figcaption').filter({visible:true}).count(),2);assert.equal(await page.locator('figcaption').filter({visible:true}).first().textContent(),'Past 24 hours · 5-minute samples');
+   assert.equal(await page.locator('figure svg text').filter({hasText:'100%'}).count(),2);
+   assert.equal(await page.locator('figure svg text').filter({hasText:'90% high'}).count(),2);
+   await page.getByText(`Used ${(4+i).toFixed(1)} of 16.0 GiB · ${(12-i).toFixed(1)} GiB available`,{exact:true}).waitFor();
    await page.screenshot({path:'.local/host-template/'+p.host+'-'+width+'.png',fullPage:true});
   }
  }
