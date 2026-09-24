@@ -55,7 +55,8 @@ homelab repository under `monitoring/vps-metrics/`.
    CPU/memory/filesystem values. Refresh the web page to discover the dashboards.
 
 For later metric-card revisions, save only the changed `host-metric-card` UI,
-`host-present` function, and `host-collect` monitor definition against the current
+`host-present` function, and `host-collect` monitor definition with its incremented
+version against the current
 catalog revision. Deploy the updated web renderer before saving UI with chart
 range properties. Running dashboards adopt the new saved package on explicit Reload;
 the collector updates server samples on its next scheduled run.
