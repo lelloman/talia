@@ -17,8 +17,9 @@ try{
    await page.setViewportSize({width,height:900});await page.evaluate(({ui,definitions,state})=>renderer.render(TaliaUI.resolve(ui,state,{definitions,width:document.querySelector('#canvas').clientWidth})),{ui,definitions,state});
    await page.getByRole('heading',{name:p.host,exact:true}).waitFor();assert.equal(await page.evaluate(()=>document.querySelector('.lv-main').scrollWidth<=document.querySelector('.lv-main').clientWidth),true);
    assert.equal(await page.locator('figcaption').filter({visible:true}).count(),2);assert.equal(await page.locator('figcaption').filter({visible:true}).first().textContent(),'Past 24 hours · 5-minute samples');
-   assert.equal(await page.locator('figure svg text').filter({hasText:'100%'}).count(),2);
-   assert.equal(await page.locator('figure svg text').filter({hasText:'90% high'}).count(),2);
+   assert.equal(await page.locator('figure canvas').filter({visible:true}).count(),2);
+   await page.waitForFunction(()=>[...document.querySelectorAll('figure canvas')].filter(c=>c.getBoundingClientRect().width>0).every(c=>{const r=c.getBoundingClientRect(),d=devicePixelRatio;return Math.abs(c.width-r.width*d)<=1&&Math.abs(c.height-r.height*d)<=1;}));
+   assert.equal(await page.evaluate(()=>[...document.querySelectorAll('figure')].filter(e=>e.getBoundingClientRect().width>0).every(e=>{const canvas=e.querySelector('canvas').getBoundingClientRect(),caption=e.querySelector('figcaption').getBoundingClientRect(),next=e.nextElementSibling?.getBoundingClientRect();return canvas.bottom<=caption.top&&(!next||caption.bottom<=next.top)})),true);
    await page.getByText(`Used ${(4+i).toFixed(1)} of 16.0 GiB · ${(12-i).toFixed(1)} GiB available`,{exact:true}).waitFor();
    await page.screenshot({path:'.local/host-template/'+p.host+'-'+width+'.png',fullPage:true});
   }
