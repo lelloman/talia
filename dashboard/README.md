@@ -120,13 +120,14 @@ remain available for the legacy fixture mode.
 Open **Dashboard → Fullscreen** for a monitoring surface without the application
 shell. Configure an ordered playlist in **Settings → Monitoring display**, set
 seconds per dashboard, and optionally enable automatic rotation on entry. Use
-Previous/Next, Play/Pause and Exit; move the pointer, touch the surface or use the
+Previous/Next, Play/Pause and Exit. Left/Right arrows and Page Up/Page Down cycle
+through dashboards while monitoring is active. Move the pointer, touch the surface or use the
 keyboard to reveal controls. Escape exits. Configuration persists for this browser
 and account; other devices have independent settings.
 
-Entering fullscreen preserves the current live dashboard. Cycling loads fresh
-saved dashboard instances; temporary ViewModel state is not retained across
-switches. Dirty agent edits and dashboard errors pause rotation. Hidden tabs and
+Entering fullscreen preserves the current live dashboard. Cycling pauses inactive
+ViewModels and reuses up to four matching instances per tab, retaining their temporary
+state. Dirty agent edits and dashboard errors pause rotation. Hidden tabs and
 disconnections suspend timing. Browser fullscreen refusal falls back to an
 in-window monitoring surface. Native Android and individual Screen cycling are
 not part of this increment.

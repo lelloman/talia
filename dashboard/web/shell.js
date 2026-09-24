@@ -35,7 +35,7 @@ export async function startShell(identity,account){
    if(window.taliaDashboard&&!catalog.dashboards.some(d=>d.id===window.taliaDashboard.id)){window.talia?.revoke();message('Access to this dashboard has been removed. Choose an available dashboard.');}
   }catch(e){if(!started)window.taliaShell.update({connected:false});throw e;}finally{busy=false;}
  }
- $('dashboard-picker').onchange=()=>attempt(async()=>{await window.talia.selectDashboard($('dashboard-picker').value);sharing();message('Dashboard opened for this client.');});
+ $('dashboard-picker').onchange=()=>attempt(async()=>{if($('dashboard-picker').value!==window.taliaDashboard?.id)await window.talia.selectDashboard($('dashboard-picker').value);sharing();message('Dashboard opened for this client.');});
  $('open-dashboard').onclick=()=>$('dashboard-picker').onchange();
  $('make-default').onclick=()=>attempt(async()=>{await account({op:'default',dashboard:$('dashboard-picker').value});await refresh();message('New clients will open this dashboard automatically.');});
  $('save-sharing').onclick=()=>attempt(async()=>{const d=current();if(!d)return;await account({op:'share',access:{dashboardId:d.id,...(drafts.get(d.id)||{owner:d.access?.owner||identity.subject,public:d.access?.public||false,viewers:d.access?.viewers||[],expectedRevision:d.access?.revision||0}),requestId:crypto.randomUUID()}});drafts.delete(d.id);await refresh();message('Dashboard sharing saved.');});

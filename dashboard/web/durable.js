@@ -22,7 +22,7 @@ export class DurableBridge {
   }if(!this.closed&&!this.paused)await this.deliver({id:r.id,valueWire:TaliaValue.encode(value)});if(r.op==='subscribe'&&this.subscriptions.has(value))this.subscriptions.get(value).ready=true;};run().catch(e=>{if(!this.closed&&!this.paused)this.deliver({id:r.id,error:String(e)}).catch(()=>{});});}}
  async poll(){if(this.closed||this.paused||!client.ready)return;for(const [event,sub]of this.subscriptions){if(!sub.ready)continue;let value;try{value=sub.resource==='alerts'?await alertRequest('snapshot'):client.sample(sub.resource);}catch{continue;}const key=client.incarnation+':'+TaliaValue.stringify(sub.resource==='alerts'?{...value,now:0}:value);if(key!==sub.key){sub.key=key;await this.deliver({event,valueWire:TaliaValue.encode(value)});}}}
  pause(){this.paused=true;client.setActive(false).catch(()=>{});}
- async resume(){this.paused=false;this.subscriptions.forEach(s=>s.key=null);await this.sync();await client.tick();await this.poll();}
- close(){this.closed=true;this.subscriptions.clear();client.setActive(false).catch(()=>{});}
+ async resume(){this.paused=false;client.onSnapshot=()=>{this.poll().catch(e=>{if(!this.closed&&!this.paused)this.changed(e);});};this.subscriptions.forEach(s=>s.key=null);await this.sync();await client.tick();await this.poll();}
+ close(){const active=!this.paused;this.closed=true;this.subscriptions.clear();if(active)client.setActive(false).catch(()=>{});}
 }
 export {client};

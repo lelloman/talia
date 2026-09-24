@@ -62,10 +62,13 @@ and shows a reload error. Confirmation is not a lock: a later save can immediate
 make update available again, but cannot change the pinned package being installed.
 Startup failure after replacement still stops the new dashboard visibly.
 
-Replacement releases the previous runtime's subscriptions, discards temporary
+Explicit reload or restart releases the previous runtime's subscriptions, discards temporary
 ViewModel edits, resets edit revision, and creates a fresh live ID. Already committed
 server writes and running server operations remain intact. Local explicit selection
-saves a desired assignment and follows the same reload path. The web host helper is
+saves a desired assignment. The web host pauses the previous ViewModel and reuses a
+matching paused instance when switching back, up to four dashboards per tab. Reuse
+preserves temporary ViewModel state and refreshes server subscriptions; a changed
+package starts a new instance. The web host helper is
 `talia.selectDashboard(id, params, presentation)`; Android's explicit launch selection
 uses `dashboard` and optional JSON `dashboard_params` extras. Normal process recreation
 loads the persisted server selection instead of replaying those selection inputs.

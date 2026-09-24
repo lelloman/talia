@@ -103,7 +103,16 @@ export function startMonitoringMode(identity){
  $('playlist-add').onclick=()=>{const id=$('playlist-add-dashboard').value;if(!id||settings.entries.length>=32||settings.entries.some(e=>e.id===id))return;settings.entries.push({id,seconds:30});persist();configure();renderSettings();};
  $('playlist-auto').onchange=()=>{settings.auto=$('playlist-auto').checked;persist();};
  surface.addEventListener('pointermove',reveal);surface.addEventListener('pointerdown',reveal);toolbar.addEventListener('focusin',reveal);
- document.addEventListener('keydown',event=>{if(!active)return;reveal();if(event.key==='Escape'){event.preventDefault();leave();}});
+ document.addEventListener('keydown',event=>{
+  if(!active)return;
+  if(event.key==='Escape'){event.preventDefault();leave();return;}
+  if(event.altKey||event.ctrlKey||event.metaKey)return;
+  const target=event.target;
+  if(target instanceof Element&&(target.closest('input, textarea, select, [contenteditable]')||target.isContentEditable))return;
+  const direction=event.key==='ArrowLeft'||event.key==='PageUp'?-1:event.key==='ArrowRight'||event.key==='PageDown'?1:0;
+  if(!direction)return;
+  event.preventDefault();message('');reveal();void player.step(direction).then(updateControls);
+ });
  document.addEventListener('fullscreenchange',()=>{if(fullscreenRequested&&document.fullscreenElement!==surface)leave();});
  window.addEventListener('hashchange',()=>{if(active&&location.hash!=='#dashboard')leave();});
  window.addEventListener('talia-dashboard-loaded',()=>{player.deadline=null;updateControls();});

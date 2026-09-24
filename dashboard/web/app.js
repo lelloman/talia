@@ -9,6 +9,14 @@ const root=document.querySelector('#dashboard'),diagnostic=document.querySelecto
 let uiRevision=0;
 let lastVmSnapshot=null;
 let guest,bridge,loaded,state,failure=null,refreshing=false,ready=false,generation=0,checking=false;
+const pausedDashboards=new Map(),pausedLimit=4;
+function retire(instance){instance.bridge.close();instance.guest.close();}
+function remember(instance){
+ const old=pausedDashboards.get(instance.loaded.id);if(old)retire(old);
+ pausedDashboards.delete(instance.loaded.id);pausedDashboards.set(instance.loaded.id,instance);
+ while(pausedDashboards.size>pausedLimit){const id=pausedDashboards.keys().next().value;retire(pausedDashboards.get(id));pausedDashboards.delete(id);}
+}
+function forgetPaused(){for(const instance of pausedDashboards.values())retire(instance);pausedDashboards.clear();}
 const registry=await ClientRegistry.open(durable);
 let editRevision=0,assignmentRevision=null,cachedBaseline=false,loadRequest=0;
 let config=registry.config;
@@ -42,28 +50,44 @@ async function checkUpdates(){
  if(checking||!loaded||document.hidden)return;checking=true;
  try{if(durable){const latest=await registry.prepare();update.hidden=latest.assignment.revision===assignmentRevision&&latest.package.revision===loaded.revision;}else{const latest=await fetchPackage();if(latest.id===loaded.id)update.hidden=latest.revision===loaded.revision;}}catch(e){if(durable&&e.code)update.hidden=false;/* Keep the loaded dashboard intact. */}finally{checking=false;}
 }
-async function start(pinned=null,beforeReplace=null){
+async function start(pinned=null,beforeReplace=null,reuse=false){
  const request=++loadRequest;let delivery,pkg,usingCache=false;
  try{if(durable){delivery=pinned||await registry.prepare();pkg=TaliaUI.validatePackage(delivery.package);}else pkg=await fetchPackage();}
  catch(e){if(pinned||e.code||window.taliaOidc)throw e;if(durable){delivery=registry.cached();if(!delivery)throw e;pkg=TaliaUI.validatePackage(delivery.package);}else{const saved=localStorage.getItem('talia.saved.'+config.dashboardId);if(!saved)throw e;pkg=TaliaUI.validatePackage(JSON.parse(saved));}usingCache=true;}
  if(durable&&pkg.id!==delivery.assignment.dashboardId)throw Error('dashboard assignment mismatch');
  if(!durable&&pkg.id!==config.dashboardId)throw Error('dashboard assignment mismatch');
- const r=await fetch('/dashboard/shared/vm.js');if(!r.ok)throw Error('VM support unavailable');const library=await r.text();
- const codec=await (await fetch('/engine/shared/value.js')).text();
  if(request!==loadRequest)return;
  if(durable&&!usingCache)await registry.confirm(delivery.assignment.revision);
  if(request!==loadRequest)return;
  if(beforeReplace){await beforeReplace();if(request!==loadRequest)return;}
- const stamp=++generation;ready=false;bridge?.close();guest?.close();failure=null;diagnostic.hidden=true;root.inert=false;document.querySelector('#restart').hidden=true;
+ let restored=null;
+ if(reuse){restored=pausedDashboards.get(pkg.id);if(restored&&(restored.signature!==JSON.stringify(pkg)||!restored.guest.alive)){pausedDashboards.delete(pkg.id);retire(restored);restored=null;}}
+ let library,codec;
+ if(!restored){const r=await fetch('/dashboard/shared/vm.js');if(!r.ok)throw Error('VM support unavailable');library=await r.text();codec=await (await fetch('/engine/shared/value.js')).text();}
+ if(request!==loadRequest)return;
+ if(restored)pausedDashboards.delete(pkg.id);
+ ++generation;ready=false;
+ if(reuse&&loaded&&guest?.alive&&!failure){
+  bridge.pause();
+  try{await guest.eval("TaliaVM.pause();'ok';");remember({loaded,guest,bridge,state,lastVmSnapshot,editRevision,signature:JSON.stringify(loaded)});}
+  catch{bridge.close();guest.close();}
+ }else{bridge?.close();guest?.close();}
+ failure=null;diagnostic.hidden=true;root.inert=false;document.querySelector('#restart').hidden=true;
  if(durable){assignmentRevision=delivery.assignment.revision;config.dashboardId=pkg.id;config.params=structuredClone(pkg.params);if(delivery.assignment.presentation.scale!==undefined)config.scale=delivery.assignment.presentation.scale;registry.saveConfig(config);scaleInput.value=config.scale;sidebarInput.checked=config.params.sidebar===true;}
  cachedBaseline=usingCache;loaded=structuredClone(pkg);
- if(window.taliaOidc){window.taliaDashboard={id:pkg.id,revision:pkg.revision,reads:pkg.grants?.reads||[]};engineClient.stopped=false;engineClient.ready=false;engineClient.values.clear();if(window.taliaViewer)engineClient.actions.clear();window.dispatchEvent(new Event('talia-dashboard-loaded'));}state=null;update.hidden=true;editRevision=0;if(window.dashboardReport)window.dashboardReport.dirty=false;
- registry.replace({dashboardId:loaded.id,packageRevision:loaded.revision,lifecycle:'paused',foreground:!document.hidden,dirty:false,editRevision:0,updateAvailable:false,assignmentRevision,cached:cachedBaseline});
+ if(window.taliaOidc){window.taliaDashboard={id:pkg.id,revision:pkg.revision,reads:pkg.grants?.reads||[]};engineClient.stopped=false;engineClient.ready=false;engineClient.values.clear();if(window.taliaViewer)engineClient.actions.clear();window.dispatchEvent(new Event('talia-dashboard-loaded'));}state=restored?.state??null;lastVmSnapshot=restored?.lastVmSnapshot??null;update.hidden=true;editRevision=restored?.editRevision??0;dirty.hidden=!lastVmSnapshot?.dirty;if(window.dashboardReport)window.dashboardReport.dirty=restored?.lastVmSnapshot?.dirty??false;
+ registry.replace({dashboardId:loaded.id,packageRevision:loaded.revision,lifecycle:'paused',foreground:!document.hidden,dirty:editRevision>0||lastVmSnapshot?.dirty===true,editRevision,updateAvailable:false,assignmentRevision,cached:cachedBaseline});
+ if(restored){
+  guest=restored.guest;bridge=restored.bridge;ready=true;
+  if(!document.hidden){await guest.eval("TaliaVM.resume();'ok';");await bridge.resume();await guest.eval("TaliaVM.reconcile("+JSON.stringify([...bridge.actions.values()])+");'ok';");await refresh();}
+  if(durable)registry.cache(delivery);else localStorage.setItem('talia.saved.'+loaded.id,JSON.stringify(loaded));
+  return;
+ }
  let localGuest;
- const localBridge=new (durable?DurableBridge:EngineBridge)(msg=>localGuest.eval(`TaliaVM.receive(${JSON.stringify(JSON.stringify(msg))});'ok';`).then(refresh),e=>{if(stamp===generation)fail(e);},loaded.grants);
- localGuest=new Guest(requests=>localBridge.requests(requests),e=>{if(stamp===generation)fail(e);});bridge=localBridge;guest=localGuest;
+ const localBridge=new (durable?DurableBridge:EngineBridge)(msg=>localGuest.eval(`TaliaVM.receive(${JSON.stringify(JSON.stringify(msg))});'ok';`).then(refresh),e=>{if(bridge===localBridge)fail(e);},loaded.grants);
+ localGuest=new Guest(requests=>localBridge.requests(requests),e=>{if(bridge===localBridge)fail(e);});bridge=localBridge;guest=localGuest;
  await guest.eval(codec+'\n'+library+'\n'+loaded.viewModel+'\nTaliaVM.start('+JSON.stringify({...loaded.params,...config.params})+');\'ok\';',true);
- if(stamp!==generation){localBridge.close();localGuest.close();return;}
+ if(bridge!==localBridge){localBridge.close();localGuest.close();return;}
  if(durable)registry.cache(delivery);else localStorage.setItem('talia.saved.'+loaded.id,JSON.stringify(loaded));ready=true;if(document.hidden){bridge.pause();await guest.eval("TaliaVM.pause();'ok';");}else await refresh();
 }
 function loadError(e){if(ready&&!failure){diagnostic.textContent='Reload failed — '+String(e);diagnostic.hidden=false;}else fail(e);}
@@ -74,7 +98,7 @@ document.addEventListener('visibilitychange',async()=>{
  if(failure||!ready)return;
  try{if(document.hidden){bridge.pause();await guest.eval("TaliaVM.pause();'ok';");window.dashboardReport={...window.dashboardReport,paused:true,subscriptions:0};}else{await guest.eval("TaliaVM.resume();'ok';");await bridge.resume();await guest.eval("TaliaVM.reconcile("+JSON.stringify([...bridge.actions.values()])+");'ok';");await refresh();await checkUpdates();}}catch(e){fail(e);}
 });
-window.talia={revoke:(reason='Access revoked')=>{fail(reason==='dashboard_changed'?'Dashboard updated. Reload to continue.':'Access to this dashboard has been removed.');engineClient.stopped=true;engineClient.epoch++;engineClient.values.clear();root.replaceChildren();},renameClient:name=>registry.rename(name),registration:()=>registry.publicStatus(),renderer,refresh,command,checkUpdates,reload:start,async selectDashboard(id,params={},presentation={},guardDirty=false){const guard=()=>{if(guardDirty&&(editRevision>0||window.dashboardReport?.dirty))throw Error('Temporary dashboard edits must be explicitly discarded before switching.');};guard();if(!/^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(id))throw Error('invalid dashboard ID');if(durable)await registry.select(id,params,presentation);else{config.dashboardId=id;registry.saveConfig(config);}try{await start(null,guardDirty?guard:null);}catch(e){loadError(e);throw e;}},async live(source){if(failure||document.hidden||!ready)return;editRevision++;reportRegistry();await command('TaliaVM.markDirty();\n'+source+"\n;'ok';");},get state(){return state;}};
+window.talia={revoke:(reason='Access revoked')=>{forgetPaused();fail(reason==='dashboard_changed'?'Dashboard updated. Reload to continue.':'Access to this dashboard has been removed.');engineClient.stopped=true;engineClient.epoch++;engineClient.values.clear();root.replaceChildren();},renameClient:name=>registry.rename(name),registration:()=>registry.publicStatus(),renderer,refresh,command,checkUpdates,reload:start,async selectDashboard(id,params={},presentation={},guardDirty=false){const guard=()=>{if(guardDirty&&(editRevision>0||window.dashboardReport?.dirty))throw Error('Temporary dashboard edits must be explicitly discarded before switching.');};guard();if(!/^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(id))throw Error('invalid dashboard ID');if(durable)await registry.select(id,params,presentation);else{config.dashboardId=id;registry.saveConfig(config);}try{await start(null,guardDirty?guard:null,true);}catch(e){loadError(e);throw e;}},async live(source){if(failure||document.hidden||!ready)return;editRevision++;reportRegistry();await command('TaliaVM.markDirty();\n'+source+"\n;'ok';");},get state(){return state;}};
 setInterval(()=>{reportRegistry();},500);setInterval(refresh,100);setInterval(checkUpdates,2000);start().catch(fail);
 
 if(durable&&!window.taliaViewer)new LiveControl(registry,{

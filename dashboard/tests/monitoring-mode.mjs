@@ -42,6 +42,13 @@ try{
  await p.waitForFunction(()=>window.taliaDashboard.id==='second',{},{timeout:8000});
  await p.mouse.move(300,200);await p.locator('#monitoring-play').click();assert.equal(await p.locator('#monitoring-play').textContent(),'Play rotation');
  await p.locator('#monitoring-previous').click();await p.waitForFunction(()=>window.taliaDashboard.id==='first');
+ await p.keyboard.press('ArrowLeft');await p.waitForFunction(()=>window.taliaDashboard.id==='second');
+ await p.keyboard.press('ArrowRight');await p.waitForFunction(()=>window.taliaDashboard.id==='first');
+ await p.keyboard.press('PageDown');await p.waitForFunction(()=>window.taliaDashboard.id==='second');
+ await p.keyboard.press('PageUp');await p.waitForFunction(()=>window.taliaDashboard.id==='first');
+ await p.evaluate(()=>{const input=document.createElement('input');input.id='keyboard-fixture';document.querySelector('#monitoring-controls').append(input);input.focus();});
+ await p.keyboard.press('ArrowRight');assert.equal(await p.evaluate(()=>window.taliaDashboard.id),'first');
+ await p.evaluate(()=>document.querySelector('#keyboard-fixture').remove());
  // Dirty agent edits stop rotation and manual switching instead of being discarded.
  await p.evaluate(()=>window.dashboardReport.dirty=true);await p.locator('#monitoring-next').click();await p.getByText(/Rotation paused: temporary dashboard edits/).waitFor();assert.equal(await p.evaluate(()=>window.taliaDashboard.id),'first');
  await p.evaluate(()=>{window.dashboardReport.dirty=false;const d=document.querySelector('#diagnostic');d.hidden=false;d.textContent='Dashboard stopped — fixture failure';});
@@ -63,5 +70,5 @@ try{
  await p.evaluate(()=>{location.hash='#dashboard';});await p.locator('#monitoring-enter').click();
  const controlsBox=await p.locator('#monitoring-controls').boundingBox();assert.ok(controlsBox.x>=0&&controlsBox.x+controlsBox.width<=390);
  await p.keyboard.press('Escape');
- assert.deepEqual(errors,[]);console.log('Monitoring mode browser checks passed: fullscreen, fallback, saved ordered playlist, timed/manual navigation, dirty/error guards, revocation and responsive controls');
+ assert.deepEqual(errors,[]);console.log('Monitoring mode browser checks passed: fullscreen, fallback, saved ordered playlist, timed/manual/keyboard navigation, dirty/error guards, revocation and responsive controls');
 }finally{await browser?.close();server.close();}
