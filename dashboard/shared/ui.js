@@ -11,7 +11,7 @@
     Scroll:{...base,width:'size',height:'size'},
     Text:{...base,text:'text!',label:'string',variant:'variant',tone:'tone'}, Status:{...base,text:'text!',label:'string',variant:'variant',tone:'tone'},
     Chart:{...base,values:'numbers!',label:'string!',height:'length',min:'number',max:'number',unit:'string',threshold:'number',startLabel:'string',endLabel:'string'},
-    Button:{...base,text:'string!',enabled:'boolean',onClick:'action!'},
+    Button:{...base,text:'string!',label:'string',enabled:'boolean',selected:'boolean',onClick:'action!'},
     Slider:{...base,value:'number!',min:'number!',max:'number!',step:'positive',label:'string!',enabled:'boolean',onChange:'action!'},
     Switch:{...base,value:'boolean!',label:'string!',enabled:'boolean',onChange:'action!'},
     If:{when:'boolean!'}, For:{items:'array!',key:'key!',columns:'positive',gap:'length'},

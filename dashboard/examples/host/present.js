@@ -11,7 +11,7 @@
   status:!good?'Collection '+sample.quality+' · showing last known readings':up?'Host metrics reachable':'Host metrics unreachable',
   statusTone:!good?'warning':up?'success':'error',
   updated:Number.isFinite(v.updated)?'Last sample: '+new Date(v.updated).toISOString().replace('T',' ').replace(/\.\d{3}Z$/,' UTC')+' · refreshes every 30s':'No collection available yet',
-  cpu:{...metric('CPU usage',v.cpu,range==='hour'?v.cpuMinuteHistory:v.cpuHistory,'Current: 5-minute average across cores','Dashed line: 90% high usage',range==='hour'?'Past hour · 1-minute CPU averages':'Past 24 hours · 5-minute CPU averages',range==='hour'?'1h ago':'24h ago',true),dayButton:range==='day'?'✓ 24 hours':'24 hours',hourButton:range==='hour'?'✓ 1 hour':'1 hour'},
+  cpu:{...metric('CPU usage',v.cpu,range==='hour'?v.cpuMinuteHistory:v.cpuHistory,'Current: 5-minute average across cores','Dashed line: 90% high usage',range==='hour'?'Past hour · 1-minute CPU averages':'Past 24 hours · 5-minute CPU averages',range==='hour'?'1h ago':'24h ago',true),daySelected:range==='day',hourSelected:range==='hour'},
   memory:metric('Memory usage',v.memory,v.memoryHistory,memoryDetail,'Used = total − available (Linux estimate)','Past 24 hours · 5-minute readings','24h ago'),
   disks:(v.disks||[]).map(d=>({id:d.id,mount:d.mount,device:d.device,value:pct(d.free),tone:!good||!up||!Number.isFinite(d.free)?'muted':d.free<10?'warning':'neutral'}))
  };

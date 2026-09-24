@@ -18,12 +18,15 @@ try{
    await page.getByRole('heading',{name:p.host,exact:true}).waitFor();assert.equal(await page.evaluate(()=>document.querySelector('.lv-main').scrollWidth<=document.querySelector('.lv-main').clientWidth),true);
    assert.equal(await page.locator('figcaption').filter({visible:true}).count(),2);assert.equal(await page.locator('figcaption').filter({visible:true}).first().textContent(),'Past 24 hours · 5-minute CPU averages');
    assert.equal(await page.locator('figure canvas').filter({visible:true}).count(),2);
+   assert.equal(await page.getByRole('button',{name:'Show past 24 hours of CPU',pressed:true}).count(),1);
    await page.waitForFunction(()=>[...document.querySelectorAll('figure canvas')].filter(c=>c.getBoundingClientRect().width>0).every(c=>{const r=c.getBoundingClientRect(),d=devicePixelRatio;return Math.abs(c.width-r.width*d)<=1&&Math.abs(c.height-r.height*d)<=1;}));
    assert.equal(await page.evaluate(()=>[...document.querySelectorAll('figure')].filter(e=>e.getBoundingClientRect().width>0).every(e=>{const canvas=e.querySelector('canvas').getBoundingClientRect(),caption=e.querySelector('figcaption').getBoundingClientRect(),next=e.nextElementSibling?.getBoundingClientRect();return canvas.bottom<=caption.top&&(!next||caption.bottom<=next.top)})),true);
    await page.getByText(`Used ${(4+i).toFixed(1)} of 16.0 GiB · ${(12-i).toFixed(1)} GiB available`,{exact:true}).waitFor();
    await page.screenshot({path:'.local/host-template/'+p.host+'-'+width+'.png',fullPage:true});
-   if(i===0&&width===390){const hourState=JSON.parse(JSON.stringify({ready:true,presentation:present(sample,p.host,'hour')}));await page.evaluate(({ui,definitions,state})=>renderer.render(TaliaUI.resolve(ui,state,{definitions,width:document.querySelector('#canvas').clientWidth})),{ui,definitions,state:hourState});await page.getByText('Past hour · 1-minute CPU averages',{exact:true}).waitFor();await page.screenshot({path:'.local/host-template/'+p.host+'-hour-390.png',fullPage:true});}
+   if(i===0&&width===390){const hourState=JSON.parse(JSON.stringify({ready:true,presentation:present(sample,p.host,'hour')}));await page.evaluate(({ui,definitions,state})=>renderer.render(TaliaUI.resolve(ui,state,{definitions,width:document.querySelector('#canvas').clientWidth})),{ui,definitions,state:hourState});await page.getByText('Past hour · 1-minute CPU averages',{exact:true}).waitFor();assert.equal(await page.getByRole('button',{name:'Show past hour of CPU',pressed:true}).count(),1);await page.screenshot({path:'.local/host-template/'+p.host+'-hour-390.png',fullPage:true});}
   }
  }
+ await page.getByRole('button',{name:/Change theme/}).click();await page.getByRole('button',{name:'Dark',exact:true}).click();
+ await page.screenshot({path:'.local/host-template/vps-us-dark-1280.png',fullPage:true});
  console.log('PASS: all three host dashboards at 390px and 1280px');
 }finally{await browser?.close();server.kill();}

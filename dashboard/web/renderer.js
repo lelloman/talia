@@ -47,7 +47,7 @@ export class Renderer {
    }else if(n.type==='Text'||n.type==='Status'||n.type==='Button'){
     if(el.textContent!==String(p.text))el.textContent=String(p.text);
     if(p.variant==='heading'){el.setAttribute('role','heading');el.setAttribute('aria-level','2');}else{el.removeAttribute('aria-level');if(n.type==='Status')el.setAttribute('role','status');else el.removeAttribute('role');}
-    if(n.type==='Button')el.disabled=p.enabled===false;
+    if(n.type==='Button'){el.disabled=p.enabled===false;if(p.selected===undefined)el.removeAttribute('aria-pressed');else el.setAttribute('aria-pressed',String(p.selected));}
     if(p.label)el.setAttribute('aria-label',p.label);else el.removeAttribute('aria-label');
    }else if(n.type==='Slider'||n.type==='Switch'){
     el.firstChild.textContent=p.label;const input=el.lastChild;input.setAttribute('aria-label',p.label);input.disabled=p.enabled===false;

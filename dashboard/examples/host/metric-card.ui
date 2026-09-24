@@ -1,8 +1,7 @@
 <Column id="card" surface="card" gap="8dp" padding="20dp">
-  <Text id="label" text={params.label} tone="muted"/>
+  <Row id="top" gap="8dp"><Text id="label" text={params.label} tone="muted"/><If id="cpuRange" when={params.hasRange}><Row id="rangeButtons" gap="0dp"><Button id="day" text="24h" label="Show past 24 hours of CPU" selected={params.daySelected} onClick={actions.cpuDay}/><Button id="hour" text="1h" label="Show past hour of CPU" selected={params.hourSelected} onClick={actions.cpuHour}/></Row></If></Row>
   <Text id="value" text={params.value} variant="metric" tone={params.tone}/>
   <Text id="detail" text={params.detail} variant="caption" tone="muted"/>
-  <If id="cpuRange" when={params.hasRange}><Row id="rangeButtons" gap="8dp"><Button id="day" text={params.dayButton} onClick={actions.cpuDay}/><Button id="hour" text={params.hourButton} onClick={actions.cpuHour}/></Row></If>
   <Chart id="trend" values={params.history} label={params.chartLabel} min={0} max={100} unit="%" threshold={90} startLabel={params.startLabel} endLabel="Now" height="160dp"/>
   <Text id="note" text={params.note} variant="caption" tone="muted"/>
 </Column>

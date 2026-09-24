@@ -18,7 +18,7 @@ for(const p of hosts){
  assert.equal(published.host,p.host);assert.equal(published.cpu,20);assert.equal(published.memory,25);assert.equal(published.memoryUsedBytes,4*1073741824);assert.equal(published.memoryTotalBytes,total);assert.equal(published.memoryAvailableBytes,available);assert.equal(published.disks[0].free,68.7);
  const state={ready:true,presentation:present({quality:'good',value:published},p.host)};
  assert.equal(state.presentation.memory.detail,'Used 4.0 of 16.0 GiB · 12.0 GiB available');
- const hour=present({quality:'good',value:published},p.host,'hour');assert.equal(hour.cpu.history.length,61);assert.equal(hour.cpu.chartLabel,'Past hour · 1-minute CPU averages');assert.equal(hour.cpu.detail,'Current: 5-minute average across cores');assert.equal(hour.cpu.hourButton,'✓ 1 hour');
+ const hour=present({quality:'good',value:published},p.host,'hour');assert.equal(hour.cpu.history.length,61);assert.equal(hour.cpu.chartLabel,'Past hour · 1-minute CPU averages');assert.equal(hour.cpu.detail,'Current: 5-minute average across cores');assert.equal(hour.cpu.hourSelected,true);assert.equal(hour.cpu.daySelected,false);
  const doc=changes.find(c=>c.key.kind==='dashboard'&&c.key.id===p.host).document;
  assert.deepEqual(doc.grants.reads,['host-'+p.host]);
  const ui=TaliaUI.compile(doc.ui),definitions={'host-layout':TaliaUI.compileDefinition(source('host-layout')),'host-metric-card':TaliaUI.compileDefinition(readFileSync('dashboard/examples/host/metric-card.ui','utf8'))};

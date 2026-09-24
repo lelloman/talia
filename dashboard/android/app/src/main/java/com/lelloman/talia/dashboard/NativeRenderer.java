@@ -66,7 +66,17 @@ final class NativeRenderer {
    text.setTextColor(Color.parseColor(color));
   }
   switch(type){
-   case "Text":case "Status":case "Button":((TextView)v).setText(p.get("text").toString());if(p.has("label"))v.setContentDescription(p.getString("label"));if(type.equals("Status"))v.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);break;
+   case "Text":case "Status":((TextView)v).setText(p.get("text").toString());if(p.has("label"))v.setContentDescription(p.getString("label"));if(type.equals("Status"))v.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);break;
+   case "Button":{
+    Button button=(Button)v;button.setText(p.getString("text"));
+    if(p.has("selected")){
+     boolean selected=p.getBoolean("selected");button.setSelected(selected);button.setTypeface(null,selected?Typeface.BOLD:Typeface.NORMAL);
+     GradientDrawable background=new GradientDrawable();background.setColor(Color.parseColor(selected?(dark?"#1e3a8a":"#dbeafe"):(dark?"#111827":"#ffffff")));background.setCornerRadius(pixels("24dp"));background.setStroke(pixels("1dp"),Color.parseColor(dark?"#4b5563":"#cbd5e1"));button.setBackground(background);
+     button.setTextColor(Color.parseColor(dark?"#f9fafb":"#1e3a8a"));button.setTextSize(14);button.setPadding(pixels("12dp"),0,pixels("12dp"),0);button.setMinimumHeight(pixels("40dp"));
+     String label=p.optString("label",p.getString("text"));button.setContentDescription(android.os.Build.VERSION.SDK_INT>=30?label:label+(selected?", selected":""));if(android.os.Build.VERSION.SDK_INT>=30)button.setStateDescription(selected?"Selected":"Not selected");
+    }else if(p.has("label"))button.setContentDescription(p.getString("label"));
+    break;
+   }
    case "Switch":((Switch)v).setText(p.getString("label"));v.setContentDescription(p.getString("label"));((Switch)v).setChecked(p.getBoolean("value"));break;
    case "Slider":{
     LinearLayout box=(LinearLayout)v;((TextView)box.getChildAt(0)).setText(p.getString("label"));SeekBar s=(SeekBar)box.getChildAt(1);s.setContentDescription(p.getString("label"));s.setEnabled(p.optBoolean("enabled",true));double step=p.optDouble("step",1);s.setMax((int)Math.ceil((p.getDouble("max")-p.getDouble("min"))/step));s.setProgress((int)Math.round((p.getDouble("value")-p.getDouble("min"))/step));break;
