@@ -46,7 +46,7 @@ ctx => {
     }
     return {id:h.instance, name:h.name, state:problems.some(p => p.severity === 'ERR') ? 'ERR' : problems.length ? 'WARN' : 'OK', problems};
   });
-  const items = hosts;
+  const items = [...hosts];
   const stepData = id => ctx.steps[id]?.status === 'succeeded' ? ctx.decode(ctx.steps[id].value.wire) : null;
   const signals = stepData('signals');
   const extras = stepData('extras');
@@ -58,7 +58,8 @@ ctx => {
     if (h.problems.some(p => p.text.startsWith('Host monitoring') || p.text.startsWith('Host reachability'))) continue;
     for (const [kind,label] of [['dns','External DNS resolution'],['https','External HTTPS connection']]) {
       const n = extra('talia_report_probe_success',{host:h.name,kind});
-      if (n === null) add(h,'WARN',label+': per-host probe not configured or stale.');
+      const checked = extra('talia_report_probe_checked_timestamp_seconds',{host:h.name,kind});
+      if (n === null || checked === null || ctx.now/1000-checked > 120 || checked > ctx.now/1000+30) add(h,'WARN',label+': probe result is missing or older than 120 seconds.');
       else if (n !== 1) add(h,'WARN',label+': probe failed.');
     }
   }
@@ -112,28 +113,7 @@ ctx => {
   }
   if (!signals) for (const id of ['dns','pezzottify','simple-ai','simple-agents']) add(byId(id),'WARN','Additional service checks could not be collected.');
   for (const warning of signals?.warnings || []) for (const id of ['dns','pezzottify','simple-ai','simple-agents']) add(byId(id),'WARN','Service data warning: '+warning);
-  const backups = {id:'backups',name:'Backups',problems:[]};
-  const last = extra('talia_report_backup_last_success_timestamp_seconds');
-  const backupOk = extra('talia_report_backup_success');
-  if (last === null || backupOk === null) add(backups,'WARN','Backup result and last successful completion are not monitored yet.');
-  else {
-    if(backupOk !== 1) add(backups,'ERR','Latest backup reported a failure.');
-    if(ctx.now/1000-last > 48*3600) add(backups,'WARN','Last successful backup is older than 48 hours.');
-  }
-  items.push(backups);
-  const tls = {id:'tls',name:'TLS certificates',problems:[]};
-  const domains = ['auth.lelloman.com','pezzottify.lelloman.com','pezzottflix.lelloman.com','ai.lelloman.com','agents.lelloman.com','store.lelloman.com','crumbles.lelloman.com'];
-  const certs = metricRows(extras,'talia_report_tls_expiry_timestamp_seconds');
-  if(!certs.length) add(tls,'WARN','Certificate validity and expiry probes are not configured.');
-  else for (const domain of domains) {
-    const expiry=sample(certs.find(r=>r.metric.domain===domain));
-    const valid=extra('talia_report_tls_valid',{domain});
-    if(expiry === null || valid === null) add(tls,'WARN',domain+': certificate probe missing.');
-    else if(valid!==1) add(tls,'ERR',domain+': certificate validation failed.');
-    else { const days=(expiry-ctx.now/1000)/86400; if(days<30) add(tls,days<7?'ERR':'WARN',domain+': certificate expires in '+Math.floor(days)+' days.'); }
-  }
-  items.push(tls);
-  for (const warning of extras?.warnings || []) for(const item of [...hosts,backups,tls]) add(item,'WARN','Probe data warning: '+warning);
+  for (const warning of extras?.warnings || []) for(const item of hosts) add(item,'WARN','Probe data warning: '+warning);
   for (const item of items) item.state=item.problems.some(p=>p.severity==='ERR')?'ERR':item.problems.length?'WARN':'OK';
   return {items,state:items.some(i=>i.state==='ERR')?'Error':items.some(i=>i.state==='WARN')?'Warning':'Nominal'};
 }

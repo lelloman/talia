@@ -1,11 +1,12 @@
 # Infrastructure checklist reports
 
 [Definitions](homelab-telegram-reports.json) run at **09:00, 14:00 and 19:00
-Europe/Rome**, including daylight-saving changes. Captured versions are **7, 6, 6**.
+Europe/Rome**, including daylight-saving changes. Captured versions are **10, 9, 9**.
 
 The checklist contains Homelab, VPS-EU, VPS-US, LelloAuth, Knot Resolver,
-Pezzottify, Pezzottflix, SimpleAI, Simple Agents, LelloStore, Crumbles, Backups,
-and TLS certificates. Observo is excluded. Host checks aggregate their metrics;
+Pezzottify, Pezzottflix, SimpleAI, Simple Agents, LelloStore and Crumbles.
+Backups and TLS certificates are excluded until real checks are configured;
+Observo is also excluded. Host checks aggregate their metrics;
 services have their own entries instead of being repeated under Homelab.
 
 Healthy items display only `✅ Name`. Anomalies display `⚠️ Name — WARN` or
@@ -38,31 +39,19 @@ The headline is Nominal, Warning or Error according to the worst measured item.
   Error; an unexpected status is Warning. Sources are `report-lellostore` at
   `http://lellostore:8080` (`/health`) and `report-crumbles` at
   `http://crumbles:8080` (`/api/health`), with 8-second timeout and 16-KiB limit.
-- Backups: missing result/time warns, explicit failure is Error, and last successful
-  backup older than 48 hours warns. The 48-hour threshold is provisional pending
-  confirmation of the backup freshness policy.
-- TLS: validity failure is Error; expiry under 30 days warns and under 7 days is
-  Error. Missing certificate probes warn. Scope: auth, pezzottify, pezzottflix, ai,
-  agents, store and crumbles under `lelloman.com`. Agents uses internal TLS, so
-  probes must use the appropriate trust chain, not disable verification.
 
-## Coverage gaps
+## Coverage
 
-**No internet, backup or TLS probe collector was deployed by this update.** These
-items intentionally warn until their evidence is connected; the report does not
-invent successful results. At verification, Pezzottify's 15-minute HTTP error ratio
-and Simple Agents' exhausted-recovery metric were also unavailable.
+Per-host internet collectors are deployed and verified; see
+[connectivity checks](host-connectivity/README.md). The `extras` query reads only
+`talia_report_probe_success` and `talia_report_probe_checked_timestamp_seconds`,
+labeled by host and check kind. Collection timestamps older than 120 seconds are
+rejected even when Prometheus continues scraping an old file.
 
-The `extras` query reserves the following metric contract for future collectors:
-
-- `talia_report_probe_success{host="Homelab|VPS-EU|VPS-US",kind="dns|https"}`
-- `talia_report_backup_success` and `talia_report_backup_last_success_timestamp_seconds`
-- `talia_report_tls_valid{domain="..."}` and
-  `talia_report_tls_expiry_timestamp_seconds{domain="..."}`
-
-These names are not currently populated. Probe samples older than 120 seconds are
-excluded. Collectors must stop exposing stale success after collection failure;
-backup completion/expiry values are Unix timestamps, while success/validity is 0/1.
+Backups and TLS certificates were removed at the user's request because their
+collectors were not configured. They produce neither checklist items nor AI
+assessment inputs. At verification, Pezzottify's HTTP error ratio and Simple
+Agents' exhausted-recovery metric remained unavailable; those checks are retained.
 
 ## Conditional assessment
 
@@ -102,7 +91,7 @@ result, then enable. Sending a preview is a separate explicitly requested operat
 - All 148 engine library tests passed, including conditional skip with zero HTTP
   inference requests, selected input isolation, invalid-condition handling and
   completed-inference reuse after restart.
-- `node deploy/test-host-reports.cjs` covers all 13 items, healthy compact output,
+- `node deploy/test-host-reports.cjs` covers all 11 current items, healthy compact output,
   thresholds, missing coverage, severity precedence, host aggregation, per-item
   assessment placement and malformed AI output fallback.
 - Unsent live preview `report-38be259e5ded107a17f041d4ffab4ef0` completed all 14
@@ -113,3 +102,20 @@ result, then enable. Sending a preview is a separate explicitly requested operat
   Databases were backed up before restart as `*.before-checklist-20260925.sqlite3`
   in the persistent Talìa data directory. The image was built from the tested local
   working tree; it is not identified as a committed Git revision.
+
+
+## Connectivity repair — 2026-09-25
+
+Versions 9, 8, 8 consume actual per-host DNS/HTTPS checks with collection timestamps.
+The [collector installation](host-connectivity/README.md) is deployed on all three
+hosts. Final unsent preview `report-1184dfd037f90566588a18ff7ec8a197` completed all
+14 steps and showed Homelab, VPS-EU and VPS-US OK. `code:smart` assessments also
+succeeded. The [earlier HTTP 500 investigation](simple-ai-500-20260925.md) traced
+that separate failure to a wake timeout shorter than idle-manager's retry cycle.
+
+
+## Removed unconfigured items
+
+Versions 10, 9, 9 remove Backups and TLS certificates and their unused metric
+queries from all three schedules. Live definitions were read back and verified;
+local checklist checks pass with 11 entries.
