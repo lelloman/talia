@@ -22,7 +22,12 @@ the final email, even if the composer omits them. Supported steps:
 | `read` | `variable`: existing engine Variable ID | Current Instance, including wire `value`, timestamp, quality and revision |
 | `source` | `source`: existing DataSource ID; `request`: JS function returning a SourceRequest | `{wire: ...}` from Prometheus query/range or HTTP GET/HEAD |
 | `script` | `source`: JS function | JSON result |
-| `analysis` | `instructions`, `inputs`: previous step IDs | `{run_id,summary,model,turns}` from simple-ai; no tools |
+| `analysis` | `instructions`, `inputs`: previous step IDs; optional `when`: JS function returning a boolean | `{run_id,summary,model,turns}` from simple-ai; no tools |
+
+An analysis `when(ctx)` condition is evaluated before opening an AI run. False
+records a durable `skipped` step with null value and no inference; true runs the
+analysis normally. A non-boolean result or thrown error fails the step under its
+normal optional/required policy. Omitted conditions preserve unconditional analysis.
 
 Request and transformation functions receive `ctx.now` (run creation time in UTC
 milliseconds), `ctx.period.start/end`, `ctx.report`, `ctx.run`, `ctx.steps`, and
@@ -44,8 +49,9 @@ and `my-email` with configured names.
 It starts with scheduling disabled so it can be previewed first.
 
 The deployed [structured Telegram reports](../deploy/homelab-telegram-reports.md)
-provide a reproducible three-times-daily homelab configuration with compact
-sections, metric bullets and a short AI interpretation.
+provide a reproducible three-times-daily infrastructure configuration with one
+checklist entry per host or service, problem-only details, a Nominal/Warning/Error
+headline and conditional per-item AI assessments.
 
 ## MCP operations
 

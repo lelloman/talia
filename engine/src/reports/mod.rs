@@ -71,6 +71,8 @@ pub enum Action {
     Analysis {
         instructions: String,
         inputs: Vec<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        when: Option<String>,
     },
     /// Historical step retained by a migration; never executable.
     Unavailable {
@@ -194,7 +196,11 @@ impl Definition {
                 Action::Analysis {
                     instructions,
                     inputs,
+                    when,
                 } => {
+                    if let Some(condition) = when {
+                        script.eval(&format!("if(typeof ({condition})!=='function')throw Error('analysis condition must be a function');"))?;
+                    }
                     if instructions.trim().is_empty()
                         || instructions.len() > 16384
                         || inputs.len() > 16

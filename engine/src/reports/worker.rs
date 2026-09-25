@@ -94,6 +94,42 @@ impl Worker {
             return self.engine.store.borrow().report_put(&run);
         }
         let step = run.definition.steps[run.index].clone();
+        // Persist the decision before advancing; a healthy report never opens an AI run.
+        if let Action::Analysis {
+            when: Some(condition),
+            ..
+        } = &step.action
+        {
+            match evaluate(condition, &run.context()) {
+                Ok(Value::Bool(true)) => {}
+                outcome => {
+                    let output = match outcome {
+                        Ok(Value::Bool(false)) => Output {
+                            status: "skipped".into(),
+                            value: Value::Null,
+                            error: None,
+                        },
+                        Ok(_) => Output {
+                            status: "failed".into(),
+                            value: Value::Null,
+                            error: Some("analysis condition must return a boolean".into()),
+                        },
+                        Err(error) => Output {
+                            status: "failed".into(),
+                            value: Value::Null,
+                            error: Some(error),
+                        },
+                    };
+                    if output.status == "failed" && !step.optional {
+                        run.status = "failed".into();
+                        run.error = Some(format!("required step {} failed", step.id));
+                    }
+                    run.outputs.insert(step.id, output);
+                    run.index += 1;
+                    return self.engine.store.borrow().report_put(&run);
+                }
+            }
+        }
         let result: Result<Value> = match &step.action {
             Action::Read { variable } => self
                 .engine
@@ -108,6 +144,7 @@ impl Worker {
             Action::Analysis {
                 instructions,
                 inputs,
+                ..
             } => {
                 let selected: BTreeMap<_, _> = inputs
                     .iter()

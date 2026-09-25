@@ -71,7 +71,7 @@ async fn report_analysis_uses_selected_inputs_and_reuses_completed_run_after_reo
         .mount(&http)
         .await;
     let mut s = Store::open(dir.join("engine.db")).unwrap();
-    let d:crate::reports::Definition=serde_json::from_value(json!({"id":"morning","version":1,"enabled":false,"steps":[{"id":"private","kind":"script","source":"()=> 'unselected-marker'"},{"id":"facts","kind":"script","source":"()=> ({up:true})"},{"id":"analysis","kind":"analysis","instructions":"Summarize the facts","inputs":["facts"]}],"compose":"ctx=>({subject:'Morning',summary:ctx.steps.analysis.value.summary,sections:[]})","destinations":[]})).unwrap();
+    let d:crate::reports::Definition=serde_json::from_value(json!({"id":"morning","version":1,"enabled":false,"steps":[{"id":"private","kind":"script","source":"()=> 'unselected-marker'"},{"id":"facts","kind":"script","source":"()=> ({up:true})"},{"id":"analysis","kind":"analysis","instructions":"Summarize the facts","inputs":["facts"],"when":"ctx => ctx.steps.facts.value.up === true"}],"compose":"ctx=>({subject:'Morning',summary:ctx.steps.analysis.value.summary,sections:[]})","destinations":[]})).unwrap();
     s.report_save(&d, 0, 1000).unwrap();
     let r = s.report_start("morning", "admin", false, 1000).unwrap();
     let e = Engine::with_clock(s, Rc::new(|| 1000));
@@ -465,4 +465,51 @@ async fn long_report_budget_is_preserved_and_short_deadline_still_cancels() {
     assert!(execute(&e, "short-budget", scope, 1020, "Inspect", json!({}), false).await.is_err());
     assert_eq!(e.store.borrow().ai_run("short-budget").unwrap().unwrap().status, "failed");
     assert_eq!(http.received_requests().await.unwrap().len(), 1);
+}
+
+#[tokio::test]
+async fn conditional_report_analysis_skips_inference_and_rejects_invalid_conditions() {
+    let http = MockServer::start().await;
+    let dir = config(&http.uri());
+    Mock::given(method("POST"))
+        .respond_with(ResponseTemplate::new(500))
+        .expect(0)
+        .mount(&http)
+        .await;
+    for (condition, optional, expected, output) in [
+        ("ctx => false", false, "complete", "skipped"),
+        ("ctx => 'false'", true, "partial", "failed"),
+        (
+            "ctx => { throw Error('bad condition'); }",
+            false,
+            "failed",
+            "failed",
+        ),
+    ] {
+        let mut s = Store::open(":memory:").unwrap();
+        let d: crate::reports::Definition = serde_json::from_value(json!({
+            "id":"conditional", "version":1, "enabled":false,
+            "steps":[{"id":"analysis","kind":"analysis","instructions":"Assess",
+                "inputs":[],"when":condition,"optional":optional}],
+            "compose":"ctx=>({subject:'Nominal',summary:'',sections:[]})"
+        }))
+        .unwrap();
+        s.report_save(&d, 0, 1000).unwrap();
+        let run = s.report_start("conditional", "admin", false, 1000).unwrap();
+        let e = Engine::with_clock(s, Rc::new(|| 1000));
+        let w = crate::reports::worker::Worker::new(e.clone());
+        w.advance(&run.id).await.unwrap();
+        w.advance(&run.id).await.unwrap();
+        let done = e.store.borrow().report_run(&run.id).unwrap();
+        assert_eq!(done.status, expected);
+        assert_eq!(done.outputs["analysis"].status, output);
+        let count: i64 = e
+            .store
+            .borrow()
+            .conn
+            .query_row("SELECT count(*) FROM ai_runs", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(count, 0);
+    }
+    std::fs::remove_dir_all(dir).unwrap();
 }

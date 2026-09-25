@@ -91,7 +91,8 @@ request logging; configure that deployment accordingly.
 
 ## Reports
 
-An `analysis` step has `instructions` and `inputs` naming previous steps. It sends
+An `analysis` step has `instructions` and `inputs` naming previous steps. Optional
+`when(ctx)` must return a boolean: false records `skipped` without opening an AI run. It sends
 only those selected outcomes and the reporting period to the model, with no tools.
 Its output is `{run_id,summary,model,turns}`; compose from `value.summary`. Collection,
 probes and JavaScript transformations remain explicit report steps.
