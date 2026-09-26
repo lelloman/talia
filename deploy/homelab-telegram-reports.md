@@ -1,7 +1,7 @@
 # Infrastructure checklist reports
 
 [Definitions](homelab-telegram-reports.json) run at **09:00, 14:00 and 19:00
-Europe/Rome**, including daylight-saving changes. Captured versions are **10, 9, 9**.
+Europe/Rome**, including daylight-saving changes. Captured versions are **11, 10, 10**.
 
 The checklist contains Homelab, VPS-EU, VPS-US, LelloAuth, Knot Resolver,
 Pezzottify, Pezzottflix, SimpleAI, Simple Agents, LelloStore and Crumbles.
@@ -50,8 +50,8 @@ rejected even when Prometheus continues scraping an old file.
 
 Backups and TLS certificates were removed at the user's request because their
 collectors were not configured. They produce neither checklist items nor AI
-assessment inputs. At verification, Pezzottify's HTTP error ratio and Simple
-Agents' exhausted-recovery metric remained unavailable; those checks are retained.
+assessment inputs. Service signal unions match on `(__name__, job, instance)` so
+distinct metrics with otherwise identical labels remain present.
 
 ## Conditional assessment
 
@@ -119,3 +119,27 @@ that separate failure to a wake timeout shorter than idle-manager's retry cycle.
 Versions 10, 9, 9 remove Backups and TLS certificates and their unused metric
 queries from all three schedules. Live definitions were read back and verified;
 local checklist checks pass with 11 entries.
+
+
+## Report corrections — 2026-09-26
+
+Versions 11, 10, 10 fix the signal query unions that hid Pezzottify's HTTP error
+ratio and Simple Agents' exhausted-recovery gauge. Live Prometheus validation at
+the 14:00 report timestamp and at update time returned all five expected signals.
+The unsent preview `report-0e3753e021494cf07bfc70f71c8623cd` completed with all
+11 checklist items healthy and skipped AI assessment.
+
+The engine footer displays `25 Sep 2026, 14:00 CEST – 26 Sep 2026, 14:00 CEST`,
+followed by the run ID on a new line. Calendar reports use their configured time
+zone; interval and unscheduled reports use UTC. Milliseconds and the Period label
+are omitted in both text and HTML.
+
+Deployed image: `registry.homelab:5000/talia:report-fix-20260926`, digest
+`sha256:723b6fd2781c86e62f8ce74ed320bac1cc9411956cc83d5e32523c373c0645da`.
+The image uses this working tree (not a committed revision). Compose override:
+`/tmp/talia-report-fix-20260926.yml` on homelab; the base Compose file still uses
+`latest`, so future deployments must include this change to retain the footer.
+Both SQLite backups (`*.before-report-fix-20260926.sqlite3`) passed integrity checks.
+All six report tests and local checklist checks passed. Final unsent preview
+`report-cf1c8941f91afd199f93fb51d534f2e9` completed with all 11 items healthy,
+the new Rome-time footer, and no deliveries.

@@ -67,7 +67,7 @@
         "id": "signals",
         "kind": "source",
         "optional": true,
-        "request": "ctx=>({kind:\"query\",query:\"label_replace(sum(rate(resolver_answer_rcode_servfail_total{job=\\\"knot-resolver\\\"}[15m])) / clamp_min(sum(rate(resolver_answer_total{job=\\\"knot-resolver\\\"}[15m])), 0.000001), \\\"__name__\\\", \\\"talia_dns_servfail_ratio\\\", \\\"\\\", \\\"\\\") or label_replace((sum(rate(pezzottify_http_requests_total{status=~\\\"5..\\\"}[15m])) or vector(0)) / clamp_min(sum(rate(pezzottify_http_requests_total[15m])), 0.000001), \\\"__name__\\\", \\\"talia_music_error_ratio\\\", \\\"\\\", \\\"\\\") or simpleai_up or simple_agents_uncertain_effects or simple_agents_exhausted_recovery\",time:ctx.period.end/1000})",
+        "request": "ctx=>({kind:\"query\",query:\"label_replace(sum(rate(resolver_answer_rcode_servfail_total{job=\\\"knot-resolver\\\"}[15m])) / clamp_min(sum(rate(resolver_answer_total{job=\\\"knot-resolver\\\"}[15m])), 0.000001), \\\"__name__\\\", \\\"talia_dns_servfail_ratio\\\", \\\"\\\", \\\"\\\") or on (__name__, job, instance) label_replace((sum(rate(pezzottify_http_requests_total{status=~\\\"5..\\\"}[15m])) or vector(0)) / clamp_min(sum(rate(pezzottify_http_requests_total[15m])), 0.000001), \\\"__name__\\\", \\\"talia_music_error_ratio\\\", \\\"\\\", \\\"\\\") or on (__name__, job, instance) simpleai_up or on (__name__, job, instance) simple_agents_uncertain_effects or on (__name__, job, instance) simple_agents_exhausted_recovery\",time:ctx.period.end/1000})",
         "source": "homelab-prometheus"
       },
       {
@@ -115,7 +115,7 @@
       }
     ],
     "timeout_ms": 1200000,
-    "version": 10
+    "version": 11
   },
   {
     "compose": "ctx => {\n  const f = ctx.steps.facts.value;\n  const analysis = ctx.steps.analysis;\n  let assessments = {};\n  if (analysis.status === 'succeeded') {\n    try {\n      const parsed = JSON.parse(analysis.value.summary);\n      if (parsed && Array.isArray(parsed.assessments)) {\n        for (const a of parsed.assessments) if (typeof a.id === 'string' && typeof a.assessment === 'string') {\n          const note = a.assessment.replace(/\\s+/g,' ').trim();\n          if (note) assessments[a.id] = note.length > 350 ? note.slice(0,347)+'…' : note;\n        }\n      }\n    } catch (_) { /* Invalid AI output never hides deterministic evidence. */ }\n  }\n  const icons = {OK:'✅', WARN:'⚠️', ERR:'❌'};\n  const text = f.items.map(item => {\n    if (item.state === 'OK') return '✅ '+item.name;\n    const explanation = item.problems.map(p=>'   '+p.text).join('\\n');\n    const note = assessments[item.id] || 'Assessment unavailable; measured findings shown above.';\n    return icons[item.state]+' '+item.name+' — '+item.state+'\\n'+explanation+'\\n   Assessment: '+note;\n  }).join('\\n');\n  return {subject:f.state+' · Infrastructure report',summary:'',sections:[{title:'Checklist',text}]};\n}\n",
@@ -185,7 +185,7 @@
         "id": "signals",
         "kind": "source",
         "optional": true,
-        "request": "ctx=>({kind:\"query\",query:\"label_replace(sum(rate(resolver_answer_rcode_servfail_total{job=\\\"knot-resolver\\\"}[15m])) / clamp_min(sum(rate(resolver_answer_total{job=\\\"knot-resolver\\\"}[15m])), 0.000001), \\\"__name__\\\", \\\"talia_dns_servfail_ratio\\\", \\\"\\\", \\\"\\\") or label_replace((sum(rate(pezzottify_http_requests_total{status=~\\\"5..\\\"}[15m])) or vector(0)) / clamp_min(sum(rate(pezzottify_http_requests_total[15m])), 0.000001), \\\"__name__\\\", \\\"talia_music_error_ratio\\\", \\\"\\\", \\\"\\\") or simpleai_up or simple_agents_uncertain_effects or simple_agents_exhausted_recovery\",time:ctx.period.end/1000})",
+        "request": "ctx=>({kind:\"query\",query:\"label_replace(sum(rate(resolver_answer_rcode_servfail_total{job=\\\"knot-resolver\\\"}[15m])) / clamp_min(sum(rate(resolver_answer_total{job=\\\"knot-resolver\\\"}[15m])), 0.000001), \\\"__name__\\\", \\\"talia_dns_servfail_ratio\\\", \\\"\\\", \\\"\\\") or on (__name__, job, instance) label_replace((sum(rate(pezzottify_http_requests_total{status=~\\\"5..\\\"}[15m])) or vector(0)) / clamp_min(sum(rate(pezzottify_http_requests_total[15m])), 0.000001), \\\"__name__\\\", \\\"talia_music_error_ratio\\\", \\\"\\\", \\\"\\\") or on (__name__, job, instance) simpleai_up or on (__name__, job, instance) simple_agents_uncertain_effects or on (__name__, job, instance) simple_agents_exhausted_recovery\",time:ctx.period.end/1000})",
         "source": "homelab-prometheus"
       },
       {
@@ -233,7 +233,7 @@
       }
     ],
     "timeout_ms": 1200000,
-    "version": 9
+    "version": 10
   },
   {
     "compose": "ctx => {\n  const f = ctx.steps.facts.value;\n  const analysis = ctx.steps.analysis;\n  let assessments = {};\n  if (analysis.status === 'succeeded') {\n    try {\n      const parsed = JSON.parse(analysis.value.summary);\n      if (parsed && Array.isArray(parsed.assessments)) {\n        for (const a of parsed.assessments) if (typeof a.id === 'string' && typeof a.assessment === 'string') {\n          const note = a.assessment.replace(/\\s+/g,' ').trim();\n          if (note) assessments[a.id] = note.length > 350 ? note.slice(0,347)+'…' : note;\n        }\n      }\n    } catch (_) { /* Invalid AI output never hides deterministic evidence. */ }\n  }\n  const icons = {OK:'✅', WARN:'⚠️', ERR:'❌'};\n  const text = f.items.map(item => {\n    if (item.state === 'OK') return '✅ '+item.name;\n    const explanation = item.problems.map(p=>'   '+p.text).join('\\n');\n    const note = assessments[item.id] || 'Assessment unavailable; measured findings shown above.';\n    return icons[item.state]+' '+item.name+' — '+item.state+'\\n'+explanation+'\\n   Assessment: '+note;\n  }).join('\\n');\n  return {subject:f.state+' · Infrastructure report',summary:'',sections:[{title:'Checklist',text}]};\n}\n",
@@ -303,7 +303,7 @@
         "id": "signals",
         "kind": "source",
         "optional": true,
-        "request": "ctx=>({kind:\"query\",query:\"label_replace(sum(rate(resolver_answer_rcode_servfail_total{job=\\\"knot-resolver\\\"}[15m])) / clamp_min(sum(rate(resolver_answer_total{job=\\\"knot-resolver\\\"}[15m])), 0.000001), \\\"__name__\\\", \\\"talia_dns_servfail_ratio\\\", \\\"\\\", \\\"\\\") or label_replace((sum(rate(pezzottify_http_requests_total{status=~\\\"5..\\\"}[15m])) or vector(0)) / clamp_min(sum(rate(pezzottify_http_requests_total[15m])), 0.000001), \\\"__name__\\\", \\\"talia_music_error_ratio\\\", \\\"\\\", \\\"\\\") or simpleai_up or simple_agents_uncertain_effects or simple_agents_exhausted_recovery\",time:ctx.period.end/1000})",
+        "request": "ctx=>({kind:\"query\",query:\"label_replace(sum(rate(resolver_answer_rcode_servfail_total{job=\\\"knot-resolver\\\"}[15m])) / clamp_min(sum(rate(resolver_answer_total{job=\\\"knot-resolver\\\"}[15m])), 0.000001), \\\"__name__\\\", \\\"talia_dns_servfail_ratio\\\", \\\"\\\", \\\"\\\") or on (__name__, job, instance) label_replace((sum(rate(pezzottify_http_requests_total{status=~\\\"5..\\\"}[15m])) or vector(0)) / clamp_min(sum(rate(pezzottify_http_requests_total[15m])), 0.000001), \\\"__name__\\\", \\\"talia_music_error_ratio\\\", \\\"\\\", \\\"\\\") or on (__name__, job, instance) simpleai_up or on (__name__, job, instance) simple_agents_uncertain_effects or on (__name__, job, instance) simple_agents_exhausted_recovery\",time:ctx.period.end/1000})",
         "source": "homelab-prometheus"
       },
       {
@@ -351,6 +351,6 @@
       }
     ],
     "timeout_ms": 1200000,
-    "version": 9
+    "version": 10
   }
 ]

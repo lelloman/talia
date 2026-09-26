@@ -41,20 +41,30 @@ pub fn render(content: &Content, run: &Run) -> Result<(String, String)> {
             );
         }
     }
+    let zone = match &run.definition.schedule {
+        Some(Schedule::Daily { zone, .. }) => {
+            zone.parse::<chrono_tz::Tz>().unwrap_or(chrono_tz::UTC)
+        }
+        _ => chrono_tz::UTC,
+    };
     let date = |ms| {
         chrono::DateTime::from_timestamp_millis(ms)
-            .map(|t| t.to_rfc3339())
+            .map(|t| {
+                t.with_timezone(&zone)
+                    .format("%d %b %Y, %H:%M %Z")
+                    .to_string()
+            })
             .unwrap_or_else(|| ms.to_string())
     };
     let period = format!(
-        "Period: {} to {}. Run: {}",
+        "{} – {}\n{}",
         date(run.period_start),
         date(run.created),
         run.id
     );
     text += &format!("\n{period}\n");
     html += &format!(
-        "<footer style=\"margin-top:24px;color:#506780\">{}</footer></main></body></html>",
+        "<footer style=\"margin-top:24px;color:#506780;white-space:pre-wrap\">{}</footer></main></body></html>",
         escape(&period)
     );
     Ok((text, html))
