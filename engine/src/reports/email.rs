@@ -22,11 +22,23 @@ pub fn render(content: &Content, run: &Run) -> Result<(String, String)> {
     {
         return Err("report composition bounds".into());
     }
-    let mut text = format!("{}\n\n{}\n", content.subject, content.summary);
+    let mut text = format!("{}\n", content.subject);
+    if !content.summary.is_empty() {
+        text += &format!("\n{}\n", content.summary);
+    }
     let mut html=format!("<!doctype html><html><body style=\"font-family:Arial,sans-serif;color:#17243a;background:#f4f7fb;padding:24px\"><main style=\"max-width:760px;margin:auto;background:white;padding:28px;border-radius:12px\"><p style=\"color:#506780\">TALÌA · MONITORING REPORT</p><h1>{}</h1><p style=\"white-space:pre-wrap\">{}</p>",escape(&content.subject),escape(&content.summary));
     for section in &content.sections {
-        text += &format!("\n{}\n{}\n", section.title, section.text);
-        html+=&format!("<section style=\"border-top:1px solid #dbe3ee;margin-top:24px\"><h2>{}</h2><div style=\"white-space:pre-wrap;overflow-wrap:anywhere\">{}</div></section>",escape(&section.title),escape(&section.text));
+        text.push('\n');
+        if !section.title.is_empty() {
+            text += &format!("{}\n", section.title);
+        }
+        text += &format!("{}\n", section.text);
+        let heading = if section.title.is_empty() {
+            String::new()
+        } else {
+            format!("<h2>{}</h2>", escape(&section.title))
+        };
+        html+=&format!("<section style=\"border-top:1px solid #dbe3ee;margin-top:24px\">{heading}<div style=\"white-space:pre-wrap;overflow-wrap:anywhere\">{}</div></section>",escape(&section.text));
     }
     for (id, output) in &run.outputs {
         if output.status == "failed" {
@@ -51,13 +63,13 @@ pub fn render(content: &Content, run: &Run) -> Result<(String, String)> {
         chrono::DateTime::from_timestamp_millis(ms)
             .map(|t| {
                 t.with_timezone(&zone)
-                    .format("%d %b %Y, %H:%M %Z")
+                    .format("%a %d %b %Y %H:%M %Z")
                     .to_string()
             })
             .unwrap_or_else(|| ms.to_string())
     };
     let period = format!(
-        "{} – {}\n{}",
+        "{}\n{}\n{}",
         date(run.period_start),
         date(run.created),
         run.id

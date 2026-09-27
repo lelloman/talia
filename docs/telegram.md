@@ -57,7 +57,7 @@ failure, cancellation or revoked access. Typing is best-effort: Telegram failure
 do not interrupt an investigation. Acknowledgements use the durable outgoing queue
 and its existing uncertain-delivery policy, and are never added to AI history.
 
-Each request has a five-minute total deadline from acceptance, including queue
+Each request has a fifteen-minute total deadline from acceptance, including queue
 time, compaction and investigation. Expired queued requests never start inference.
 On timeout Talìa stops waiting, stops typing, retains failure evidence and queues
 a clear timeout reply; late results are discarded. Sending a new message starts
@@ -126,3 +126,16 @@ checks cover delivery settings, viewer denial and rejection of retired MCP keys.
 Conversation fixtures also cover report context selection, manual/automatic
 compaction, revocation during inference and bot delivery while inference waits.
 No live Telegram messages are sent by these tests.
+
+## Timeout update — 2026-09-26
+
+Telegram investigations now allow 15 minutes from acceptance. The user-facing
+expiry notice and queued/active deadline tests use the same limit. Existing jobs
+retain their stored deadlines; new requests receive the increased budget.
+
+Deployed image: `registry.homelab:5000/talia:telegram-timeout-15-20260926`, digest
+`sha256:a075427b1df1dbd1bfd468acc2e145c0c56665f2f0c73c57ae8dad53276749e9`.
+The working-tree build includes the compact report layout. Deployment uses
+`/tmp/talia-telegram-timeout-15-20260926.yml` on homelab; future base-Compose
+`latest` deployments must include these changes. Both pre-deployment SQLite
+backups passed integrity checks; all eight Telegram tests passed.

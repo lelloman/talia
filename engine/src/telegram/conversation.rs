@@ -1,6 +1,6 @@
 use super::*;
 use crate::ai;
-const MESSAGE_TIMEOUT_MS: i64 = 5 * 60 * 1000;
+const MESSAGE_TIMEOUT_MS: i64 = 15 * 60 * 1000;
 #[derive(Clone, Serialize, Deserialize)]
 struct Job {
     id: i64,
@@ -112,7 +112,7 @@ impl Worker {
             // An old acknowledgement must not arrive after the timeout notice.
             s.conn.execute("UPDATE telegram_outbox SET status='failed' WHERE id=? AND status='pending'", [format!("ack-{}-000", job.id)]).map_err(err)?;
             let text = if timed_out {
-                "Your request timed out after five minutes. I’ve stopped waiting for a result. You can send a new message to try again."
+                "Your request timed out after fifteen minutes. I’ve stopped waiting for a result. You can send a new message to try again."
             } else {
                 "The investigation failed. Its run and error are retained in Talìa; please ask an administrator to check the Telegram status."
             };

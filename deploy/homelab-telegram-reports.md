@@ -1,7 +1,7 @@
 # Infrastructure checklist reports
 
 [Definitions](homelab-telegram-reports.json) run at **09:00, 14:00 and 19:00
-Europe/Rome**, including daylight-saving changes. Captured versions are **11, 10, 10**.
+Europe/Rome**, including daylight-saving changes. Captured versions are **12, 11, 11**.
 
 The checklist contains Homelab, VPS-EU, VPS-US, LelloAuth, Knot Resolver,
 Pezzottify, Pezzottflix, SimpleAI, Simple Agents, LelloStore and Crumbles.
@@ -11,7 +11,10 @@ services have their own entries instead of being repeated under Homelab.
 
 Healthy items display only `✅ Name`. Anomalies display `⚠️ Name — WARN` or
 `❌ Name — ERR`, measured problems, and a short item-specific AI assessment.
-The headline is Nominal, Warning or Error according to the worst measured item.
+The headline is `Infra report: 🟢 nominal`, `Infra report: 🟡 warning`, or
+`Infra report: 🔴 error` according to the worst measured item. A single blank line
+separates it from the items; there is no Checklist heading. Telegram uses colored
+circle emoji because text colors are unavailable.
 
 ## Deterministic checks
 
@@ -143,3 +146,20 @@ Both SQLite backups (`*.before-report-fix-20260926.sqlite3`) passed integrity ch
 All six report tests and local checklist checks passed. Final unsent preview
 `report-cf1c8941f91afd199f93fb51d534f2e9` completed with all 11 items healthy,
 the new Rome-time footer, and no deliveries.
+
+
+## Compact report layout — 2026-09-26
+
+The footer shows the start and end on separate lines, formatted as
+`Fri 25 Sep 2026 14:00 CEST` and `Sat 26 Sep 2026 14:00 CEST`, followed by
+the run ID. Calendar report dates use the configured time zone. Empty summaries
+and section headings no longer add extra blank lines or an empty HTML heading.
+
+Versions 12, 11, 11 are deployed with image
+`registry.homelab:5000/talia:report-layout-20260926` (digest
+`sha256:7ebefb18fa0610269ee171faa31ea0ca5f572fd4aff0f7bd222e2353427ec071`).
+The deployment uses `/tmp/talia-report-layout-20260926.yml` on homelab. Both
+`*.before-report-layout-20260926.sqlite3` backups passed integrity checks.
+All six report tests and the local checklist checks passed. Unsent preview
+`report-a411ca19b3be6dc424ea8f6346ff4ff5` verified the heading, single blank line,
+unlabeled checklist, separate date lines and run ID; all 11 items were healthy.

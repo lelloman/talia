@@ -603,12 +603,12 @@ async fn queued_requests_expire_once_without_starting_inference() {
     {
         let mut s = w.engine.store.borrow_mut();
         for id in [60, 61] {
-            s.telegram_ingest(&json!({"update_id":id,"message":{"chat":{"id":55,"type":"private"},"from":{"id":55,"is_bot":false},"text":"Check"}}), -299000).unwrap();
+            s.telegram_ingest(&json!({"update_id":id,"message":{"chat":{"id":55,"type":"private"},"from":{"id":55,"is_bot":false},"text":"Check"}}), -899000).unwrap();
         }
-        // A retained job from the old deployment must use the new bound too.
+        // A retained job with an excessive deadline must use the current bound too.
         s.conn
             .execute(
-                "UPDATE telegram_jobs SET body=json_set(body,'$.deadline',601000) WHERE id=61",
+                "UPDATE telegram_jobs SET body=json_set(body,'$.deadline',1201000) WHERE id=61",
                 [],
             )
             .unwrap();
@@ -628,7 +628,7 @@ async fn queued_requests_expire_once_without_starting_inference() {
                 .unwrap(),
             2
         );
-        assert_eq!(s.conn.query_row("SELECT count(*) FROM telegram_outbox WHERE body LIKE '%timed out after five minutes%' AND status='pending'",[],|r|r.get::<_,i64>(0)).unwrap(),2);
+        assert_eq!(s.conn.query_row("SELECT count(*) FROM telegram_outbox WHERE body LIKE '%timed out after fifteen minutes%' AND status='pending'",[],|r|r.get::<_,i64>(0)).unwrap(),2);
         assert_eq!(s.conn.query_row("SELECT count(*) FROM telegram_outbox WHERE id GLOB 'ack-*' AND status='pending'",[],|r|r.get::<_,i64>(0)).unwrap(),0);
         assert_eq!(
             s.conn
@@ -661,8 +661,8 @@ async fn active_request_uses_remaining_budget_and_discards_late_answer() {
         .expect(1)
         .mount(&ai)
         .await;
-    // 299.8 seconds were already spent queued; only 200 ms remain.
-    w.engine.store.borrow_mut().telegram_ingest(&json!({"update_id":60,"message":{"chat":{"id":55,"type":"private"},"from":{"id":55,"is_bot":false},"text":"Check"}}), -298800).unwrap();
+    // 899.8 seconds were already spent queued; only 200 ms remain.
+    w.engine.store.borrow_mut().telegram_ingest(&json!({"update_id":60,"message":{"chat":{"id":55,"type":"private"},"from":{"id":55,"is_bot":false},"text":"Check"}}), -898800).unwrap();
     w.conversation().await.unwrap();
     tokio::time::sleep(Duration::from_millis(550)).await;
     w.conversation().await.unwrap();
@@ -680,12 +680,12 @@ async fn active_request_uses_remaining_budget_and_discards_late_answer() {
         assert_eq!(status, "failed");
         assert_eq!(
             body["deadline"].as_i64().unwrap() - body["created"].as_i64().unwrap(),
-            300000
+            900000
         );
         let run = s.ai_run("telegram-60-answer-0").unwrap().unwrap();
         assert_eq!(run.status, "failed");
         assert!(run.error.unwrap().contains("deadline exceeded"));
-        assert_eq!(s.conn.query_row("SELECT count(*) FROM telegram_outbox WHERE body LIKE '%timed out after five minutes%'",[],|r|r.get::<_,i64>(0)).unwrap(),1);
+        assert_eq!(s.conn.query_row("SELECT count(*) FROM telegram_outbox WHERE body LIKE '%timed out after fifteen minutes%'",[],|r|r.get::<_,i64>(0)).unwrap(),1);
         assert_eq!(
             s.conn
                 .query_row("SELECT count(*) FROM telegram_history", [], |r| r

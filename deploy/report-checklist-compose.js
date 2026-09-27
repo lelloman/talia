@@ -20,5 +20,6 @@ ctx => {
     const note = assessments[item.id] || 'Assessment unavailable; measured findings shown above.';
     return icons[item.state]+' '+item.name+' — '+item.state+'\n'+explanation+'\n   Assessment: '+note;
   }).join('\n');
-  return {subject:f.state+' · Infrastructure report',summary:'',sections:[{title:'Checklist',text}]};
+  const statusIcons = {Nominal:'🟢', Warning:'🟡', Error:'🔴'};
+  return {subject:'Infra report: '+statusIcons[f.state]+' '+f.state.toLowerCase(),summary:'',sections:[{title:'',text}]};
 }
