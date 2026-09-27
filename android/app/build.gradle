@@ -15,8 +15,8 @@ android {
         applicationId 'com.lelloman.talia'
         minSdk 30
         targetSdk 36
-        versionCode 1
-        versionName '0.1.0'
+        versionCode 2
+        versionName '0.1.1'
     }
     productFlavors {
         normal { applicationIdSuffix '.normal' }
@@ -48,7 +48,7 @@ paravoid {
     bootstrap = 'embedded'
     controlsLauncher = false
     crashRecovery { enabled = true; updater = 'default' }
-    payloadVersion = providers.gradleProperty('paravoidPayloadVersion').map { it.toLong() }.getOrElse(1L)
+    payloadVersion = providers.gradleProperty('paravoidPayloadVersion').map { it.toLong() }.getOrElse(2L)
     if (providers.gradleProperty('paravoidBaselineDirectory').present) {
         baselineDirectory = layout.projectDirectory.dir(providers.gradleProperty('paravoidBaselineDirectory').get())
     }

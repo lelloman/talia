@@ -24,7 +24,7 @@ export ANDROID_HOME="$HOME/Android/Sdk"
 ```
 
 The normal package is `com.lelloman.talia.normal`; the production Paravoid package
-is `com.lelloman.talia`, version 0.1.0 (1), initial payload version 1. They can be
+is `com.lelloman.talia`, version 0.1.1 (2), payload version 2. They can be
 installed side by side. Paravoid uses complete packaging, embedded bootstrap,
 APK-grant Store delivery, explicit update controls and default crash recovery.
 No automatic check/download schedule or payload minification is enabled.
@@ -68,7 +68,27 @@ publisher accepted the 22,881,175-byte shell APK with `--dry-run --json` (status
 The LelloDesign drawer and Settings navigation worked, and dark appearance
 survived a full restart of the signed app.
 
-Paravoid's update controls open, but report `UPDATE_SERVICE_UNAVAILABLE` and no
-installed release. This remains unresolved; update delivery is not validated.
-Do not treat the packaging dry-run as an end-to-end update test. The build uses
-the sibling Paravoid source at commit `6770678`.
+Paravoid's update controls on the directly installed local shell report
+`UPDATE_SERVICE_UNAVAILABLE`. Investigation confirmed the installed APK matches
+the local artifact and `ApkGrantReader` rejects it with `CREDENTIAL_UNAVAILABLE:
+APK update credential missing`. With `authentication = 'apkKey'`, LelloStore
+inserts the credential during authenticated acquisition; the build artifact
+does not contain one. UpdateRuntime aborts at `DeliveryClient.installedApk` and
+UpdateService replaces the underlying error with the generic message. This
+happens before an update request reaches LelloStore.
+
+Version 0.1.0 (1) and its embedded payload were subsequently published on
+LelloStore, publication revision 2. The live Store reports matching public
+head/grant keys, verified shell and payload, Paravoid distribution mode, and an
+active stream. An authenticated acquisition produced a personalized APK with
+the grant present; its download hash matched the Store's response.
+
+Installing that APK over the local shell on the API 36.1 emulator removed the
+service error. Controls show installed version 1, and a manual network check
+successfully discovers the published payload. The UI offers version 1 even
+though version 1 is already installed; choosing download returns to that same
+offer. A newer-version download/apply cycle has not been validated.
+
+Use authenticated LelloStore acquisition for update testing; a raw/admin APK
+download is not a substitute. The build uses sibling Paravoid source at commit
+`6770678`.
