@@ -642,6 +642,7 @@ async fn asset(State(d): State<Deployment>, r: Request) -> Response {
         Some("css") => "text/css",
         Some("svg") => "image/svg+xml",
         Some("wasm") => "application/wasm",
+        Some("woff2") => "font/woff2",
         _ => return StatusCode::NOT_FOUND.into_response(),
     };
     match tokio::fs::read(file).await {

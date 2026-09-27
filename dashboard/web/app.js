@@ -65,6 +65,7 @@ async function start(pinned=null,beforeReplace=null,reuse=false){
  let library,codec;
  if(!restored){const r=await fetch('/dashboard/shared/vm.js');if(!r.ok)throw Error('VM support unavailable');library=await r.text();codec=await (await fetch('/engine/shared/value.js')).text();}
  if(request!==loadRequest)return;
+ if(beforeReplace){await beforeReplace();if(request!==loadRequest)return;}
  if(restored)pausedDashboards.delete(pkg.id);
  ++generation;ready=false;
  if(reuse&&loaded&&guest?.alive&&!failure){

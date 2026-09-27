@@ -10,4 +10,6 @@ node dashboard/compile.mjs dashboard/examples/monitoring.package.json dashboard/
 NODE_PATH=spikes/runtime/node_modules spikes/runtime/node_modules/.bin/esbuild dashboard/web/worker.js --bundle --format=esm --outfile=dashboard/web/dist/worker.js
 cp spikes/runtime/node_modules/@jitl/quickjs-ng-wasmfile-release-sync/dist/emscripten-module.wasm dashboard/web/dist/ng.wasm
 
-NODE_PATH=dashboard/web/node_modules spikes/runtime/node_modules/.bin/esbuild dashboard/web/chrome.js --bundle --format=esm --minify --define:process.env.NODE_ENV=\"production\" --outfile=dashboard/web/dist/chrome.js
+NODE_PATH=dashboard/web/node_modules spikes/runtime/node_modules/.bin/esbuild dashboard/web/chrome.js --bundle --format=esm --minify --define:process.env.NODE_ENV=\"production\" --loader:.woff2=file --loader:.ttf=file --asset-names=fonts/[name]-[hash] --outfile=dashboard/web/dist/chrome.js
+
+cp dashboard/web/node_modules/@lelloman/lellodesign-vue/dist/fonts/OFL.txt dashboard/web/dist/fonts/OFL.txt

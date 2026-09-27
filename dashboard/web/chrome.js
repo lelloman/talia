@@ -1,6 +1,6 @@
 // Framework-owned application chrome. The dashboard host owns one retained DOM island.
 import {createApp,h,ref,computed,nextTick,watch,render} from 'vue';
-import {LelloSegmentedControl,LelloTheme,LelloScaffold,LelloAccount,LelloDialog,LelloButton,LelloConnectionStatus,LelloThemeSelector} from '@lelloman/lellodesign-vue';
+import {LelloSection,LelloSegmentedControl,LelloTheme,LelloScaffold,LelloAccount,LelloDialog,LelloButton,LelloConnectionStatus,LelloThemeSelector} from '@lelloman/lellodesign-vue';
 import '@lelloman/lellodesign-vue/style.css';
 // Thin adapter between the declarative dashboard and the library-owned control.
 export function renderSegmentedControl(root,props){render(props?h(LelloSegmentedControl,props):null,root);}
@@ -21,10 +21,10 @@ export async function mountChrome(identity,{development=false,signOut=()=>{}}={}
  function route(focus=false){const desired=location.hash.slice(1)||'dashboard';if(desired.startsWith('lello-main-'))return;const next=items.value.some(i=>i.id===desired)?desired:'dashboard';const main=document.querySelector('.lv-main');if(main)scroll.set(active.value,main.scrollTop);active.value=next;
   document.querySelectorAll('[data-shell-page]').forEach(p=>p.hidden=p.dataset.shellPage!==next);
   document.title=`${items.value.find(i=>i.id===next)?.label||'Dashboard'} · Talìa`;
-  if(focus)requestAnimationFrame(()=>{document.querySelector(`[data-shell-page="${next}"] h1`)?.focus({preventScroll:true});if(main)main.scrollTop=scroll.get(next)||0;});
+  if(focus)requestAnimationFrame(()=>{document.querySelector(`[data-shell-page="${next}"]`)?.focus({preventScroll:true});if(main)main.scrollTop=scroll.get(next)||0;});
  }
  const app=createApp({setup(){return()=>h(LelloTheme,{theme:theme.value},{default:()=>[
-  h(LelloScaffold,{productName:'Talìa',title:mobile.value?'Talìa':items.value.find(i=>i.id===active.value)?.label,items:items.value,active:active.value,mobileNavigation:'drawer',collapsed:collapsed.value,'onUpdate:collapsed':v=>collapsed.value=v,onNavigate:(item,e)=>{if(e.button!==0||e.ctrlKey||e.metaKey||e.shiftKey||e.altKey)return;e.preventDefault();if(location.hash!==item.href)location.hash=item.href;else route(true);}},{
+  h(LelloScaffold,{productName:'Talìa',title:items.value.find(i=>i.id===active.value)?.label,items:items.value,active:active.value,mobileNavigation:'drawer',collapsed:collapsed.value,'onUpdate:collapsed':v=>collapsed.value=v,onNavigate:(item,e)=>{if(e.button!==0||e.ctrlKey||e.metaKey||e.shiftKey||e.altKey)return;e.preventDefault();if(location.hash!==item.href)location.hash=item.href;else route(true);}},{
    logo:()=>h('img',{src:'/assets/brand/brand.svg',alt:'',width:36,height:36}),
    'nav-icon':({item})=>h('svg',{viewBox:'0 0 24 24',fill:'none',stroke:'currentColor','stroke-width':1.7,'stroke-linecap':'round','stroke-linejoin':'round'},[h('path',{d:paths[item.id]})]),
    account:({compact})=>h(LelloAccount,{name:identity.name,compact,label:development?'Local development':'Lello account',onActivate:()=>dialog.value=true}),
@@ -33,7 +33,13 @@ export async function mountChrome(identity,{development=false,signOut=()=>{}}={}
   }),
   h(LelloDialog,{title:development?'Development session':'Your Lello account',modelValue:dialog.value,'onUpdate:modelValue':v=>dialog.value=v},{default:()=>[h('p',{id:'account-name'},identity.name),h('p',{id:'account-role',class:'lv-muted'},development?'Development':admin.value?'Administrator':'Viewer')],actions:()=>[h(LelloButton,{variant:'neutral',onClick:()=>dialog.value=false},{default:()=> 'Close'}),...(!development?[h(LelloButton,{id:'sign-out',variant:'primary',onClick:signOut},{default:()=> 'Sign out'})]:[])]})
  ]});}});
- app.mount('#app');await nextTick();if(development)document.getElementById('agent-access').hidden=true;route();addEventListener('hashchange',()=>route(true));
+ app.mount('#app');await nextTick();
+ document.querySelectorAll('[data-lello-section]').forEach(root=>{
+  const heading=root.querySelector('summary'),title=heading.textContent;heading.remove();
+  const content=document.createDocumentFragment();while(root.firstChild)content.append(root.firstChild);
+  const sectionApp=createApp({render:()=>h(LelloSection,{title},{default:()=>h('div',{class:'talia-section-content',ref:el=>{if(el&&content.childNodes.length)el.append(content);}})})});
+  sectionApp.config.idPrefix='talia-'+root.id;sectionApp.mount(root);
+ });if(development)document.getElementById('agent-access').hidden=true;route();addEventListener('hashchange',()=>route(true));
  window.taliaShell={update({isAdmin=admin.value,alerts=canAlert.value,connected}={}){admin.value=isAdmin;canAlert.value=alerts;if(connected!==undefined)status.value=connected?'connected':'disconnected';route();},status(value){status.value=value==='connecting...'?'connecting':value==='disconnected'?'disconnected':'connected';}};
  addEventListener('talia-connection',e=>window.taliaShell.status(e.detail));
  return window.taliaShell;
