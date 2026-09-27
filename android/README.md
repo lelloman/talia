@@ -4,9 +4,11 @@ Native Compose application shell with LelloDesign's actual scaffold, drawer,
 account and section components. Appearance lives in Settings and persists across
 launches. Paravoid's shell-owned update controls are accessible from Settings.
 
-This first build is an implementation scaffold. Reports, chat, server sign-in,
-automation and the Rust runtime are not connected yet. The UI says so explicitly.
-No sample health data is represented as a real service result.
+Native sign-in and the live Overview are implemented, with encrypted session
+storage, service sample freshness, recent reports, and explicit failure states.
+They require the matching native API endpoints to be deployed. Report execution,
+chat, automation and the Rust runtime are not connected yet.
+See `../docs/android-native-api.md` for authentication, scope and validation.
 
 ## Build
 

@@ -334,6 +334,13 @@ async fn alerts_rpc(State(tx):State<mpsc::Sender<Request>>,headers:HeaderMap,bro
     if tx.try_send(Request{http_mcp:false,browser_subject:browser.map(|axum::Extension(i)|i.subject),body,credential:Some(credential),agent:true,connection:String::new(),call:String::new(),reply}).is_err(){return Json(json!({"error":"limit_exceeded"}));}
     Json(rx.await.unwrap_or_else(|_|json!({"error":"internal_error"})))
 }
+async fn native_overview(State(tx):State<mpsc::Sender<Request>>, identity:Option<axum::Extension<deployment::Identity>>)->axum::response::Response {
+ use axum::response::IntoResponse;
+ let Some(identity)=identity else {return axum::http::StatusCode::UNAUTHORIZED.into_response()};
+ let Json(value)=account_rpc(State(tx),Some(identity),Json(json!({"op":"nativeOverview"}))).await;
+ let status=match value["error"].as_str(){Some("forbidden")=>axum::http::StatusCode::FORBIDDEN,Some(_)=>axum::http::StatusCode::SERVICE_UNAVAILABLE,None=>axum::http::StatusCode::OK};
+ (status,Json(value)).into_response()
+}
 async fn account_rpc(State(tx):State<mpsc::Sender<Request>>, browser:Option<axum::Extension<deployment::Identity>>, Json(mut body):Json<Value>)->Json<Value>{
  let Some(axum::Extension(identity))=browser else{return Json(json!({"error":"unauthenticated"}))};
  // Internal envelope keeps trusted identity separate from untrusted operation arguments.
@@ -426,6 +433,7 @@ async fn run(args:Vec<String>)->Result<()> {
         .route("/engine", post(rpc))
         .route("/clients", post(client_rpc))
         .route("/account", post(account_rpc))
+        .route("/native/overview", axum::routing::get(native_overview))
         .route("/agent", post(agent_rpc))
         .route("/alerts", post(alerts_rpc))
         .layer(DefaultBodyLimit::max(2_359_296))

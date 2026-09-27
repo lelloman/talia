@@ -9,8 +9,9 @@ not publish, replace versions, increment versions or retry failed uploads.
 The production `android/` project now builds a native Compose scaffold in normal
 and Paravoid modes. Configure its private signing material using
 `scripts/setup-android-signing.py`; see `android/README.md`. Existing dashboard
-and runtime-spike APKs are not selected automatically. This first build has no
-server connection or Rust runtime integration yet.
+and runtime-spike APKs are not selected automatically. This app has no
+Rust runtime integration yet. Native sign-in and Overview now require the matching
+server API deployment; see `android-native-api.md`.
 
 ## Prebuilt artifacts
 

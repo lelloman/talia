@@ -1,6 +1,13 @@
 package com.lelloman.talia
 
 import android.os.Bundle
+import android.content.Intent
+import android.net.Uri
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.delay
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -31,6 +38,19 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     private fun TaliaApp() {
+        val connection: NativeConnection = viewModel()
+        val lifecycle = LocalLifecycleOwner.current.lifecycle
+        LaunchedEffect(connection, lifecycle) {
+            lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                while (true) {
+                    if (connection.pending || connection.signedIn) connection.refresh()
+                    delay(if (connection.pending) 2000 else 30000)
+                }
+            }
+        }
+        val openBrowser: (String) -> Unit = { url ->
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addCategory(Intent.CATEGORY_BROWSABLE))
+        }
         val preferences = remember { getSharedPreferences("appearance", MODE_PRIVATE) }
         var appearance by remember { mutableStateOf(runCatching {
             LelloAppearance.valueOf(preferences.getString("mode", "System")!!)
@@ -54,7 +74,7 @@ class MainActivity : ComponentActivity() {
                 destinations = destinations, selectedId = page, onNavigate = { page = it },
                 mobileNavigation = LelloMobileNavigation.Drawer,
                 logo = { Image(painterResource(R.drawable.ic_talia), "Talìa", Modifier.size(32.dp)) },
-                account = { compact -> LelloAccount("Not signed in", { page = "settings" }, compact = compact) },
+                account = { compact -> LelloAccount(connection.name, { page = "settings" }, compact = compact) },
             ) { insets ->
                 Column(Modifier.fillMaxSize().padding(insets).consumeWindowInsets(insets)
                     .verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
@@ -79,9 +99,9 @@ class MainActivity : ComponentActivity() {
                                 }
                             } else Text("Normal APK build. Install a new APK to update.")
                         }
-                        LelloSection("Connection") {
-                            Text("Not connected. Server sign-in will be added in the next implementation slice.")
-                        }
+                        ConnectionPanel(connection, openBrowser)
+                    } else if (page == "overview") {
+                        Overview(connection, openBrowser)
                     } else {
                         LelloSection("Android preview") {
                             Text("The native app shell is ready. ${destinations.first { it.id == page }.label} is not connected to your server yet.")

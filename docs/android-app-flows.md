@@ -28,9 +28,11 @@ shows a retryable message on 13. Do not collect the provider password in the app
 sign-in. Keep drafts scoped to account and server. Switching either requires
 confirmation before discarding unsent drafts; never expose another account’s cache.
 
-Implementation dependency: native OIDC enrollment is not implemented today
-(`user-access.md`). Define a public native client, authorization-code/PKCE flow,
-verified callback, secure session storage and revocation before shipping.
+The first implementation uses the server-brokered PKCE handoff documented in
+`android-native-api.md`, reusing the server's confidential LelloAuth client.
+The custom-scheme return link carries no credential; one-time verifier redemption
+authenticates the handoff. Secure storage and server-session revocation are
+implemented. Production use requires deployment of the matching native API.
 
 ## Report → investigation (16–21, 03, 07)
 

@@ -102,9 +102,11 @@ since publishing can expose data to every user. Narrow definition-authoring gran
 cannot change sharing. Access mutation receipts are separate from engine-operation
 audits and can be recovered by repeating the identical request ID.
 
-The currently deployed OIDC transport is web. Native Android still uses the
-existing development host transport; this change neither enables anonymous native
-network access nor claims native OIDC enrollment is implemented.
+The native app uses a server-brokered PKCE handoff to the existing LelloAuth
+browser flow; see `android-native-api.md`. Its opaque sessions authorize only
+native session, logout and Overview endpoints. Global native Overview is
+admin-only; viewer dashboard delivery retains the rules above. The native API
+must be deployed alongside the app before production sign-in is available.
 
 ## Verification
 

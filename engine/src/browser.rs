@@ -14,6 +14,9 @@ impl Service {
                 .unwrap()
                 .to_string()
         };
+        if r.connection == "account" && r.body["request"]["op"]=="nativeOverview" {
+            return self.engine.store.borrow_mut().native_overview(subject,r.body["name"].as_str().unwrap_or(subject),self.engine.now());
+        }
         if r.connection == "account" && r.body["request"]["op"].as_str().is_some_and(|op| op.starts_with("aiAccount")) {
             return talia_engine::ai::account::admin(&self.engine, subject, r.body["request"].clone()).await;
         }

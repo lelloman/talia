@@ -1,4 +1,5 @@
 //! LelloAuth OIDC browser boundary. No shared dashboard keys or provider tokens in JavaScript.
+mod native;
 use crate::oidc::{OidcClient, SessionTokens};
 use axum::{
     body::Body,
@@ -29,6 +30,7 @@ pub struct Identity {
     pub session_id: String,
 }
 struct Login {
+    native: Option<String>,
     browser: String,
     verifier: String,
     nonce: String,
@@ -39,6 +41,7 @@ const SESSION_SECONDS: i64 = 30 * 24 * 60 * 60;
 struct Inner {
     db: Connection,
     logins: HashMap<String, Login>,
+    native: HashMap<String, native::Pending>,
     checked: HashMap<String, i64>,
     checks: HashMap<String, Weak<tokio::sync::Mutex<()>>>,
 }
@@ -153,6 +156,7 @@ impl Deployment {
             inner: Arc::new(Mutex::new(Inner {
                 db,
                 logins: HashMap::new(),
+                native: HashMap::new(),
                 checked: HashMap::new(),
                 checks: HashMap::new(),
             })),
@@ -327,6 +331,11 @@ impl Deployment {
     }
     pub fn routes(&self) -> Router {
         Router::new()
+            .route("/native/start", post(native::start))
+            .route("/native/authorize", get(native::authorize))
+            .route("/native/exchange", post(native::exchange))
+            .route("/native/session", get(session))
+            .route("/native/logout", post(native::logout))
             .route("/auth/login", get(login))
             .route("/auth/callback", get(callback))
             .route("/auth/session", get(session))
@@ -336,22 +345,26 @@ impl Deployment {
     }
     pub async fn gate(State(d): State<Self>, mut r: Request, next: Next) -> Response {
         let path = r.uri().path();
+        let native_request = matches!(path, "/native/overview" | "/native/session" | "/native/logout");
         let browser_alert = path == "/alerts" && !r.headers().contains_key(header::AUTHORIZATION);
         let protected = matches!(
             path,
             "/engine" | "/clients" | "/account" | "/auth/session" | "/auth/logout"
-        ) || browser_alert;
+        ) || browser_alert || native_request;
         if r.method() != axum::http::Method::GET
             && (r
                 .headers()
                 .get(header::ORIGIN)
                 .is_some_and(|o| o.as_bytes() != d.origin.as_bytes())
-                || protected && r.headers().get(header::ORIGIN).is_none())
+                || protected && !native_request && r.headers().get(header::ORIGIN).is_none())
         {
             return StatusCode::FORBIDDEN.into_response();
         }
         if protected {
-            match d.identity(r.headers()).await {
+            let identity = if native_request {
+                match native::bearer(r.headers()) { Some(token) => d.identity_id(&hash(token)).await, None => Err(StatusCode::UNAUTHORIZED) }
+            } else { d.identity(r.headers()).await };
+            match identity {
                 Ok(identity) => {
                     // A browser installation credential is scoped to its authenticated user.
                     if path == "/clients" {
@@ -393,6 +406,9 @@ fn hex_digest(s: &str) -> String {
         .collect()
 }
 async fn login(State(d): State<Deployment>, headers: HeaderMap) -> Response {
+    login_flow(d, headers, None).await
+}
+async fn login_flow(d: Deployment, headers: HeaderMap, native: Option<String>) -> Response {
     let state = random();
     let browser = random();
     let verifier = random();
@@ -410,6 +426,7 @@ async fn login(State(d): State<Deployment>, headers: HeaderMap) -> Response {
     inner.logins.insert(
         hash(&state),
         Login {
+            native,
             browser: hash(&browser),
             verifier,
             nonce: nonce.clone(),
@@ -441,7 +458,11 @@ async fn callback(
     headers: HeaderMap,
     Query(q): Query<Callback>,
 ) -> Response {
+    let native_attempt = q.state.as_ref().and_then(|s| d.inner.lock().unwrap().logins.get(&hash(s)).and_then(|l| l.native.clone()));
     let outcome = finish(&d, &headers, q).await;
+    if let (Some(attempt), Ok((token, _))) = (&native_attempt, &outcome) {
+        return native::complete(&d, attempt, token.clone());
+    }
     let mut response = match outcome {
         Ok((token, age)) => (
             [(
@@ -519,7 +540,7 @@ async fn finish(
     if expires <= now() {
         return Err(StatusCode::UNAUTHORIZED);
     }
-    let token = random();
+    let token = if flow.native.is_some() { format!("n.{}",random()) } else { random() };
     let encrypted =
         d.seal(&serde_json::to_string(&tokens).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?)?;
     let mut inner = d.inner.lock().unwrap();
@@ -529,7 +550,7 @@ async fn finish(
         .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
     tx.execute("DELETE FROM sessions WHERE expires<=?", [now()])
         .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
-    if let Some(old) = cookie(headers, "__Host-talia-session") {
+    if let Some(old) = cookie(headers, "__Host-talia-session").filter(|_| flow.native.is_none()) {
         tx.execute("DELETE FROM sessions WHERE id=?", [hash(&old)])
             .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
     }
@@ -640,7 +661,7 @@ mod tests {
     use tower::ServiceExt;
     use wiremock::matchers::{method, path};
     use wiremock::{Mock, MockServer, ResponseTemplate};
-    async fn fixture() -> (MockServer, Deployment) {
+    pub(super) async fn fixture() -> (MockServer, Deployment) {
         let server = MockServer::start().await;
         Mock::given(method("GET")).and(path("/.well-known/openid-configuration")).respond_with(ResponseTemplate::new(200).set_body_json(json!({"issuer":server.uri(),"authorization_endpoint":format!("{}/authorize",server.uri()),"token_endpoint":format!("{}/token",server.uri()),"jwks_uri":format!("{}/jwks",server.uri()),"introspection_endpoint":format!("{}/introspect",server.uri()),"response_types_supported":["code"],"id_token_signing_alg_values_supported":["RS256"],"code_challenge_methods_supported":["S256"],"token_endpoint_auth_methods_supported":["none","client_secret_basic"]}))).mount(&server).await;
         Mock::given(method("GET"))
@@ -663,6 +684,7 @@ mod tests {
             inner: Arc::new(Mutex::new(Inner {
                 db,
                 logins: HashMap::new(),
+                native: HashMap::new(),
                 checked: HashMap::new(),
                 checks: HashMap::new(),
             })),
@@ -729,6 +751,52 @@ mod tests {
             .await;
         Mock::given(method("POST")).and(path("/introspect")).respond_with(ResponseTemplate::new(200).set_body_json(json!({"active":true,"sub":"provider-subject-123","client_id":CLIENT_ID,"iss":server.uri()}))).mount(server).await;
     }
+    #[tokio::test]
+    async fn native_pkce_handoff_is_one_time_scoped_and_revocable() {
+        let (server,d)=fixture().await;
+        let router=d.routes().route("/native/overview",get(||async{"private"}))
+            .route("/engine",post(||async{"private"}))
+            .layer(axum::middleware::from_fn_with_state(d.clone(),Deployment::gate));
+        let verifier=random();
+        let response=router.clone().oneshot(Request::builder().method("POST").uri("/native/start")
+            .header("content-type","application/json").body(Body::from(json!({"challenge":hash(&verifier)}).to_string())).unwrap()).await.unwrap();
+        assert_eq!(response.status(),StatusCode::OK);
+        let value:serde_json::Value=serde_json::from_slice(&axum::body::to_bytes(response.into_body(),8192).await.unwrap()).unwrap();
+        let attempt=value["attempt"].as_str().unwrap();
+        let response=router.clone().oneshot(Request::builder().uri(format!("/native/authorize?attempt={attempt}")).body(Body::empty()).unwrap()).await.unwrap();
+        let browser=response.headers()[header::SET_COOKIE].to_str().unwrap().split(';').next().unwrap().to_owned();
+        let url=url::Url::parse(response.headers()[header::LOCATION].to_str().unwrap()).unwrap();
+        let fields:HashMap<_,_>=url.query_pairs().into_owned().collect();
+        token(&server,&fields["nonce"],&fields["code_challenge"]).await;
+        let response=router.clone().oneshot(Request::builder().uri(format!("/auth/callback?state={}&code=code",fields["state"]))
+            .header(header::COOKIE,browser).body(Body::empty()).unwrap()).await.unwrap();
+        assert_eq!(response.status(),StatusCode::OK);
+        let html=String::from_utf8(axum::body::to_bytes(response.into_body(),8192).await.unwrap().to_vec()).unwrap();
+        assert!(!html.contains("private-provider-token"));
+        for (proof,expected) in [(random(),StatusCode::UNAUTHORIZED),(verifier.clone(),StatusCode::OK),(verifier.clone(),StatusCode::UNAUTHORIZED)] {
+            let response=router.clone().oneshot(Request::builder().method("POST").uri("/native/exchange").header("content-type","application/json")
+                .body(Body::from(json!({"attempt":attempt,"verifier":proof}).to_string())).unwrap()).await.unwrap();
+            assert_eq!(response.status(),expected);
+            if expected==StatusCode::OK {
+                let v:serde_json::Value=serde_json::from_slice(&axum::body::to_bytes(response.into_body(),8192).await.unwrap()).unwrap();
+                let token=v["token"].as_str().unwrap();
+                assert!(token.starts_with("n."));
+                for (path,method,origin,expected) in [
+                    ("/native/session","GET",None,StatusCode::OK),
+                    ("/native/overview","GET",None,StatusCode::OK),
+                    ("/engine","POST",Some("https://talia.test"),StatusCode::UNAUTHORIZED),
+                    ("/native/logout","POST",Some("https://attacker.test"),StatusCode::FORBIDDEN),
+                    ("/native/logout","POST",None,StatusCode::NO_CONTENT),
+                    ("/native/session","GET",None,StatusCode::UNAUTHORIZED),
+                ] {
+                    let mut request=Request::builder().method(method).uri(path).header(header::AUTHORIZATION,format!("Bearer {token}"));
+                    if let Some(origin)=origin {request=request.header(header::ORIGIN,origin);}
+                    assert_eq!(router.clone().oneshot(request.body(Body::empty()).unwrap()).await.unwrap().status(),expected,"{path}");
+                }
+            }
+        }
+    }
+
     #[tokio::test]
     async fn pkce_browser_binding_replay_session_logout_and_removed_key() {
         let (server, d) = fixture().await;
@@ -965,6 +1033,7 @@ mod tests {
             inner: Arc::new(Mutex::new(Inner {
                 db: Connection::open(&path).unwrap(),
                 logins: HashMap::new(),
+                native: HashMap::new(),
                 checked: HashMap::new(),
                 checks: HashMap::new(),
             })),
