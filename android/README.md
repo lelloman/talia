@@ -26,10 +26,15 @@ export ANDROID_HOME="$HOME/Android/Sdk"
 ```
 
 The normal package is `com.lelloman.talia.normal`; the production Paravoid package
-is `com.lelloman.talia`, version 0.1.1 (2), payload version 3. They can be
+is `com.lelloman.talia`, version 0.1.1 (2), payload version 4 (local candidate; published payload is 3). They can be
 installed side by side. Paravoid uses complete packaging, embedded bootstrap,
 APK-grant Store delivery, explicit update controls and default crash recovery.
-No automatic check/download schedule or payload minification is enabled.
+No automatic check/download schedule is enabled. Payload-only R8 shrinking,
+optimization and obfuscation are enabled via `minifyPayload`. Standard AGP
+minification and resource shrinking remain disabled for Paravoid compatibility.
+The build collects external dependencies' consumer rules and applies
+`app/payload-rules.pro` for reflection entry points. Keep the exact
+`payload-mapping.txt` alongside each released VPK for crash decoding.
 
 ## Signing and trust
 
@@ -108,3 +113,13 @@ the committed baseline. An emulator installed the authenticated Store APK 2,
 discovered payload 3, downloaded it, and applied it via the restart controls.
 The updated app opened the native server/sign-in screen successfully.
 Interactive production authentication was not exercised in this release check.
+
+## Minified payload 4 candidate
+
+The signed VPK is 3,302,404 bytes (payload 3 was 22,436,062 bytes), an 85.3%
+reduction. Release build and APK 2 contract compatibility checks passed.
+A separate emulator user launched the embedded minified payload, initiated
+browser sign-in, restored encrypted pending sign-in across a cold start, and
+retained dark appearance after another cold start. The crash buffer was empty.
+Full authenticated Overview/sign-out and a Store-delivered upgrade from payload 3
+are still untested. This candidate has not been published.

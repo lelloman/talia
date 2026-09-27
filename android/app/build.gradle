@@ -48,8 +48,10 @@ paravoid {
     packaging = 'complete'
     bootstrap = 'embedded'
     controlsLauncher = false
+    minifyPayload = true
+    payloadProguardFiles.from(file('payload-rules.pro'))
     crashRecovery { enabled = true; updater = 'default' }
-    payloadVersion = providers.gradleProperty('paravoidPayloadVersion').map { it.toLong() }.getOrElse(3L)
+    payloadVersion = providers.gradleProperty('paravoidPayloadVersion').map { it.toLong() }.getOrElse(4L)
     baselineDirectory = layout.projectDirectory.dir(
         providers.gradleProperty('paravoidBaselineDirectory').getOrElse('../paravoid-baselines/apk-2'))
     signing {
@@ -63,6 +65,50 @@ paravoid {
         trustPolicyFile = file(System.getenv('PARAVOID_TRUST_POLICY') ?: new File(releaseDirectory, 'trust.json').path)
         schedule { checks = false; downloads = false }
     }
+}
+// Paravoid's payload R8 path does not collect dependency consumer rules itself.
+def consumerRulesFile = layout.buildDirectory.file('generated/paravoid/consumer-rules.pro')
+def collectPayloadConsumerRules = tasks.register('collectPayloadConsumerRules') {
+    def runtime = configurations.named('paravoidAndroidReleaseRuntimeClasspath').map {
+        it.incoming.artifactView {
+            componentFilter { it instanceof org.gradle.api.artifacts.component.ModuleComponentIdentifier }
+        }.files
+    }
+    inputs.files(runtime)
+    outputs.file(consumerRulesFile)
+    doLast {
+        def rules = new StringBuilder()
+        def collectZipRules = { InputStream stream, String origin, boolean aar ->
+            new java.util.zip.ZipInputStream(stream).withCloseable { zip ->
+                for (def entry = zip.nextEntry; entry != null; entry = zip.nextEntry) {
+                    if ((!aar && entry.name.startsWith('META-INF/proguard/')) ||
+                            (aar && entry.name == 'proguard.txt')) {
+                        rules.append("\n# ${origin}: ${entry.name}\n")
+                        rules.append(new String(zip.readAllBytes(), 'UTF-8')).append('\n')
+                    }
+                }
+            }
+        }
+        runtime.get().files.sort { it.name }.each { artifact ->
+            if (artifact.name.endsWith('.aar')) {
+                collectZipRules(new FileInputStream(artifact), artifact.name, true)
+                new java.util.zip.ZipFile(artifact).withCloseable { zip ->
+                    zip.entries().findAll { it.name.endsWith('.jar') }.each { entry ->
+                        collectZipRules(zip.getInputStream(entry), "${artifact.name}/${entry.name}", false)
+                    }
+                }
+            } else if (artifact.name.endsWith('.jar')) {
+                collectZipRules(new FileInputStream(artifact), artifact.name, false)
+            }
+        }
+        def output = consumerRulesFile.get().asFile
+        output.parentFile.mkdirs()
+        output.text = rules.toString()
+    }
+}
+paravoid.payloadProguardFiles.from(consumerRulesFile)
+tasks.matching { it.name.startsWith('packageParavoidAndroid') && it.name.endsWith('ParavoidApplication') }.configureEach {
+    dependsOn(collectPayloadConsumerRules)
 }
 dependencies {
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'
