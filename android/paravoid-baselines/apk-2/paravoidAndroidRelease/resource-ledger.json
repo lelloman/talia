@@ -1,0 +1,1431 @@
+{
+    "version": 1,
+    "applicationId": "com.lelloman.talia",
+    "entries": [
+        {
+            "name": "attr/alpha",
+            "id": "0x7f010000",
+            "removed": false
+        },
+        {
+            "name": "attr/font",
+            "id": "0x7f010001",
+            "removed": false
+        },
+        {
+            "name": "attr/fontProviderAuthority",
+            "id": "0x7f010002",
+            "removed": false
+        },
+        {
+            "name": "attr/fontProviderCerts",
+            "id": "0x7f010003",
+            "removed": false
+        },
+        {
+            "name": "attr/fontProviderFallbackQuery",
+            "id": "0x7f010004",
+            "removed": false
+        },
+        {
+            "name": "attr/fontProviderFetchStrategy",
+            "id": "0x7f010005",
+            "removed": false
+        },
+        {
+            "name": "attr/fontProviderFetchTimeout",
+            "id": "0x7f010006",
+            "removed": false
+        },
+        {
+            "name": "attr/fontProviderPackage",
+            "id": "0x7f010007",
+            "removed": false
+        },
+        {
+            "name": "attr/fontProviderQuery",
+            "id": "0x7f010008",
+            "removed": false
+        },
+        {
+            "name": "attr/fontProviderSystemFontFamily",
+            "id": "0x7f010009",
+            "removed": false
+        },
+        {
+            "name": "attr/fontStyle",
+            "id": "0x7f01000a",
+            "removed": false
+        },
+        {
+            "name": "attr/fontVariationSettings",
+            "id": "0x7f01000b",
+            "removed": false
+        },
+        {
+            "name": "attr/fontWeight",
+            "id": "0x7f01000c",
+            "removed": false
+        },
+        {
+            "name": "attr/lStar",
+            "id": "0x7f01000d",
+            "removed": false
+        },
+        {
+            "name": "attr/nestedScrollViewStyle",
+            "id": "0x7f01000e",
+            "removed": false
+        },
+        {
+            "name": "attr/queryPatterns",
+            "id": "0x7f01000f",
+            "removed": false
+        },
+        {
+            "name": "attr/shortcutMatchRequired",
+            "id": "0x7f010010",
+            "removed": false
+        },
+        {
+            "name": "attr/ttcIndex",
+            "id": "0x7f010011",
+            "removed": false
+        },
+        {
+            "name": "color/androidx_core_ripple_material_light",
+            "id": "0x7f020000",
+            "removed": false
+        },
+        {
+            "name": "color/androidx_core_secondary_text_default_material_light",
+            "id": "0x7f020001",
+            "removed": false
+        },
+        {
+            "name": "color/call_notification_answer_color",
+            "id": "0x7f020002",
+            "removed": false
+        },
+        {
+            "name": "color/call_notification_decline_color",
+            "id": "0x7f020003",
+            "removed": false
+        },
+        {
+            "name": "color/launcher_background",
+            "id": "0x7f020004",
+            "removed": false
+        },
+        {
+            "name": "color/notification_action_color_filter",
+            "id": "0x7f020005",
+            "removed": false
+        },
+        {
+            "name": "color/notification_icon_bg_color",
+            "id": "0x7f020006",
+            "removed": false
+        },
+        {
+            "name": "color/vector_tint_color",
+            "id": "0x7f020007",
+            "removed": false
+        },
+        {
+            "name": "color/vector_tint_theme_color",
+            "id": "0x7f020008",
+            "removed": false
+        },
+        {
+            "name": "dimen/compat_button_inset_horizontal_material",
+            "id": "0x7f030000",
+            "removed": false
+        },
+        {
+            "name": "dimen/compat_button_inset_vertical_material",
+            "id": "0x7f030001",
+            "removed": false
+        },
+        {
+            "name": "dimen/compat_button_padding_horizontal_material",
+            "id": "0x7f030002",
+            "removed": false
+        },
+        {
+            "name": "dimen/compat_button_padding_vertical_material",
+            "id": "0x7f030003",
+            "removed": false
+        },
+        {
+            "name": "dimen/compat_control_corner_material",
+            "id": "0x7f030004",
+            "removed": false
+        },
+        {
+            "name": "dimen/compat_notification_large_icon_max_height",
+            "id": "0x7f030005",
+            "removed": false
+        },
+        {
+            "name": "dimen/compat_notification_large_icon_max_width",
+            "id": "0x7f030006",
+            "removed": false
+        },
+        {
+            "name": "dimen/notification_action_icon_size",
+            "id": "0x7f030007",
+            "removed": false
+        },
+        {
+            "name": "dimen/notification_action_text_size",
+            "id": "0x7f030008",
+            "removed": false
+        },
+        {
+            "name": "dimen/notification_big_circle_margin",
+            "id": "0x7f030009",
+            "removed": false
+        },
+        {
+            "name": "dimen/notification_content_margin_start",
+            "id": "0x7f03000a",
+            "removed": false
+        },
+        {
+            "name": "dimen/notification_large_icon_height",
+            "id": "0x7f03000b",
+            "removed": false
+        },
+        {
+            "name": "dimen/notification_large_icon_width",
+            "id": "0x7f03000c",
+            "removed": false
+        },
+        {
+            "name": "dimen/notification_main_column_padding_top",
+            "id": "0x7f03000d",
+            "removed": false
+        },
+        {
+            "name": "dimen/notification_media_narrow_margin",
+            "id": "0x7f03000e",
+            "removed": false
+        },
+        {
+            "name": "dimen/notification_right_icon_size",
+            "id": "0x7f03000f",
+            "removed": false
+        },
+        {
+            "name": "dimen/notification_right_side_padding_top",
+            "id": "0x7f030010",
+            "removed": false
+        },
+        {
+            "name": "dimen/notification_small_icon_background_padding",
+            "id": "0x7f030011",
+            "removed": false
+        },
+        {
+            "name": "dimen/notification_small_icon_size_as_large",
+            "id": "0x7f030012",
+            "removed": false
+        },
+        {
+            "name": "dimen/notification_subtext_size",
+            "id": "0x7f030013",
+            "removed": false
+        },
+        {
+            "name": "dimen/notification_top_pad",
+            "id": "0x7f030014",
+            "removed": false
+        },
+        {
+            "name": "dimen/notification_top_pad_large_text",
+            "id": "0x7f030015",
+            "removed": false
+        },
+        {
+            "name": "drawable/ic_call_answer",
+            "id": "0x7f040000",
+            "removed": false
+        },
+        {
+            "name": "drawable/ic_call_answer_low",
+            "id": "0x7f040001",
+            "removed": false
+        },
+        {
+            "name": "drawable/ic_call_answer_video",
+            "id": "0x7f040002",
+            "removed": false
+        },
+        {
+            "name": "drawable/ic_call_answer_video_low",
+            "id": "0x7f040003",
+            "removed": false
+        },
+        {
+            "name": "drawable/ic_call_decline",
+            "id": "0x7f040004",
+            "removed": false
+        },
+        {
+            "name": "drawable/ic_call_decline_low",
+            "id": "0x7f040005",
+            "removed": false
+        },
+        {
+            "name": "drawable/ic_launcher_foreground",
+            "id": "0x7f040006",
+            "removed": false
+        },
+        {
+            "name": "drawable/ic_talia",
+            "id": "0x7f040007",
+            "removed": false
+        },
+        {
+            "name": "drawable/notification_action_background",
+            "id": "0x7f040008",
+            "removed": false
+        },
+        {
+            "name": "drawable/notification_bg",
+            "id": "0x7f040009",
+            "removed": false
+        },
+        {
+            "name": "drawable/notification_bg_low",
+            "id": "0x7f04000a",
+            "removed": false
+        },
+        {
+            "name": "drawable/notification_bg_low_normal",
+            "id": "0x7f04000b",
+            "removed": false
+        },
+        {
+            "name": "drawable/notification_bg_low_pressed",
+            "id": "0x7f04000c",
+            "removed": false
+        },
+        {
+            "name": "drawable/notification_bg_normal",
+            "id": "0x7f04000d",
+            "removed": false
+        },
+        {
+            "name": "drawable/notification_bg_normal_pressed",
+            "id": "0x7f04000e",
+            "removed": false
+        },
+        {
+            "name": "drawable/notification_icon_background",
+            "id": "0x7f04000f",
+            "removed": false
+        },
+        {
+            "name": "drawable/notification_oversize_large_icon_bg",
+            "id": "0x7f040010",
+            "removed": false
+        },
+        {
+            "name": "drawable/notification_template_icon_bg",
+            "id": "0x7f040011",
+            "removed": false
+        },
+        {
+            "name": "drawable/notification_template_icon_low_bg",
+            "id": "0x7f040012",
+            "removed": false
+        },
+        {
+            "name": "drawable/notification_tile_bg",
+            "id": "0x7f040013",
+            "removed": false
+        },
+        {
+            "name": "drawable/notify_panel_notification_icon_bg",
+            "id": "0x7f040014",
+            "removed": false
+        },
+        {
+            "name": "font/lello_inter_bold",
+            "id": "0x7f050000",
+            "removed": false
+        },
+        {
+            "name": "font/lello_inter_medium",
+            "id": "0x7f050001",
+            "removed": false
+        },
+        {
+            "name": "font/lello_inter_regular",
+            "id": "0x7f050002",
+            "removed": false
+        },
+        {
+            "name": "font/lello_inter_semibold",
+            "id": "0x7f050003",
+            "removed": false
+        },
+        {
+            "name": "id/accessibility_action_clickable_span",
+            "id": "0x7f060000",
+            "removed": false
+        },
+        {
+            "name": "id/accessibility_custom_action_0",
+            "id": "0x7f060001",
+            "removed": false
+        },
+        {
+            "name": "id/accessibility_custom_action_1",
+            "id": "0x7f060002",
+            "removed": false
+        },
+        {
+            "name": "id/accessibility_custom_action_10",
+            "id": "0x7f060003",
+            "removed": false
+        },
+        {
+            "name": "id/accessibility_custom_action_11",
+            "id": "0x7f060004",
+            "removed": false
+        },
+        {
+            "name": "id/accessibility_custom_action_12",
+            "id": "0x7f060005",
+            "removed": false
+        },
+        {
+            "name": "id/accessibility_custom_action_13",
+            "id": "0x7f060006",
+            "removed": false
+        },
+        {
+            "name": "id/accessibility_custom_action_14",
+            "id": "0x7f060007",
+            "removed": false
+        },
+        {
+            "name": "id/accessibility_custom_action_15",
+            "id": "0x7f060008",
+            "removed": false
+        },
+        {
+            "name": "id/accessibility_custom_action_16",
+            "id": "0x7f060009",
+            "removed": false
+        },
+        {
+            "name": "id/accessibility_custom_action_17",
+            "id": "0x7f06000a",
+            "removed": false
+        },
+        {
+            "name": "id/accessibility_custom_action_18",
+            "id": "0x7f06000b",
+            "removed": false
+        },
+        {
+            "name": "id/accessibility_custom_action_19",
+            "id": "0x7f06000c",
+            "removed": false
+        },
+        {
+            "name": "id/accessibility_custom_action_2",
+            "id": "0x7f06000d",
+            "removed": false
+        },
+        {
+            "name": "id/accessibility_custom_action_20",
+            "id": "0x7f06000e",
+            "removed": false
+        },
+        {
+            "name": "id/accessibility_custom_action_21",
+            "id": "0x7f06000f",
+            "removed": false
+        },
+        {
+            "name": "id/accessibility_custom_action_22",
+            "id": "0x7f060010",
+            "removed": false
+        },
+        {
+            "name": "id/accessibility_custom_action_23",
+            "id": "0x7f060011",
+            "removed": false
+        },
+        {
+            "name": "id/accessibility_custom_action_24",
+            "id": "0x7f060012",
+            "removed": false
+        },
+        {
+            "name": "id/accessibility_custom_action_25",
+            "id": "0x7f060013",
+            "removed": false
+        },
+        {
+            "name": "id/accessibility_custom_action_26",
+            "id": "0x7f060014",
+            "removed": false
+        },
+        {
+            "name": "id/accessibility_custom_action_27",
+            "id": "0x7f060015",
+            "removed": false
+        },
+        {
+            "name": "id/accessibility_custom_action_28",
+            "id": "0x7f060016",
+            "removed": false
+        },
+        {
+            "name": "id/accessibility_custom_action_29",
+            "id": "0x7f060017",
+            "removed": false
+        },
+        {
+            "name": "id/accessibility_custom_action_3",
+            "id": "0x7f060018",
+            "removed": false
+        },
+        {
+            "name": "id/accessibility_custom_action_30",
+            "id": "0x7f060019",
+            "removed": false
+        },
+        {
+            "name": "id/accessibility_custom_action_31",
+            "id": "0x7f06001a",
+            "removed": false
+        },
+        {
+            "name": "id/accessibility_custom_action_4",
+            "id": "0x7f06001b",
+            "removed": false
+        },
+        {
+            "name": "id/accessibility_custom_action_5",
+            "id": "0x7f06001c",
+            "removed": false
+        },
+        {
+            "name": "id/accessibility_custom_action_6",
+            "id": "0x7f06001d",
+            "removed": false
+        },
+        {
+            "name": "id/accessibility_custom_action_7",
+            "id": "0x7f06001e",
+            "removed": false
+        },
+        {
+            "name": "id/accessibility_custom_action_8",
+            "id": "0x7f06001f",
+            "removed": false
+        },
+        {
+            "name": "id/accessibility_custom_action_9",
+            "id": "0x7f060020",
+            "removed": false
+        },
+        {
+            "name": "id/action_container",
+            "id": "0x7f060021",
+            "removed": false
+        },
+        {
+            "name": "id/action_divider",
+            "id": "0x7f060022",
+            "removed": false
+        },
+        {
+            "name": "id/action_image",
+            "id": "0x7f060023",
+            "removed": false
+        },
+        {
+            "name": "id/action_text",
+            "id": "0x7f060024",
+            "removed": false
+        },
+        {
+            "name": "id/actions",
+            "id": "0x7f060025",
+            "removed": false
+        },
+        {
+            "name": "id/androidx_compose_ui_view_composition_context",
+            "id": "0x7f060026",
+            "removed": false
+        },
+        {
+            "name": "id/async",
+            "id": "0x7f060027",
+            "removed": false
+        },
+        {
+            "name": "id/blocking",
+            "id": "0x7f060028",
+            "removed": false
+        },
+        {
+            "name": "id/chronometer",
+            "id": "0x7f060029",
+            "removed": false
+        },
+        {
+            "name": "id/compose_prefetch_scheduler",
+            "id": "0x7f06002a",
+            "removed": false
+        },
+        {
+            "name": "id/compose_view_saveable_id_tag",
+            "id": "0x7f06002b",
+            "removed": false
+        },
+        {
+            "name": "id/consume_window_insets_tag",
+            "id": "0x7f06002c",
+            "removed": false
+        },
+        {
+            "name": "id/dialog_button",
+            "id": "0x7f06002d",
+            "removed": false
+        },
+        {
+            "name": "id/edit_text_id",
+            "id": "0x7f06002e",
+            "removed": false
+        },
+        {
+            "name": "id/forever",
+            "id": "0x7f06002f",
+            "removed": false
+        },
+        {
+            "name": "id/hide_graphics_layer_in_inspector_tag",
+            "id": "0x7f060030",
+            "removed": false
+        },
+        {
+            "name": "id/hide_ime_id",
+            "id": "0x7f060031",
+            "removed": false
+        },
+        {
+            "name": "id/hide_in_inspector_tag",
+            "id": "0x7f060032",
+            "removed": false
+        },
+        {
+            "name": "id/icon",
+            "id": "0x7f060033",
+            "removed": false
+        },
+        {
+            "name": "id/icon_group",
+            "id": "0x7f060034",
+            "removed": false
+        },
+        {
+            "name": "id/info",
+            "id": "0x7f060035",
+            "removed": false
+        },
+        {
+            "name": "id/inspection_slot_table_set",
+            "id": "0x7f060036",
+            "removed": false
+        },
+        {
+            "name": "id/is_pooling_container_tag",
+            "id": "0x7f060037",
+            "removed": false
+        },
+        {
+            "name": "id/italic",
+            "id": "0x7f060038",
+            "removed": false
+        },
+        {
+            "name": "id/line1",
+            "id": "0x7f060039",
+            "removed": false
+        },
+        {
+            "name": "id/line3",
+            "id": "0x7f06003a",
+            "removed": false
+        },
+        {
+            "name": "id/normal",
+            "id": "0x7f06003b",
+            "removed": false
+        },
+        {
+            "name": "id/notification_background",
+            "id": "0x7f06003c",
+            "removed": false
+        },
+        {
+            "name": "id/notification_main_column",
+            "id": "0x7f06003d",
+            "removed": false
+        },
+        {
+            "name": "id/notification_main_column_container",
+            "id": "0x7f06003e",
+            "removed": false
+        },
+        {
+            "name": "id/pooling_container_listener_holder_tag",
+            "id": "0x7f06003f",
+            "removed": false
+        },
+        {
+            "name": "id/report_drawn",
+            "id": "0x7f060040",
+            "removed": false
+        },
+        {
+            "name": "id/right_icon",
+            "id": "0x7f060041",
+            "removed": false
+        },
+        {
+            "name": "id/right_side",
+            "id": "0x7f060042",
+            "removed": false
+        },
+        {
+            "name": "id/tag_accessibility_actions",
+            "id": "0x7f060043",
+            "removed": false
+        },
+        {
+            "name": "id/tag_accessibility_clickable_spans",
+            "id": "0x7f060044",
+            "removed": false
+        },
+        {
+            "name": "id/tag_accessibility_heading",
+            "id": "0x7f060045",
+            "removed": false
+        },
+        {
+            "name": "id/tag_accessibility_pane_title",
+            "id": "0x7f060046",
+            "removed": false
+        },
+        {
+            "name": "id/tag_on_apply_window_listener",
+            "id": "0x7f060047",
+            "removed": false
+        },
+        {
+            "name": "id/tag_on_receive_content_listener",
+            "id": "0x7f060048",
+            "removed": false
+        },
+        {
+            "name": "id/tag_on_receive_content_mime_types",
+            "id": "0x7f060049",
+            "removed": false
+        },
+        {
+            "name": "id/tag_screen_reader_focusable",
+            "id": "0x7f06004a",
+            "removed": false
+        },
+        {
+            "name": "id/tag_state_description",
+            "id": "0x7f06004b",
+            "removed": false
+        },
+        {
+            "name": "id/tag_transition_group",
+            "id": "0x7f06004c",
+            "removed": false
+        },
+        {
+            "name": "id/tag_unhandled_key_event_manager",
+            "id": "0x7f06004d",
+            "removed": false
+        },
+        {
+            "name": "id/tag_unhandled_key_listeners",
+            "id": "0x7f06004e",
+            "removed": false
+        },
+        {
+            "name": "id/tag_window_insets_animation_callback",
+            "id": "0x7f06004f",
+            "removed": false
+        },
+        {
+            "name": "id/text",
+            "id": "0x7f060050",
+            "removed": false
+        },
+        {
+            "name": "id/text2",
+            "id": "0x7f060051",
+            "removed": false
+        },
+        {
+            "name": "id/time",
+            "id": "0x7f060052",
+            "removed": false
+        },
+        {
+            "name": "id/title",
+            "id": "0x7f060053",
+            "removed": false
+        },
+        {
+            "name": "id/view_tree_disjoint_parent",
+            "id": "0x7f060054",
+            "removed": false
+        },
+        {
+            "name": "id/view_tree_lifecycle_owner",
+            "id": "0x7f060055",
+            "removed": false
+        },
+        {
+            "name": "id/view_tree_on_back_pressed_dispatcher_owner",
+            "id": "0x7f060056",
+            "removed": false
+        },
+        {
+            "name": "id/view_tree_saved_state_registry_owner",
+            "id": "0x7f060057",
+            "removed": false
+        },
+        {
+            "name": "id/view_tree_view_model_store_owner",
+            "id": "0x7f060058",
+            "removed": false
+        },
+        {
+            "name": "id/wrapped_composition_tag",
+            "id": "0x7f060059",
+            "removed": false
+        },
+        {
+            "name": "integer/m3c_window_layout_in_display_cutout_mode",
+            "id": "0x7f070000",
+            "removed": false
+        },
+        {
+            "name": "integer/status_bar_notification_info_maxnum",
+            "id": "0x7f070001",
+            "removed": false
+        },
+        {
+            "name": "layout/custom_dialog",
+            "id": "0x7f080000",
+            "removed": false
+        },
+        {
+            "name": "layout/ime_base_split_test_activity",
+            "id": "0x7f080001",
+            "removed": false
+        },
+        {
+            "name": "layout/ime_secondary_split_test_activity",
+            "id": "0x7f080002",
+            "removed": false
+        },
+        {
+            "name": "layout/notification_action",
+            "id": "0x7f080003",
+            "removed": false
+        },
+        {
+            "name": "layout/notification_action_tombstone",
+            "id": "0x7f080004",
+            "removed": false
+        },
+        {
+            "name": "layout/notification_template_custom_big",
+            "id": "0x7f080005",
+            "removed": false
+        },
+        {
+            "name": "layout/notification_template_icon_group",
+            "id": "0x7f080006",
+            "removed": false
+        },
+        {
+            "name": "layout/notification_template_part_chronometer",
+            "id": "0x7f080007",
+            "removed": false
+        },
+        {
+            "name": "layout/notification_template_part_time",
+            "id": "0x7f080008",
+            "removed": false
+        },
+        {
+            "name": "mipmap/ic_launcher",
+            "id": "0x7f090000",
+            "removed": false
+        },
+        {
+            "name": "string/androidx_startup",
+            "id": "0x7f0a0000",
+            "removed": false
+        },
+        {
+            "name": "string/autofill",
+            "id": "0x7f0a0001",
+            "removed": false
+        },
+        {
+            "name": "string/call_notification_answer_action",
+            "id": "0x7f0a0002",
+            "removed": false
+        },
+        {
+            "name": "string/call_notification_answer_video_action",
+            "id": "0x7f0a0003",
+            "removed": false
+        },
+        {
+            "name": "string/call_notification_decline_action",
+            "id": "0x7f0a0004",
+            "removed": false
+        },
+        {
+            "name": "string/call_notification_hang_up_action",
+            "id": "0x7f0a0005",
+            "removed": false
+        },
+        {
+            "name": "string/call_notification_incoming_text",
+            "id": "0x7f0a0006",
+            "removed": false
+        },
+        {
+            "name": "string/call_notification_ongoing_text",
+            "id": "0x7f0a0007",
+            "removed": false
+        },
+        {
+            "name": "string/call_notification_screening_text",
+            "id": "0x7f0a0008",
+            "removed": false
+        },
+        {
+            "name": "string/close_drawer",
+            "id": "0x7f0a0009",
+            "removed": false
+        },
+        {
+            "name": "string/close_sheet",
+            "id": "0x7f0a000a",
+            "removed": false
+        },
+        {
+            "name": "string/default_error_message",
+            "id": "0x7f0a000b",
+            "removed": false
+        },
+        {
+            "name": "string/default_popup_window_title",
+            "id": "0x7f0a000c",
+            "removed": false
+        },
+        {
+            "name": "string/dropdown_menu",
+            "id": "0x7f0a000d",
+            "removed": false
+        },
+        {
+            "name": "string/in_progress",
+            "id": "0x7f0a000e",
+            "removed": false
+        },
+        {
+            "name": "string/indeterminate",
+            "id": "0x7f0a000f",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_bottom_sheet_collapse_description",
+            "id": "0x7f0a0010",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_bottom_sheet_dismiss_description",
+            "id": "0x7f0a0011",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_bottom_sheet_drag_handle_description",
+            "id": "0x7f0a0012",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_bottom_sheet_expand_description",
+            "id": "0x7f0a0013",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_bottom_sheet_pane_title",
+            "id": "0x7f0a0014",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_date_input_headline",
+            "id": "0x7f0a0015",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_date_input_headline_description",
+            "id": "0x7f0a0016",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_date_input_invalid_for_pattern",
+            "id": "0x7f0a0017",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_date_input_invalid_not_allowed",
+            "id": "0x7f0a0018",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_date_input_invalid_year_range",
+            "id": "0x7f0a0019",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_date_input_label",
+            "id": "0x7f0a001a",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_date_input_no_input_description",
+            "id": "0x7f0a001b",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_date_input_title",
+            "id": "0x7f0a001c",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_date_picker_headline",
+            "id": "0x7f0a001d",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_date_picker_headline_description",
+            "id": "0x7f0a001e",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_date_picker_navigate_to_year_description",
+            "id": "0x7f0a001f",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_date_picker_no_selection_description",
+            "id": "0x7f0a0020",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_date_picker_scroll_to_earlier_years",
+            "id": "0x7f0a0021",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_date_picker_scroll_to_later_years",
+            "id": "0x7f0a0022",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_date_picker_switch_to_calendar_mode",
+            "id": "0x7f0a0023",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_date_picker_switch_to_day_selection",
+            "id": "0x7f0a0024",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_date_picker_switch_to_input_mode",
+            "id": "0x7f0a0025",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_date_picker_switch_to_next_month",
+            "id": "0x7f0a0026",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_date_picker_switch_to_previous_month",
+            "id": "0x7f0a0027",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_date_picker_switch_to_year_selection",
+            "id": "0x7f0a0028",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_date_picker_title",
+            "id": "0x7f0a0029",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_date_picker_today_description",
+            "id": "0x7f0a002a",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_date_picker_year_picker_pane_title",
+            "id": "0x7f0a002b",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_date_range_input_invalid_range_input",
+            "id": "0x7f0a002c",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_date_range_input_title",
+            "id": "0x7f0a002d",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_date_range_picker_day_in_range",
+            "id": "0x7f0a002e",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_date_range_picker_end_headline",
+            "id": "0x7f0a002f",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_date_range_picker_scroll_to_next_month",
+            "id": "0x7f0a0030",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_date_range_picker_scroll_to_previous_month",
+            "id": "0x7f0a0031",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_date_range_picker_start_headline",
+            "id": "0x7f0a0032",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_date_range_picker_title",
+            "id": "0x7f0a0033",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_dialog",
+            "id": "0x7f0a0034",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_dropdown_menu_collapsed",
+            "id": "0x7f0a0035",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_dropdown_menu_expanded",
+            "id": "0x7f0a0036",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_dropdown_menu_toggle",
+            "id": "0x7f0a0037",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_floating_toolbar_collapse",
+            "id": "0x7f0a0038",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_floating_toolbar_expand",
+            "id": "0x7f0a0039",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_search_bar_search",
+            "id": "0x7f0a003a",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_snackbar_dismiss",
+            "id": "0x7f0a003b",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_snackbar_pane_title",
+            "id": "0x7f0a003c",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_suggestions_available",
+            "id": "0x7f0a003d",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_time_input_dialog_title",
+            "id": "0x7f0a003e",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_time_picker_am",
+            "id": "0x7f0a003f",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_time_picker_dialog_title",
+            "id": "0x7f0a0040",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_time_picker_hour",
+            "id": "0x7f0a0041",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_time_picker_hour_24h_suffix",
+            "id": "0x7f0a0042",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_time_picker_hour_selection",
+            "id": "0x7f0a0043",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_time_picker_hour_suffix",
+            "id": "0x7f0a0044",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_time_picker_hour_text_field",
+            "id": "0x7f0a0045",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_time_picker_minute",
+            "id": "0x7f0a0046",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_time_picker_minute_selection",
+            "id": "0x7f0a0047",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_time_picker_minute_suffix",
+            "id": "0x7f0a0048",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_time_picker_minute_text_field",
+            "id": "0x7f0a0049",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_time_picker_period_toggle_description",
+            "id": "0x7f0a004a",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_time_picker_pm",
+            "id": "0x7f0a004b",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_time_picker_toggle_keyboard",
+            "id": "0x7f0a004c",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_time_picker_toggle_touch",
+            "id": "0x7f0a004d",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_tooltip_long_press_label",
+            "id": "0x7f0a004e",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_tooltip_pane_description",
+            "id": "0x7f0a004f",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_wide_navigation_rail_close_rail",
+            "id": "0x7f0a0050",
+            "removed": false
+        },
+        {
+            "name": "string/m3c_wide_navigation_rail_pane_title",
+            "id": "0x7f0a0051",
+            "removed": false
+        },
+        {
+            "name": "string/navigation_menu",
+            "id": "0x7f0a0052",
+            "removed": false
+        },
+        {
+            "name": "string/not_selected",
+            "id": "0x7f0a0053",
+            "removed": false
+        },
+        {
+            "name": "string/range_end",
+            "id": "0x7f0a0054",
+            "removed": false
+        },
+        {
+            "name": "string/range_start",
+            "id": "0x7f0a0055",
+            "removed": false
+        },
+        {
+            "name": "string/selected",
+            "id": "0x7f0a0056",
+            "removed": false
+        },
+        {
+            "name": "string/snackbar_pane_title",
+            "id": "0x7f0a0057",
+            "removed": false
+        },
+        {
+            "name": "string/state_empty",
+            "id": "0x7f0a0058",
+            "removed": false
+        },
+        {
+            "name": "string/state_off",
+            "id": "0x7f0a0059",
+            "removed": false
+        },
+        {
+            "name": "string/state_on",
+            "id": "0x7f0a005a",
+            "removed": false
+        },
+        {
+            "name": "string/status_bar_notification_info_overflow",
+            "id": "0x7f0a005b",
+            "removed": false
+        },
+        {
+            "name": "string/switch_role",
+            "id": "0x7f0a005c",
+            "removed": false
+        },
+        {
+            "name": "string/tab",
+            "id": "0x7f0a005d",
+            "removed": false
+        },
+        {
+            "name": "string/template_percent",
+            "id": "0x7f0a005e",
+            "removed": false
+        },
+        {
+            "name": "string/tooltip_description",
+            "id": "0x7f0a005f",
+            "removed": false
+        },
+        {
+            "name": "string/tooltip_label",
+            "id": "0x7f0a0060",
+            "removed": false
+        },
+        {
+            "name": "style/DialogWindowTheme",
+            "id": "0x7f0b0000",
+            "removed": false
+        },
+        {
+            "name": "style/EdgeToEdgeFloatingDialogTheme",
+            "id": "0x7f0b0001",
+            "removed": false
+        },
+        {
+            "name": "style/EdgeToEdgeFloatingDialogWindowTheme",
+            "id": "0x7f0b0002",
+            "removed": false
+        },
+        {
+            "name": "style/FloatingDialogWindowTheme",
+            "id": "0x7f0b0003",
+            "removed": false
+        },
+        {
+            "name": "style/TextAppearance.Compat.Notification",
+            "id": "0x7f0b0004",
+            "removed": false
+        },
+        {
+            "name": "style/TextAppearance.Compat.Notification.Info",
+            "id": "0x7f0b0005",
+            "removed": false
+        },
+        {
+            "name": "style/TextAppearance.Compat.Notification.Line2",
+            "id": "0x7f0b0006",
+            "removed": false
+        },
+        {
+            "name": "style/TextAppearance.Compat.Notification.Time",
+            "id": "0x7f0b0007",
+            "removed": false
+        },
+        {
+            "name": "style/TextAppearance.Compat.Notification.Title",
+            "id": "0x7f0b0008",
+            "removed": false
+        },
+        {
+            "name": "style/Theme.Talia",
+            "id": "0x7f0b0009",
+            "removed": false
+        },
+        {
+            "name": "style/Widget.Compat.NotificationActionContainer",
+            "id": "0x7f0b000a",
+            "removed": false
+        },
+        {
+            "name": "style/Widget.Compat.NotificationActionText",
+            "id": "0x7f0b000b",
+            "removed": false
+        }
+    ]
+}

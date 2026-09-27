@@ -26,7 +26,7 @@ export ANDROID_HOME="$HOME/Android/Sdk"
 ```
 
 The normal package is `com.lelloman.talia.normal`; the production Paravoid package
-is `com.lelloman.talia`, version 0.1.1 (2), payload version 2. They can be
+is `com.lelloman.talia`, version 0.1.1 (2), payload version 3. They can be
 installed side by side. Paravoid uses complete packaging, embedded bootstrap,
 APK-grant Store delivery, explicit update controls and default crash recovery.
 No automatic check/download schedule or payload minification is enabled.
@@ -47,7 +47,12 @@ APK key prevents compatible APK updates. Do not commit keys or passwords.
 If interrupted during initial generation, inspect the partial files before any
 manual repair; the tool deliberately does not silently regenerate identity.
 
-Before subsequent payload updates, export and review a complete shell baseline:
+The accepted APK 2 baseline is pinned in `paravoid-baselines/apk-2` and used by
+default. Payload 3 adds native sign-in and Overview. APK 2 has no browser callback
+intent filter: after signing in, switch back to Talìa to finish connecting. The
+normal build retains the callback for development.
+
+For a new shell generation, export and review a complete shell baseline:
 
 ```sh
 ./gradlew :app:exportParavoidAndroidReleaseParavoidCompleteBaseline
@@ -94,3 +99,12 @@ offer. A newer-version download/apply cycle has not been validated.
 Use authenticated LelloStore acquisition for update testing; a raw/admin APK
 download is not a substitute. The build uses sibling Paravoid source at commit
 `6770678`.
+
+## Payload 3 release validation
+
+Payload 3 is published and verified on LelloStore (publication revision 6),
+targeting the existing APK 2 contract. The compatibility check passed against
+the committed baseline. An emulator installed the authenticated Store APK 2,
+discovered payload 3, downloaded it, and applied it via the restart controls.
+The updated app opened the native server/sign-in screen successfully.
+Interactive production authentication was not exercised in this release check.

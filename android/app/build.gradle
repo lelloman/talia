@@ -49,10 +49,9 @@ paravoid {
     bootstrap = 'embedded'
     controlsLauncher = false
     crashRecovery { enabled = true; updater = 'default' }
-    payloadVersion = providers.gradleProperty('paravoidPayloadVersion').map { it.toLong() }.getOrElse(2L)
-    if (providers.gradleProperty('paravoidBaselineDirectory').present) {
-        baselineDirectory = layout.projectDirectory.dir(providers.gradleProperty('paravoidBaselineDirectory').get())
-    }
+    payloadVersion = providers.gradleProperty('paravoidPayloadVersion').map { it.toLong() }.getOrElse(3L)
+    baselineDirectory = layout.projectDirectory.dir(
+        providers.gradleProperty('paravoidBaselineDirectory').getOrElse('../paravoid-baselines/apk-2'))
     signing {
         keyId = System.getenv('PARAVOID_SIGNING_KEY_ID') ?: 'talia-release'
         privateKeyFile = file(System.getenv('PARAVOID_SIGNING_KEY') ?: new File(releaseDirectory, 'talia-release.pk8').path)

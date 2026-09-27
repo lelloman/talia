@@ -20,6 +20,9 @@ registering another public client at LelloAuth.
    once. The existing LelloAuth flow still checks browser binding, state, nonce,
    provider PKCE, token identity and introspection.
 3. On success the browser offers a `com.lelloman.talia://signin` return link.
+   The published APK 2 shell has no callback intent filter, so VPK 3 users
+   switch back to Talìa manually; foreground polling completes the same exchange.
+   The normal development variant supports the return link.
    This link carries no credential and is only a navigation hint. Authenticating
    the handoff does not depend on a custom-scheme handler being exclusive.
 4. Foreground Android exchanges the attempt ID and verifier at
