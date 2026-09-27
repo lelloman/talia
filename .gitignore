@@ -38,3 +38,10 @@ engine/__pycache__/
 
 # Web shell dependencies
 dashboard/web/node_modules/
+
+# Production Android release configuration (private)
+android/signing.properties
+android/local.properties
+android/.gradle/
+android/build/
+android/app/build/

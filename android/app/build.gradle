@@ -1,0 +1,73 @@
+plugins {
+    id 'com.lelloman.paravoid'
+    id 'org.jetbrains.kotlin.android'
+    id 'org.jetbrains.kotlin.plugin.compose'
+}
+def signingValues = new Properties()
+def signingFile = rootProject.file('signing.properties')
+if (signingFile.exists()) signingFile.withInputStream { signingValues.load(it) }
+def releaseDirectory = new File(System.getProperty('user.home'), '.config/talia/paravoid-release')
+android {
+    namespace 'com.lelloman.talia'
+    compileSdk 36
+    buildToolsVersion '36.1.0'
+    defaultConfig {
+        applicationId 'com.lelloman.talia'
+        minSdk 30
+        targetSdk 36
+        versionCode 1
+        versionName '0.1.0'
+    }
+    productFlavors {
+        normal { applicationIdSuffix '.normal' }
+        paravoidAndroid { applicationIdSuffix '' }
+    }
+    signingConfigs {
+        release {
+            if (signingValues.getProperty('storeFile')) {
+                storeFile file(signingValues.getProperty('storeFile'))
+                storePassword signingValues.getProperty('storePassword')
+                keyAlias signingValues.getProperty('keyAlias')
+                keyPassword signingValues.getProperty('keyPassword')
+            }
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            shrinkResources false
+            signingConfig signingConfigs.release
+        }
+    }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+    kotlinOptions { jvmTarget = '17' }
+    buildFeatures { compose true; buildConfig true }
+}
+paravoid {
+    packaging = 'complete'
+    bootstrap = 'embedded'
+    controlsLauncher = false
+    crashRecovery { enabled = true; updater = 'default' }
+    payloadVersion = providers.gradleProperty('paravoidPayloadVersion').map { it.toLong() }.getOrElse(1L)
+    if (providers.gradleProperty('paravoidBaselineDirectory').present) {
+        baselineDirectory = layout.projectDirectory.dir(providers.gradleProperty('paravoidBaselineDirectory').get())
+    }
+    signing {
+        keyId = System.getenv('PARAVOID_SIGNING_KEY_ID') ?: 'talia-release'
+        privateKeyFile = file(System.getenv('PARAVOID_SIGNING_KEY') ?: new File(releaseDirectory, 'talia-release.pk8').path)
+    }
+    updates {
+        enabled = true
+        baseUrl = System.getenv('PARAVOID_UPDATE_BASE_URL') ?: 'https://store.lelloman.com/api/paravoid/'
+        authentication = 'apkKey'
+        trustPolicyFile = file(System.getenv('PARAVOID_TRUST_POLICY') ?: new File(releaseDirectory, 'trust.json').path)
+        schedule { checks = false; downloads = false }
+    }
+}
+dependencies {
+    implementation project(':paravoid-runtime')
+    implementation 'com.lelloman:lellodesign-compose:0.3.0-local'
+    implementation 'androidx.activity:activity-compose:1.11.0'
+    implementation 'androidx.lifecycle:lifecycle-runtime-compose:2.9.4'
+    implementation 'androidx.compose.material:material-icons-core'
+}

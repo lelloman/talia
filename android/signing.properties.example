@@ -1,0 +1,5 @@
+# Keep the real signing.properties ignored and mode 0600.
+storeFile=/absolute/private/path/talia-release.p12
+storePassword=replace-me
+keyAlias=talia
+keyPassword=replace-me

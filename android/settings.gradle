@@ -1,0 +1,21 @@
+pluginManagement {
+    def source = System.getenv('PARAVOID_SOURCE_DIRECTORY') ?: '../../paravoid-android'
+    includeBuild("${source}/paravoid-gradle-plugin")
+    repositories { google(); mavenCentral(); gradlePluginPortal() }
+}
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories { google(); mavenCentral() }
+}
+rootProject.name = 'Talia'
+include ':app'
+def source = file(System.getenv('PARAVOID_SOURCE_DIRECTORY') ?: '../../paravoid-android')
+for (name in ['paravoid-api','paravoid-contract','paravoid-runtime','paravoid-update-api','paravoid-recovery-api']) {
+    include ":${name}"
+    project(":${name}").projectDir = new File(source, name)
+}
+includeBuild(System.getenv('LELLODESIGN_COMPOSE_DIRECTORY') ?: '../../lellodesign/packages/compose') {
+    dependencySubstitution {
+        substitute module('com.lelloman:lellodesign-compose') using project(':lellodesign')
+    }
+}
