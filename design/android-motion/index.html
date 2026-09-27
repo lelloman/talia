@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Talìa · Icon motion</title>
+<style>
+:root{font-family:Inter,system-ui,sans-serif;color:#18243a;background:#f7f9fc;--surface:#fff;--line:#dae2ef;--muted:#64748b;--accent:#2563eb;color-scheme:light}body.dark{color:#eaf0ff;background:#101722;--surface:#172231;--line:#344156;--muted:#a9b7ca;--accent:#83adff;color-scheme:dark}*{box-sizing:border-box}body{margin:0;padding:32px 20px}main{max-width:760px;margin:auto}h1{font-size:26px;margin:0 0 12px}p{color:var(--muted);line-height:1.6}.stage{margin:28px 0 20px;min-height:300px;background:var(--surface);border:1px solid var(--line);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px}.stage svg{width:72px;height:72px;overflow:visible}.stage p{margin:0;color:inherit;font-size:16px}.controls{display:flex;gap:12px;flex-wrap:wrap;align-items:center}button,select{font:inherit;color:inherit;background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:12px;min-height:48px}button{cursor:pointer}label{display:flex;gap:8px;align-items:center}.inspector{margin-top:28px;border-top:1px solid var(--line);padding-top:16px}h2{font-size:16px}.meters{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}.track{height:5px;background:var(--line);margin-top:10px;border-radius:3px;overflow:hidden}.bar{height:100%;background:var(--accent);transform-origin:left;transform:scaleX(0)}.meter{font-size:13px;color:var(--muted)}small{display:block;margin-top:16px;color:var(--muted);line-height:1.5}a{color:var(--accent)}@media(max-width:480px){.meters{grid-template-columns:repeat(2,1fr)}}
+.stage{min-height:210px;margin-top:20px}.saved-preview{display:flex;align-items:center;gap:24px;margin-top:24px;border-top:1px solid var(--line);padding-top:20px}.saved-mark svg{width:48px;height:48px}.saved-mark.settle svg{animation:settle 240ms cubic-bezier(.2,0,0,1)}@keyframes settle{from{transform:translateY(-4px)}to{transform:translateY(0)}}@media(prefers-reduced-motion:reduce){.saved-mark svg{animation:none!important}}h1{font-size:24px}.stage svg{width:48px;height:48px}</style>
+</head>
+<body><main>
+<h1>Talìa · A watchful eye</h1>
+<p>Talìa’s original eye mark: two arcs and a pupil. Gentle movement evolves continuously while a check is running.</p>
+<div class="stage"><svg viewBox="0 0 100 100" aria-hidden="true"><g id="block0"><path d="M15 43Q50 17 85 43" fill="none" stroke="#bfdbfe" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/></g><g id="block1"><path d="M15 57Q50 83 85 57" fill="none" stroke="#60a5fa" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/></g><g id="block2"><circle cx="50" cy="50" r="12" fill="#2563eb"/></g></svg><p id="status" role="status">Checking infrastructure…</p></div>
+<div class="controls">
+<button id="pause" aria-pressed="false">Pause</button>
+<label>Energy <select id="energy"><option value="0.65">Quiet</option><option value="1" selected>Balanced</option><option value="1.5">Expressive</option></select></label>
+<label>Size <select id="size"><option value="48" selected>48 px</option><option value="72">72 px</option><option value="96">96 px</option></select></label>
+<button id="theme" aria-pressed="false">Dark background</button>
+<button id="restart">New variation</button><button id="complete">Complete check</button><label><input id="reduce" type="checkbox"> Reduce motion</label>
+</div>
+<section class="saved-preview"><div class="saved-mark"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none"><path d="M15 43Q50 17 85 43" fill="none" stroke="#bfdbfe" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 57Q50 83 85 57" fill="none" stroke="#60a5fa" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/><circle cx="50" cy="50" r="12" fill="#2563eb"/></svg></div><div><h2>Schedule saved</h2><p>240 ms settle, once, then the original mark rests.</p><button id="saved-replay">Replay saved</button></div></section><section class="inspector"><h2>What is becoming more prominent</h2><div class="meters">
+<div class="meter">Movement<div class="track"><div class="bar"></div></div></div>
+<div class="meter">Scale<div class="track"><div class="bar"></div></div></div>
+<div class="meter">Rotation<div class="track"><div class="bar"></div></div></div>
+<div class="meter">Opacity<div class="track"><div class="bar"></div></div></div>
+</div><small>These meters explain the preview; they are not part of the app loader. Watch for 20–30 seconds to see the character change. The sequence has no short fixed loop; bounded motion keeps the original logo recognizable.</small>
+<small id="motion-note">Reduced motion uses the static original logo.</small></section>
+</main>
+<script>
+const blocks=[0,1,2].map(i=>document.querySelector('#block'+i));
+const centers=[[50,36.5],[50,63.5],[50,50]];
+const bars=[...document.querySelectorAll('.bar')];
+const reduced=matchMedia('(prefers-reduced-motion: reduce)');
+let paused=false,staticLogo=reduced.matches,elapsed=0,last=null,frame=null,finished=false,inView=true;
+let seed=2718,energy=1,targetEnergy=1;
+const tau=Math.PI*2;
+const smooth=x=>x*x*x*(x*(x*6-15)+10);
+// Deterministic, smoothly interpolated random values: no random jumps per frame.
+function hash(n,channel){const x=Math.sin(n*127.1+channel*311.7+seed)*43758.5453;return x-Math.floor(x);}
+function noise(t,channel){const n=Math.floor(t),f=smooth(t-n);return hash(n,channel)*(1-f)+hash(n+1,channel)*f;}
+function weights(t){
+ const values=[0,1,2,3].map(i=>Math.exp(5*noise(t/(4.8+i*.73),i)));
+ const sum=values.reduce((a,b)=>a+b,0);
+ return values.map(v=>v/sum);
+}
+function stateAt(t,i,e=1){
+ const w=weights(t),phase=i*.72;
+ // Phase drift changes speed continuously, without switching oscillators.
+ const p=tau*t/1.85 + .65*Math.sin(t*.23)+phase;
+ const q=tau*t/2.37 + .55*Math.sin(t*.17)+phase*1.13;
+ const movement=.12+.88*w[0],size=.10+.90*w[1],rotation=.08+.92*w[2];
+ const direction=t*.13+noise(t/8,12)*tau;
+ const distance=(i===2?3.5:2)*e*movement*Math.sin(p);
+ return {
+  x:distance*Math.cos(direction),
+  y:distance*Math.sin(direction)+0.7*e*movement*Math.sin(q),
+  scale:1+.06*e*size*Math.sin(q),
+  rotation:(i===2?0:4)*e*rotation*Math.sin(p*.79+phase),
+  opacity:1-(.02+.16*w[3])*Math.min(e,1.5)*(.5+.5*Math.sin(q*.91+phase))
+ };
+}
+function render(t){
+ if(staticLogo){blocks.forEach(b=>{b.removeAttribute('transform');b.setAttribute('opacity','1');});bars.forEach(b=>b.style.transform='scaleX(0)');return;}
+ blocks.forEach((block,i)=>{
+  const s=stateAt(t,i,energy),[cx,cy]=centers[i];
+  block.setAttribute('transform',`translate(${s.x} ${s.y}) translate(${cx} ${cy}) rotate(${s.rotation}) scale(${s.scale}) translate(${-cx} ${-cy})`);
+  block.setAttribute('opacity',s.opacity);
+ });
+ weights(t).forEach((w,i)=>bars[i].style.transform=`scaleX(${w})`);
+}
+function tick(now){
+ frame=null;
+ if(paused||staticLogo||finished||!inView||document.hidden){last=null;return;}
+ const dt=last===null?0:Math.min((now-last)/1000,.05);last=now;
+ elapsed+=dt;energy+=(targetEnergy-energy)*(1-Math.exp(-dt*3));
+ render(elapsed);frame=requestAnimationFrame(tick);
+}
+function schedule(){if(frame===null&&!paused&&!staticLogo&&!finished&&inView&&!document.hidden)frame=requestAnimationFrame(tick);}
+function syncButton(){const b=document.querySelector('#pause');b.textContent=paused?'Play':'Pause';b.setAttribute('aria-pressed',paused);}
+document.querySelector('#pause').onclick=()=>{paused=!paused;if(!paused){last=null;schedule();}syncButton();};
+document.querySelector('#energy').onchange=e=>targetEnergy=Number(e.target.value);
+document.querySelector('#size').onchange=e=>{const svg=document.querySelector('svg');svg.style.width=svg.style.height=e.target.value+'px';};
+document.querySelector('#theme').onclick=e=>{const dark=document.body.classList.toggle('dark');e.currentTarget.textContent=dark?'Light background':'Dark background';e.currentTarget.setAttribute('aria-pressed',dark);};
+document.querySelector('#restart').onclick=()=>{seed=Math.random()*10000;elapsed=0;last=null;render(elapsed);};
+document.addEventListener('visibilitychange',()=>{last=null;schedule();});
+function motionPreference(){
+ staticLogo=reduced.matches||document.querySelector('#reduce').checked;
+ document.querySelector('#motion-note').textContent=staticLogo?'Reduced motion: original logo at full opacity.':'Talìa logo adaptation · transforms only · theme changes preserve the motion clock.';
+ if(staticLogo){cancelAnimationFrame(frame);frame=null;last=null;render(0);document.querySelector('.saved-mark').classList.remove('settle');}else schedule();
+}
+reduced.addEventListener('change',motionPreference);
+document.querySelector('#reduce').onchange=motionPreference;
+document.querySelector('#complete').onclick=e=>{
+ finished=!finished;last=null;
+ if(finished){cancelAnimationFrame(frame);frame=null;blocks.forEach(b=>{b.removeAttribute('transform');b.setAttribute('opacity','1');});}
+ else {elapsed=0;seed=Math.random()*10000;schedule();}
+ document.querySelector('#status').textContent=finished?'Check complete. All services healthy.':'Checking infrastructure…';
+ e.currentTarget.textContent=finished?'Start new check':'Complete check';
+};
+document.querySelector('#saved-replay').onclick=()=>{
+ const mark=document.querySelector('.saved-mark');mark.classList.remove('settle');
+ if(staticLogo)return;void mark.offsetWidth;mark.classList.add('settle');
+};
+document.querySelector('.saved-mark').addEventListener('animationend',e=>e.currentTarget.classList.remove('settle'));
+new IntersectionObserver(entries=>{inView=entries[0].isIntersecting;last=null;if(!inView){cancelAnimationFrame(frame);frame=null;}else schedule();}).observe(document.querySelector('.stage'));
+window.addEventListener('pagehide',()=>{cancelAnimationFrame(frame);frame=null;});
+motionPreference();syncButton();render(0);schedule();
+</script></body></html>
