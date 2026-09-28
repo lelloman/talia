@@ -192,3 +192,10 @@ combinations, dropdown interaction and history cursor reset/preservation.
 Eight backend report regressions passed, including filtered ascending pagination.
 Compact catalog and history screenshots were reviewed; Android lint and the
 signed minified APK 3 compatibility build passed.
+
+Payload 8 is published and verified on LelloStore (publication revision 16), on
+the active APK 3 stream. The VPK is 3,841,101 bytes, SHA-256
+`bf7d4a03c4caf54bd9a199bba8e8929283ddfde72f5ac0d073d05610b218c3b8`.
+Exact artifacts, R8 mapping and provenance are archived in
+`.local/android-releases/payload-8`. Backend source `ed2145d` is deployed and
+healthy. The signed shell launched on the emulator without crash output.
