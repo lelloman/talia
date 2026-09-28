@@ -2,6 +2,12 @@ package com.lelloman.talia
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.semantics.Role
@@ -45,6 +51,24 @@ internal fun RunStatus(status: String) = StatusLabel(when (status) {
     else -> LelloTone.Info
 })
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun ReportsScreen(connection: NativeConnection, modifier: Modifier = Modifier, setup: () -> Unit) {
+    val refresh = { if (connection.signedIn && !connection.reportsBusy) connection.refreshReports() }
+    val content: @Composable () -> Unit = {
+        LelloWorkspace(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).semantics {
+            if (connection.signedIn) customActions = listOf(CustomAccessibilityAction("Refresh reports") {
+                refresh(); true
+            })
+        }) { Reports(connection, setup) }
+    }
+    if (connection.signedIn) {
+        PullToRefreshBox(isRefreshing = connection.reportsBusy, onRefresh = refresh, modifier = modifier) { content() }
+    } else {
+        Box(modifier) { content() }
+    }
+}
+
 @Composable
 internal fun Reports(connection: NativeConnection, setup: () -> Unit) {
     var query by rememberSaveable { mutableStateOf("") }
@@ -70,15 +94,6 @@ internal fun Reports(connection: NativeConnection, setup: () -> Unit) {
     if (connection.reportSelected.isNotEmpty()) LelloTextButton(connection::reportsBack, enabled = !connection.reportsBusy) {
         Text(if (connection.reportRunSelected.isEmpty()) "All reports" else "Back to history")
     }
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Column(Modifier.weight(1f)) {
-            Text(if (connection.reportSelected.isEmpty()) "Available reports" else connection.reportSelected,
-                style = MaterialTheme.typography.headlineSmall)
-            Muted(if (connection.reportRunSelected.isNotEmpty()) "Run details" else if (connection.reportSelected.isNotEmpty()) "Run history" else "Checks and summaries from your server")
-        }
-        LelloTextButton(connection::refreshReports, enabled = !connection.reportsBusy) { Text("Refresh") }
-    }
-    if (connection.reportsBusy) LinearProgressIndicator(Modifier.fillMaxWidth())
     connection.reportsMessage?.let { LelloAlert(it, tone = LelloTone.Warning) }
     if (connection.reportsForbidden) return
     connection.pendingReport?.takeIf { !connection.reportsBusy }?.let {

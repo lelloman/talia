@@ -92,14 +92,16 @@ class MainActivity : ComponentActivity() {
         )
         LelloTheme(product = "blue", dark = dark) {
             LelloScaffold(
-                productName = "Talìa", title = destinations.first { it.id == page }.label,
+                productName = "Talìa", title = if (page == "reports" && connection.reportSelected.isNotEmpty()) connection.reportSelected else destinations.first { it.id == page }.label,
                 destinations = destinations, selectedId = page, onNavigate = { page = it },
                 mobileNavigation = LelloMobileNavigation.Drawer,
                 logo = { Image(painterResource(R.drawable.ic_talia), "Talìa", Modifier.size(32.dp)) },
                 account = { compact -> LelloAccount(connection.name, { page = "settings" }, compact = compact) },
             ) { insets ->
                 pageState.SaveableStateProvider(page) {
-                    LelloWorkspace(Modifier.fillMaxSize().padding(insets).consumeWindowInsets(insets)
+                    if (page == "reports") {
+                        ReportsScreen(connection, Modifier.fillMaxSize().padding(insets).consumeWindowInsets(insets).imePadding()) { page = "settings" }
+                    } else LelloWorkspace(Modifier.fillMaxSize().padding(insets).consumeWindowInsets(insets)
                         .imePadding().verticalScroll(rememberScrollState())) {
                         if (page == "settings") {
                             ConnectionPanel(connection, openBrowser)
@@ -134,8 +136,6 @@ class MainActivity : ComponentActivity() {
                             }
                         } else if (page == "overview") {
                             Overview(connection) { page = "settings" }
-                        } else if (page == "reports") {
-                            Reports(connection) { page = "settings" }
                         } else {
                             LelloState(
                                 title = "${destinations.first { it.id == page }.label} is coming next",

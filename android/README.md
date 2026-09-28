@@ -199,3 +199,13 @@ the active APK 3 stream. The VPK is 3,841,101 bytes, SHA-256
 Exact artifacts, R8 mapping and provenance are archived in
 `.local/android-releases/payload-8`. Backend source `ed2145d` is deployed and
 healthy. The signed shell launched on the emulator without crash output.
+
+## Reports pull-to-refresh (payload 9)
+
+Reports no longer repeats the title, subtitle and Refresh button below the app
+bar. The selected report name lives in the app bar. Material 3 pull-to-refresh,
+using the LelloDesign theme, refreshes catalog, history and run details. A custom
+accessibility action also exposes refresh. The viewport remains scrollable for
+short or empty lists, and signed-out setup does not issue refresh requests.
+All 18 emulator tests passed, including actual downward touch gestures on all
+three Reports screens. Lint and signed minified APK 3 compatibility checks passed.

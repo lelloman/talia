@@ -5,8 +5,6 @@ import android.graphics.Bitmap
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.Modifier
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -42,6 +40,28 @@ class ReportsReviewTest {
         }
         fail("No clickable $text")
     }
+    private fun refreshBySwipe(requests: java.util.concurrent.atomic.AtomicInteger) {
+        val before = requests.get()
+        val display = instrumentation.targetContext.resources.displayMetrics
+        val x = display.widthPixels * 0.9f
+        val start = display.heightPixels * 0.32f
+        val end = display.heightPixels * 0.8f
+        val down = android.os.SystemClock.uptimeMillis()
+        fun event(action: Int, y: Float) {
+            val e = android.view.MotionEvent.obtain(down, android.os.SystemClock.uptimeMillis(), action, x, y, 0)
+            e.source = android.view.InputDevice.SOURCE_TOUCHSCREEN
+            instrumentation.uiAutomation.injectInputEvent(e, true)
+            e.recycle()
+        }
+        event(android.view.MotionEvent.ACTION_DOWN, start)
+        for (i in 1..25) { Thread.sleep(10); event(android.view.MotionEvent.ACTION_MOVE, start + (end - start) * i / 25) }
+        event(android.view.MotionEvent.ACTION_UP, end)
+        val deadline = System.currentTimeMillis() + 5000
+        while (requests.get() == before && System.currentTimeMillis() < deadline) Thread.sleep(25)
+        assertTrue("Swipe should refresh the current Reports screen", requests.get() > before)
+        instrumentation.waitForIdleSync()
+        Thread.sleep(400)
+    }
     private fun shot(name: String) {
         val directory = File(instrumentation.targetContext.externalCacheDir, "ui-review").apply { mkdirs() }
         instrumentation.uiAutomation.takeScreenshot().let { bitmap ->
@@ -55,9 +75,11 @@ class ReportsReviewTest {
         vault.clear()
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             lateinit var model: NativeConnection
+            val requests = java.util.concurrent.atomic.AtomicInteger()
             scenario.onActivity { activity ->
                 vault.write(JSONObject().put("server", "https://talia.test").put("token", "n." + "a".repeat(43)))
                 model = NativeConnection(app) { _, _, _, body ->
+                    requests.incrementAndGet()
                     when (body!!.getString("op")) {
                         "list" -> {
                             val rows = org.json.JSONArray()
@@ -75,20 +97,24 @@ class ReportsReviewTest {
                 activity.setContent {
                     LelloTheme(product = "blue") {
                         LelloScaffold(productName = "Talìa", title = "Reports", destinations = emptyList(), selectedId = "reports", onNavigate = {}) { insets ->
-                            LelloWorkspace(Modifier.fillMaxSize().padding(insets).consumeWindowInsets(insets).verticalScroll(rememberScrollState())) { Reports(model) {} }
+                            ReportsScreen(model, Modifier.fillMaxSize().padding(insets).consumeWindowInsets(insets)) {}
                         }
                     }
                 }
             }
-            awaitText("6 of 6 reports"); shot("reports-catalog")
+            awaitText("6 of 6 reports")
+            assertFalse("Available reports" in texts(instrumentation.uiAutomation.rootInActiveWindow))
+            assertFalse("Refresh" in texts(instrumentation.uiAutomation.rootInActiveWindow))
+            refreshBySwipe(requests)
+            shot("reports-catalog")
             clickText("Filter: All reports"); awaitText("Never run"); clickText("Never run")
             awaitText("1 of 6 reports")
             clickText("Filter: Never run"); awaitText("All reports"); clickText("All reports")
             awaitText("6 of 6 reports")
             instrumentation.runOnMainSync { model.selectReport("homelab-infrastructure") }
-            awaitText("Completed"); shot("reports-history")
+            awaitText("Completed"); refreshBySwipe(requests); shot("reports-history")
             instrumentation.runOnMainSync { model.selectReportRun("fixture-run") }
-            awaitText("Infra report: Warning"); shot("reports-result")
+            awaitText("Infra report: Warning"); refreshBySwipe(requests); shot("reports-result")
             assertTrue("Run completed" in texts(instrumentation.uiAutomation.rootInActiveWindow))
         }
         vault.clear()
