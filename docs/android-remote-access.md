@@ -74,4 +74,6 @@ existing tunnels, which reconnect normally.
   to sign-in, and setup with emulator Wi-Fi disabled showed the home-Wi-Fi prompt.
 - Full authenticated tunnel use, account/device revocation and a real mobile-data
   round trip require the user's LelloAuth enrollment and remain acceptance work.
-- This shell has not been published to LelloStore.
+- APK 0.1.2 (3) and embedded payload 5 are published and verified on LelloStore
+  (publication revision 10). The APK is 4,174,873 bytes; the payload is 3,666,377
+  bytes. Install the APK update from LelloStore before enrolling on home Wi-Fi.
