@@ -216,7 +216,7 @@ on the active APK 3 stream. The VPK is 3,862,165 bytes, SHA-256
 Source commit: `0e98386`; artifacts, R8 mapping and provenance are archived in
 `.local/android-releases/payload-9`. No backend deployment was required.
 
-## Shared LelloDesign browsing controls (payload 10 candidate)
+## Shared LelloDesign browsing controls (payload 10)
 
 Reports now consumes `LelloListControls` from the sibling Compose library at
 LelloDesign commit `8f66a1f`, replacing Talìa's custom `ReportChoice` dropdown.
@@ -228,4 +228,11 @@ pull-to-refresh remain intact.
 
 The library's three interaction tests, unit tests and lint passed. Talìa's 18
 device tests, lint and signed minified APK 3 compatibility checks passed; shared
-sheet and applied-filter screenshots were reviewed. Payload 10 is not published.
+sheet and applied-filter screenshots were reviewed.
+
+Payload 10 is published and verified on LelloStore (publication revision 20),
+on the active APK 3 stream for `com.lelloman.talia` / APK 0.1.2 (3).
+The VPK is 3,946,165 bytes, SHA-256
+`c1f82358b4758e6b8122f17f71ed3b33893a2860a79a9639681c2cac114303e5`.
+Source commit: `e489730`; artifacts, R8 mapping and provenance are archived in
+`.local/android-releases/payload-10`. No backend deployment was required.
