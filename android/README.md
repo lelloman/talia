@@ -209,3 +209,9 @@ accessibility action also exposes refresh. The viewport remains scrollable for
 short or empty lists, and signed-out setup does not issue refresh requests.
 All 18 emulator tests passed, including actual downward touch gestures on all
 three Reports screens. Lint and signed minified APK 3 compatibility checks passed.
+
+Payload 9 is published and verified on LelloStore (publication revision 18),
+on the active APK 3 stream. The VPK is 3,862,165 bytes, SHA-256
+`ffb3935540edaa7de07e7d29fcf8db3c661fd051477e4b52b9147b87272caf07`.
+Source commit: `0e98386`; artifacts, R8 mapping and provenance are archived in
+`.local/android-releases/payload-9`. No backend deployment was required.
