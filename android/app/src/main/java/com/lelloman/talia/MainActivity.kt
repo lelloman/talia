@@ -71,10 +71,17 @@ class MainActivity : ComponentActivity() {
             LelloAppearance.valueOf(preferences.getString("mode", "System")!!)
         }.getOrDefault(LelloAppearance.System)) }
         var page by rememberSaveable { mutableStateOf("overview") }
+        val pageState = androidx.compose.runtime.saveable.rememberSaveableStateHolder()
         val dark = when (appearance) {
             LelloAppearance.Light -> false
             LelloAppearance.Dark -> true
             LelloAppearance.System -> isSystemInDarkTheme()
+        }
+        SideEffect {
+            androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).apply {
+                isAppearanceLightStatusBars = !dark
+                isAppearanceLightNavigationBars = !dark
+            }
         }
         val destinations = listOf(
             LelloDestination("overview", "Overview") { Icon(Icons.Default.Home, null) },
@@ -91,38 +98,55 @@ class MainActivity : ComponentActivity() {
                 logo = { Image(painterResource(R.drawable.ic_talia), "Talìa", Modifier.size(32.dp)) },
                 account = { compact -> LelloAccount(connection.name, { page = "settings" }, compact = compact) },
             ) { insets ->
-                Column(Modifier.fillMaxSize().padding(insets).consumeWindowInsets(insets)
-                    .verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
-                    if (page == "settings") {
-                        LelloSection("Appearance") {
-                            LelloAppearance.entries.forEach { choice ->
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    RadioButton(appearance == choice, onClick = {
+                pageState.SaveableStateProvider(page) {
+                    LelloWorkspace(Modifier.fillMaxSize().padding(insets).consumeWindowInsets(insets)
+                        .imePadding().verticalScroll(rememberScrollState())) {
+                        if (page == "settings") {
+                            ConnectionPanel(connection, openBrowser)
+                            ConnectionSettings(connection, openBrowser)
+                            LelloSettingsSection("Appearance") {
+                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        Text("Theme", style = MaterialTheme.typography.titleMedium)
+                                        Muted(when (appearance) {
+                                            LelloAppearance.System -> "Follow your device settings"
+                                            LelloAppearance.Light -> "Light appearance"
+                                            LelloAppearance.Dark -> "Dark appearance"
+                                        })
+                                    }
+                                    LelloAppearanceSelector(appearance, { choice ->
                                         appearance = choice
                                         preferences.edit().putString("mode", choice.name).apply()
                                     })
-                                    Text(choice.name)
                                 }
                             }
-                        }
-                        LelloSection("App updates") {
-                            Text("Version ${BuildConfig.VERSION_NAME}")
-                            if (BuildConfig.FLAVOR == "paravoidAndroid") {
-                                Text("Updates are verified and managed by Paravoid.")
-                                Button(onClick = { ParavoidUpdates.get().openControls(this@MainActivity) }) {
-                                    Text("Manage app updates")
+                            LelloSettingsSection("App updates") {
+                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Text("Talìa ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.titleMedium)
+                                    Muted("Keep Talìa up to date with the latest improvements.")
                                 }
-                            } else Text("Normal APK build. Install a new APK to update.")
+                                if (BuildConfig.FLAVOR == "paravoidAndroid") {
+                                    LelloOutlinedButton({ ParavoidUpdates.get().openControls(this@MainActivity) }) {
+                                        Text("Manage app updates")
+                                    }
+                                }
+                            }
+                        } else if (page == "overview") {
+                            Overview(connection) { page = "settings" }
+                        } else {
+                            LelloState(
+                                title = "${destinations.first { it.id == page }.label} is coming next",
+                                description = when (page) {
+                                    "reports" -> "For now, you can read recent report results in Overview. Running reports from the app is coming next."
+                                    "automation" -> "Schedules and alert rules will live here. They aren’t available in the app yet."
+                                    else -> "Your conversations with Talìa will live here. Chat isn’t available in the app yet."
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                icon = { destinations.first { it.id == page }.icon() },
+                                action = { LelloOutlinedButton({ page = "overview" }) { Text("Back to Overview") } },
+                            )
                         }
-                        ConnectionPanel(connection, openBrowser)
-                    } else if (page == "overview") {
-                        Overview(connection, openBrowser)
-                    } else {
-                        LelloSection("Android preview") {
-                            Text("The native app shell is ready. ${destinations.first { it.id == page }.label} is not connected to your server yet.")
-                            Text("No live service status or results are shown in this build.")
-                        }
-                        Button(onClick = { page = "settings" }) { Text("Open settings") }
                     }
                 }
             }

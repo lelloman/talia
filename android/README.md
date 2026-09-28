@@ -128,3 +128,17 @@ are still untested. Payload 4 is published and verified on LelloStore (publicati
 replacing payload 3 on the APK 2 stream. The exact VPK, R8 mapping and source
 commit provenance are archived locally under `.local/android-releases/payload-4`
 at the repository root.
+
+## Overview and Settings refresh (payload 6 candidate)
+
+Overview uses LelloDesign workspace spacing, semantic status colors, a service
+summary panel, compact service rows and expandable report panels. A completed
+report run is labeled separately from the service health described by its result.
+Stale samples remain visibly stale. Setup and account actions live in Settings;
+Appearance uses the shared selector. Page scroll and expanded details survive
+navigation, and larger text uses stacked counts and service rows.
+
+Light/dark and 150% text-size fixture screenshots were visually reviewed.
+Twelve device tests (including existing authentication/gateway regressions),
+Android lint and signed minified build checks passed against the APK 3 contract.
+The fixture data exists only in androidTest. Payload 6 is not yet published.
