@@ -531,3 +531,35 @@ fn native_reports_authority_projection_and_replay() {
     s.conn.execute("UPDATE dashboard_users SET admin=0 WHERE subject='admin'", []).unwrap();
     assert_eq!(s.native_reports("admin", "run_get", json!({"id":admitted["run_id"]}), 2000).unwrap_err(), "forbidden");
 }
+
+#[test]
+fn history_and_native_catalog_are_newest_first_with_stable_pages() {
+    let mut s = Store::open(":memory:").unwrap();
+    s.user_bootstrap("admin").unwrap();
+    for name in ["morning", "recent", "never"] {
+        let mut d = definition(); d.id = name.into();
+        s.report_save(&d, 0, 1000).unwrap();
+    }
+    // Deliberately make IDs disagree with chronology, including a timestamp tie.
+    for (name, id, created) in [("morning", "z-old", 1000), ("morning", "a-new", 3000),
+        ("morning", "b-new", 3000), ("morning", "m-middle", 2000), ("recent", "c-latest", 4000)] {
+        let mut run = s.report_start(name, "admin", false, created).unwrap();
+        s.conn.execute("DELETE FROM report_runs WHERE id=?", [&run.id]).unwrap();
+        run.id = id.into(); run.status = "complete".into(); s.report_put(&run).unwrap();
+    }
+    let first = s.native_reports("admin", "runs", json!({"report":"morning","limit":2}), 5000).unwrap();
+    assert_eq!(first["runs"][0]["id"], "b-new");
+    assert_eq!(first["runs"][1]["id"], "a-new");
+    let next = s.native_reports("admin", "runs", json!({"report":"morning","limit":2,"before":first["next_before"]}), 5000).unwrap();
+    assert_eq!(next["runs"][0]["id"], "m-middle");
+    assert_eq!(next["runs"][1]["id"], "z-old");
+    let tied = s.native_reports("admin", "runs", json!({"report":"morning","limit":1,"before":"b-new"}), 5000).unwrap();
+    assert_eq!(tied["runs"][0]["id"], "a-new");
+    let catalog = s.native_reports("admin", "list", json!({}), 5000).unwrap();
+    assert_eq!(catalog["definitions"][0]["id"], "recent");
+    assert_eq!(catalog["definitions"][1]["latest"]["id"], "b-new");
+    assert_eq!(catalog["definitions"][2]["id"], "never");
+    assert!(s.native_reports("admin", "runs", json!({"report":"morning","before":"c-latest"}), 5000).is_err());
+    s.conn.execute("DELETE FROM report_runs WHERE id='a-new'", []).unwrap();
+    assert!(s.native_reports("admin", "runs", json!({"report":"morning","before":"a-new"}), 5000).is_err());
+}

@@ -100,6 +100,8 @@ impl Store {
                     "available":!d.steps.iter().any(|s| matches!(s.action, Action::Unavailable {..})),
                     "latest":latest["runs"][0]}));
             }
+            definitions.sort_by(|a, b| b["latest"]["created"].as_i64().cmp(&a["latest"]["created"].as_i64())
+                .then_with(|| a["id"].as_str().cmp(&b["id"].as_str())));
             return Ok(json!({"definitions":definitions}));
         }
         if op == "run_get" {
@@ -143,10 +145,15 @@ impl Store {
                 if limit == 0 || limit > 100 {
                     return Err("limit must be 1..100".into());
                 }
-                let before = args["before"].as_str().unwrap_or("~");
-                let mut q=self.conn.prepare("SELECT body FROM report_runs WHERE report=? AND id<? ORDER BY id DESC LIMIT ?").map_err(err)?;
+                let (before_created, before_id) = if let Some(before) = args["before"].as_str() {
+                    let created: i64 = self.conn.query_row(
+                        "SELECT created FROM report_runs WHERE report=? AND id=?", params![report, before], |r| r.get(0)
+                    ).optional().map_err(err)?.ok_or("history cursor expired; refresh history")?;
+                    (created, before)
+                } else { (i64::MAX, "~") };
+                let mut q=self.conn.prepare("SELECT body FROM report_runs WHERE report=? AND (created,id)<(?,?) ORDER BY created DESC,id DESC LIMIT ?").map_err(err)?;
                 let rows = q
-                    .query_map(params![report, before, limit], |r| r.get::<_, String>(0))
+                    .query_map(params![report, before_created, before_id, limit], |r| r.get::<_, String>(0))
                     .map_err(err)?;
                 let runs=rows.map(|r|{let r:Run=serde_json::from_str(&r.map_err(err)?).map_err(err)?;Ok(json!({"id":r.id,"created":r.created,"status":r.status,"version":r.definition.version,"send":r.send,"error":r.error,"deliveries":r.deliveries}))}).collect::<Result<Vec<_>>>()?;
                 Ok(

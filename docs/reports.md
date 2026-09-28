@@ -66,7 +66,9 @@ metadata and results can contain operational data and should be treated accordin
 - `reports_run_get`: `{id:run_id}` returns step outcomes,
   frozen definition, report HTML/text and per-destination delivery status.
 - `reports_runs`: `{report,limit?,before?}` lists bounded summaries; use the
-  returned `next_before` as the exclusive run-ID cursor.
+  returned `next_before` as the exclusive run-ID cursor. Runs are ordered by
+  creation time descending, with run ID as a deterministic tie-breaker. A cursor
+  removed by pruning requires refreshing history.
 - `reports_deliver`: `{id:run_id,requestId}` delivers a completed, unsent preview
   without rerunning its checks. A second delivery request is rejected.
 - `reports_prune`: `{before:UTC_milliseconds,requestId}` removes terminal runs
@@ -157,7 +159,8 @@ Use Settings → Telegram to pair a destination, then reference its `telegram-CH
 ## Native Android Reports
 
 The drawer's Reports screen lists configured definitions with schedule state,
-check count, reporting period and latest run status. Open a report to browse its
+check count, reporting period and latest run status. The catalog is ordered by
+most recent run first, with never-run definitions last. Open a report to browse its
 paginated history or start a new run. App runs use `send:false`: collection,
 scripts and inference execute normally and results are retained, without email
 or Telegram delivery. A disabled schedule does not disable manual execution.
