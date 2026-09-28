@@ -20,7 +20,10 @@ private fun time(value: Long): String = DateTimeFormatter.ofPattern("EEE dd MMM 
 internal fun ConnectionPanel(connection: NativeConnection, openBrowser: (String) -> Unit) {
     var address by rememberSaveable { mutableStateOf(connection.server) }
     LelloSection("Connection") {
-        if (connection.signedIn) {
+        if (connection.gateway.pending) {
+            Text("Authorize remote access in your browser. Initial setup requires home Wi-Fi.")
+            TextButton(onClick = connection::cancelGateway) { Text("Cancel remote setup") }
+        } else if (connection.signedIn) {
             Text("Signed in as ${connection.name}")
             Text(connection.server)
             Button(onClick = connection::signOut, enabled = !connection.busy) { Text("Sign out") }
@@ -33,6 +36,13 @@ internal fun ConnectionPanel(connection: NativeConnection, openBrowser: (String)
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri), enabled = !connection.busy, modifier = Modifier.fillMaxWidth())
             Button(onClick = { connection.signIn(address, openBrowser) }, enabled = !connection.busy) { Text("Sign in with LelloAuth") }
         }
+        if (connection.server == HomelabGateway.HOME && !connection.gateway.pending) {
+            Text(if (connection.gateway.enrolled) "Remote access enabled · ${connection.gateway.route}" else "Remote access is not enabled. Set it up on home Wi-Fi.")
+            TextButton(onClick = { connection.enableRemote(openBrowser) }, enabled = !connection.busy) {
+                Text(if (connection.gateway.enrolled) "Renew remote access" else "Enable remote access")
+            }
+            if (connection.gateway.enrolled) TextButton(onClick = connection::disableRemote, enabled = !connection.busy) { Text("Disable remote access") }
+        }
         connection.message?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         if (connection.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
     }
@@ -43,6 +53,7 @@ internal fun Overview(connection: NativeConnection, openBrowser: (String) -> Uni
     if (!connection.signedIn) { ConnectionPanel(connection, openBrowser); return }
     LelloSection("Overview") {
         Text("${connection.name} · ${connection.server}")
+        if (connection.server == HomelabGateway.HOME) Text(connection.gateway.route)
         TextButton(onClick = connection::refresh, enabled = !connection.busy) { Text("Refresh") }
         if (connection.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
         connection.message?.let { Text(it, color = MaterialTheme.colorScheme.error) }

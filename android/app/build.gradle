@@ -15,8 +15,8 @@ android {
         applicationId 'com.lelloman.talia'
         minSdk 30
         targetSdk 36
-        versionCode 2
-        versionName '0.1.1'
+        versionCode 3
+        versionName '0.1.2'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
     productFlavors {
@@ -51,9 +51,10 @@ paravoid {
     minifyPayload = true
     payloadProguardFiles.from(file('payload-rules.pro'))
     crashRecovery { enabled = true; updater = 'default' }
-    payloadVersion = providers.gradleProperty('paravoidPayloadVersion').map { it.toLong() }.getOrElse(4L)
+    payloadVersion = providers.gradleProperty('paravoidPayloadVersion').map { it.toLong() }.getOrElse(5L)
+    // APK 3 introduces the gateway callback and network permission.
     baselineDirectory = layout.projectDirectory.dir(
-        providers.gradleProperty('paravoidBaselineDirectory').getOrElse('../paravoid-baselines/apk-2'))
+        providers.gradleProperty('paravoidBaselineDirectory').getOrElse('../paravoid-baselines/apk-3'))
     signing {
         keyId = System.getenv('PARAVOID_SIGNING_KEY_ID') ?: 'talia-release'
         privateKeyFile = file(System.getenv('PARAVOID_SIGNING_KEY') ?: new File(releaseDirectory, 'talia-release.pk8').path)
@@ -111,6 +112,7 @@ tasks.matching { it.name.startsWith('packageParavoidAndroid') && it.name.endsWit
     dependsOn(collectPayloadConsumerRules)
 }
 dependencies {
+    implementation 'it.lelloman.homelab:access-gateway-client:1.0.0'
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'
     androidTestImplementation 'androidx.test:runner:1.6.2'
     implementation project(':paravoid-runtime')

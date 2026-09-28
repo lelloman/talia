@@ -3,7 +3,9 @@
 The Android app now has native connection/sign-in and a read-only Overview. The
 matching server endpoints must be deployed before using it against production;
 older servers return the app's unsupported-server message. The default address
-is `https://talia.lan.lelloman.com`, reachable on the LAN/VPN. Users can choose
+is `https://talia.lan.lelloman.com`. APK 3 adds authenticated gateway access
+away from home after enrollment on home Wi-Fi; see
+[Android remote access](android-remote-access.md). Users can choose
 another HTTPS origin. No insecure HTTP or certificate-bypass option is exposed.
 
 ## Authentication boundary

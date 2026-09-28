@@ -9,6 +9,8 @@ storage, service sample freshness, recent reports, and explicit failure states.
 They require the matching native API endpoints to be deployed. Report execution,
 chat, automation and the Rust runtime are not connected yet.
 See `../docs/android-native-api.md` for authentication, scope and validation.
+The gateway integration and new shell onboarding are documented in
+[`android-remote-access.md`](../docs/android-remote-access.md).
 
 ## Build
 
@@ -26,7 +28,7 @@ export ANDROID_HOME="$HOME/Android/Sdk"
 ```
 
 The normal package is `com.lelloman.talia.normal`; the production Paravoid package
-is `com.lelloman.talia`, version 0.1.1 (2), payload version 4. They can be
+is `com.lelloman.talia`, version 0.1.2 (3), payload version 5. They can be
 installed side by side. Paravoid uses complete packaging, embedded bootstrap,
 APK-grant Store delivery, explicit update controls and default crash recovery.
 No automatic check/download schedule is enabled. Payload-only R8 shrinking,
@@ -52,8 +54,8 @@ APK key prevents compatible APK updates. Do not commit keys or passwords.
 If interrupted during initial generation, inspect the partial files before any
 manual repair; the tool deliberately does not silently regenerate identity.
 
-The accepted APK 2 baseline is pinned in `paravoid-baselines/apk-2` and used by
-default. Payload 3 adds native sign-in and Overview. APK 2 has no browser callback
+The new APK 3 baseline is pinned in `paravoid-baselines/apk-3` and used by
+default. APK 2's published baseline is retained in `paravoid-baselines/apk-2`. Payload 3 adds native sign-in and Overview. APK 2 has no browser callback
 intent filter: after signing in, switch back to Talìa to finish connecting. The
 normal build retains the callback for development.
 

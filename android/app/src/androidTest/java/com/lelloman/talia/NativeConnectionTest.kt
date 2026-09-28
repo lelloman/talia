@@ -81,6 +81,32 @@ class NativeConnectionTest {
         assertNull(model.overview)
         assertTrue(model.forbidden)
     }
+    @Test fun expiredGatewayCallbackIsReportedWithoutCrashingOrOpeningBrowser() {
+        SessionVault(application, "gateway_session").clear()
+        lateinit var model: NativeConnection
+        instrumentation.runOnMainSync {
+            model = NativeConnection(application) { _, _, _, _ -> error("No native request expected") }
+            model.completeGateway(HomelabGateway.CALLBACK) { error("No browser expected") }
+        }
+        waitForIdle(model)
+        assertTrue(model.message!!.contains("expired"))
+        assertFalse(model.gateway.pending)
+        model.gateway.close()
+    }
+    @Test fun gatewayDenialDoesNotExpireTheIndependentNativeSession() {
+        seed()
+        lateinit var model: NativeConnection
+        instrumentation.runOnMainSync {
+            model = NativeConnection(application) { _, _, _, _ ->
+                throw RemoteAccessFailure("Remote access was revoked")
+            }
+            model.refresh()
+        }
+        waitForIdle(model)
+        assertTrue(model.signedIn)
+        assertEquals(token, vault.read()!!.getString("token"))
+        assertEquals("Remote access was revoked", model.message)
+    }
     @Test fun nativeHandoffPersistsAndRedeemsPkceWithoutCallbackCredentials() {
         lateinit var model: NativeConnection
         var browserUrl = ""

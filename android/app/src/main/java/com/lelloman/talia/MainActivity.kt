@@ -33,7 +33,22 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        handleGatewayIntent(intent)
         setContent { TaliaApp() }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleGatewayIntent(intent)
+    }
+    private fun handleGatewayIntent(intent: Intent?) {
+        val uri = intent?.data?.toString()?.let { runCatching { java.net.URI(it) }.getOrNull() } ?: return
+        if (!HomelabGateway.isCallback(uri)) return
+        intent.data = null
+        androidx.lifecycle.ViewModelProvider(this)[NativeConnection::class.java].completeGateway(uri) { url ->
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addCategory(Intent.CATEGORY_BROWSABLE))
+        }
     }
 
     @Composable
@@ -43,7 +58,7 @@ class MainActivity : ComponentActivity() {
         LaunchedEffect(connection, lifecycle) {
             lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 while (true) {
-                    if (connection.pending || connection.signedIn) connection.refresh()
+                    if (!connection.gateway.pending && (connection.pending || connection.signedIn)) connection.refresh()
                     delay(if (connection.pending) 2000 else 30000)
                 }
             }

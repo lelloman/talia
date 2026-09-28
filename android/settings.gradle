@@ -19,3 +19,5 @@ includeBuild(System.getenv('LELLODESIGN_COMPOSE_DIRECTORY') ?: '../../lellodesig
         substitute module('com.lelloman:lellodesign-compose') using project(':lellodesign')
     }
 }
+
+includeBuild(System.getenv('HOMELAB_ACCESS_CLIENT_DIRECTORY') ?: '../../homelab/access-gateway/client-kotlin')
