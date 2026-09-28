@@ -215,3 +215,17 @@ on the active APK 3 stream. The VPK is 3,862,165 bytes, SHA-256
 `ffb3935540edaa7de07e7d29fcf8db3c661fd051477e4b52b9147b87272caf07`.
 Source commit: `0e98386`; artifacts, R8 mapping and provenance are archived in
 `.local/android-releases/payload-9`. No backend deployment was required.
+
+## Shared LelloDesign browsing controls (payload 10 candidate)
+
+Reports now consumes `LelloListControls` from the sibling Compose library at
+LelloDesign commit `8f66a1f`, replacing Talìa's custom `ReportChoice` dropdown.
+Sort is a neutral action showing the current order. Filter opens the reusable
+sheet, with draft selections committed only by Apply. Applied criteria become
+removable chips. Catalog status and schedule criteria can be combined; history
+continues to apply its filter on the server before pagination. Search and
+pull-to-refresh remain intact.
+
+The library's three interaction tests, unit tests and lint passed. Talìa's 18
+device tests, lint and signed minified APK 3 compatibility checks passed; shared
+sheet and applied-filter screenshots were reviewed. Payload 10 is not published.

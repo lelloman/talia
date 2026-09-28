@@ -13,7 +13,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -74,6 +73,7 @@ internal fun Reports(connection: NativeConnection, setup: () -> Unit) {
     var query by rememberSaveable { mutableStateOf("") }
     var sort by rememberSaveable { mutableStateOf("newest") }
     var filter by rememberSaveable { mutableStateOf("all") }
+    var schedule by rememberSaveable { mutableStateOf("all") }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(connection, lifecycle, connection.signedIn, connection.reportSelected, connection.reportRunSelected) {
         if (connection.signedIn) lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -108,14 +108,15 @@ internal fun Reports(connection: NativeConnection, setup: () -> Unit) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 LelloButton(connection::runReport, enabled = !connection.reportsBusy && connection.pendingReport == null && definition?.optBoolean("available", true) != false) { Text("Run report") }
                 Muted("Saved in Talìa · No Telegram or email sent")
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ReportChoice("Sort", connection.reportSort, listOf("newest" to "Newest first", "oldest" to "Oldest first"), !connection.reportsBusy) {
-                        connection.filterReportHistory(it, connection.reportFilter)
-                    }
-                    ReportChoice("Status", connection.reportFilter, historyFilters, !connection.reportsBusy) {
-                        connection.filterReportHistory(connection.reportSort, it)
-                    }
-                }
+                LelloListControls(
+                    sortOptions = reportSortOptions,
+                    selectedSort = connection.reportSort,
+                    onSortSelected = { connection.filterReportHistory(it, connection.reportFilter) },
+                    filterGroups = listOf(historyFilterGroup),
+                    selectedFilters = if (connection.reportFilter == "all") emptySet() else setOf(connection.reportFilter),
+                    onFiltersApplied = { connection.filterReportHistory(connection.reportSort, it.firstOrNull() ?: "all") },
+                    enabled = !connection.reportsBusy,
+                )
                 if (connection.reportHistory.length() == 0 && !connection.reportsBusy && connection.reportsMessage == null)
                     Muted(if (connection.reportFilter == "all") "No runs yet." else "No runs match this filter.")
                 for (i in 0 until connection.reportHistory.length()) {
@@ -129,14 +130,24 @@ internal fun Reports(connection: NativeConnection, setup: () -> Unit) {
         }
         else -> {
             val definitions = connection.reportDefinitions
-            val reports = catalogReports(definitions, query, sort, filter)
+            val reports = catalogReports(definitions, query, sort, filter, schedule)
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 LelloTextField(query, { query = it }, { Text("Search reports") }, modifier = Modifier.fillMaxWidth(),
                     suffix = { if (query.isNotEmpty()) LelloTextButton({ query = "" }) { Text("Clear") } })
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ReportChoice("Sort", sort, listOf("newest" to "Newest first", "oldest" to "Oldest first", "name" to "Name A–Z")) { sort = it }
-                    ReportChoice("Filter", filter, listOf("all" to "All reports", "issues" to "Needs attention", "active" to "Running", "scheduled" to "Scheduled", "never" to "Never run")) { filter = it }
-                }
+                LelloListControls(
+                    sortOptions = reportSortOptions + LelloListOption("name", "Name A–Z"),
+                    selectedSort = sort, onSortSelected = { sort = it },
+                    filterGroups = catalogFilterGroups,
+                    selectedFilters = buildSet {
+                        if (filter != "all") add("status:$filter")
+                        if (schedule != "all") add("schedule:$schedule")
+                    },
+                    onFiltersApplied = { criteria ->
+                        filter = criteria.firstOrNull { it.startsWith("status:") }?.removePrefix("status:") ?: "all"
+                        schedule = criteria.firstOrNull { it.startsWith("schedule:") }?.removePrefix("schedule:") ?: "all"
+                    },
+                    enabled = !connection.reportsBusy,
+                )
                 Muted("${reports.size} of ${definitions?.length() ?: 0} reports")
                 if (reports.isEmpty() && !connection.reportsBusy && connection.reportsMessage == null)
                     Muted(if (definitions?.length() == 0) "No reports configured." else "No reports match your search or filter.")
@@ -154,16 +165,27 @@ internal fun Reports(connection: NativeConnection, setup: () -> Unit) {
     }
 }
 
-private val historyFilters = listOf("all" to "All statuses", "active" to "Running", "complete" to "Completed", "issues" to "With issues", "failed" to "Failed")
+private val reportSortOptions = listOf(LelloListOption("newest", "Newest first"), LelloListOption("oldest", "Oldest first"))
+private val historyFilterGroup = LelloFilterGroup("status", "Status", listOf(
+    LelloListOption("active", "Running"), LelloListOption("complete", "Completed"),
+    LelloListOption("issues", "With issues"), LelloListOption("failed", "Failed")), anyLabel = "All statuses")
+private val catalogFilterGroups = listOf(
+    LelloFilterGroup("status", "Status", listOf(LelloListOption("status:issues", "Needs attention"),
+        LelloListOption("status:active", "Running"), LelloListOption("status:never", "Never run")), anyLabel = "All statuses"),
+    LelloFilterGroup("schedule", "Schedule", listOf(LelloListOption("schedule:scheduled", "Scheduled"),
+        LelloListOption("schedule:off", "Schedule off")), anyLabel = "Any schedule"),
+)
 private fun shortReportTime(ms: Long) = DateTimeFormatter.ofPattern("dd MMM · HH:mm").format(Instant.ofEpochMilli(ms).atZone(ZoneId.systemDefault()))
 private fun compactStatus(status: String) = when (status) {
     "complete" -> "Completed"; "partial" -> "With issues"; "failed" -> "Failed"
     "queued" -> "Queued"; "running" -> "Running"; "delivering" -> "Sending"; "never" -> "Never run"; else -> status
 }
-internal fun catalogReports(data: org.json.JSONArray?, query: String, sort: String, filter: String): List<JSONObject> {
+internal fun catalogReports(data: org.json.JSONArray?, query: String, sort: String, filter: String, schedule: String = "all"): List<JSONObject> {
     val rows = (0 until (data?.length() ?: 0)).map { data!!.getJSONObject(it) }.filter { report ->
         val status = report.optJSONObject("latest")?.optString("status")
-        report.getString("id").contains(query.trim(), ignoreCase = true) && when (filter) {
+        val scheduled = report.optBoolean("enabled") && report.optBoolean("scheduled")
+        val matchesSchedule = when (schedule) { "scheduled" -> scheduled; "off" -> !scheduled; else -> true }
+        matchesSchedule && report.getString("id").contains(query.trim(), ignoreCase = true) && when (filter) {
             "issues" -> status in listOf("failed", "partial") || !report.optBoolean("available", true)
             "active" -> status != null && reportActive(status)
             "scheduled" -> report.optBoolean("enabled") && report.optBoolean("scheduled")
@@ -183,22 +205,6 @@ internal fun catalogReports(data: org.json.JSONArray?, query: String, sort: Stri
             else -> bt.compareTo(at)
         }
         if (order != 0) order else a.getString("id").compareTo(b.getString("id"), ignoreCase = true)
-    }
-}
-
-@Composable
-private fun ReportChoice(label: String, value: String, choices: List<Pair<String, String>>, enabled: Boolean = true, select: (String) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-    Box {
-        LelloFilterChip(selected = true, enabled = enabled, onClick = { if (enabled) expanded = true }, label = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("$label: ${choices.first { it.first == value }.second}", style = MaterialTheme.typography.labelLarge)
-                Icon(Icons.Default.ArrowDropDown, null, Modifier.size(18.dp))
-            }
-        })
-        DropdownMenu(expanded, { expanded = false }) {
-            choices.forEach { (key, title) -> DropdownMenuItem(text = { Text(title) }, onClick = { expanded = false; select(key) }) }
-        }
     }
 }
 

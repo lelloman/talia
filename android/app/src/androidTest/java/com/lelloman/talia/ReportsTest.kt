@@ -42,6 +42,8 @@ class ReportsTest {
         assertEquals(listOf("gamma", "alpha"), ids(filter = "scheduled"))
         assertEquals(listOf("delta"), ids(filter = "never"))
         assertEquals(emptyList<String>(), ids(query = "missing"))
+        assertEquals(listOf("beta"), catalogReports(data, "", "newest", "issues", "off").map { it.getString("id") })
+        assertTrue(catalogReports(data, "", "newest", "issues", "scheduled").isEmpty())
     }
     @Test fun changingHistoryFiltersResetsCursorAndAppliesToEveryPage() {
         val queries = mutableListOf<JSONObject>()

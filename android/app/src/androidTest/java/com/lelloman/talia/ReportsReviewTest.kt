@@ -35,7 +35,11 @@ class ReportsReviewTest {
         }
         var node = find(instrumentation.uiAutomation.rootInActiveWindow)
         while (node != null) {
-            if (node.isClickable && node.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return
+            if (node.isClickable && node.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
+                instrumentation.waitForIdleSync()
+                Thread.sleep(150)
+                return
+            }
             node = node.parent
         }
         fail("No clickable $text")
@@ -107,9 +111,9 @@ class ReportsReviewTest {
             assertFalse("Refresh" in texts(instrumentation.uiAutomation.rootInActiveWindow))
             refreshBySwipe(requests)
             shot("reports-catalog")
-            clickText("Filter: All reports"); awaitText("Never run"); clickText("Never run")
-            awaitText("1 of 6 reports")
-            clickText("Filter: Never run"); awaitText("All reports"); clickText("All reports")
+            clickText("Filter"); awaitText("Never run"); shot("reports-filter-sheet"); clickText("Never run")
+            clickText("Apply"); awaitText("1 of 6 reports"); shot("reports-applied-filter")
+            clickText("Status: Never run")
             awaitText("6 of 6 reports")
             instrumentation.runOnMainSync { model.selectReport("homelab-infrastructure") }
             awaitText("Completed"); refreshBySwipe(requests); shot("reports-history")
