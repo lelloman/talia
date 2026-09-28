@@ -32,7 +32,7 @@ internal fun Muted(text: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun StatusLabel(label: String, tone: LelloTone) {
+internal fun StatusLabel(label: String, tone: LelloTone) {
     val palette = LocalLelloPalette.current
     val key = tone.name.lowercase(java.util.Locale.ROOT)
     Surface(shape = MaterialTheme.shapes.small, color = palette["$key-container"], contentColor = palette["on-$key-container"]) {
@@ -224,10 +224,10 @@ internal fun OverviewContent(data: JSONObject?, busy: Boolean, message: String?,
 private fun ReportSummary(report: JSONObject) {
     var expanded by rememberSaveable(report.getString("id")) { mutableStateOf(false) }
     val status = report.getString("status")
-    val tone = when (status) { "succeeded" -> LelloTone.Success; "failed" -> LelloTone.Error; "running", "pending" -> LelloTone.Info; else -> LelloTone.Warning }
+    val tone = when (status) { "complete", "succeeded" -> LelloTone.Success; "failed" -> LelloTone.Error; "running", "pending" -> LelloTone.Info; else -> LelloTone.Warning }
     LelloCard(Modifier.fillMaxWidth()) {
         Text(if (report.isNull("title")) report.getString("report") else report.getString("title"), style = MaterialTheme.typography.titleMedium)
-        StatusLabel(when (status) { "succeeded" -> "Run completed"; "failed" -> "Run failed"; else -> status.replaceFirstChar { it.uppercase() } }, tone)
+        StatusLabel(when (status) { "complete", "succeeded" -> "Run completed"; "failed" -> "Run failed"; else -> status.replaceFirstChar { it.uppercase() } }, tone)
         Text(time(report.getLong("created")), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         if (!report.isNull("summary")) Text(report.getString("summary"), style = MaterialTheme.typography.bodyMedium,
             maxLines = if (expanded) Int.MAX_VALUE else 4, overflow = TextOverflow.Ellipsis)

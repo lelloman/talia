@@ -146,3 +146,20 @@ on LelloStore (publication revision 12), on the active APK 3 update stream.
 The signed VPK is 3,760,741 bytes, built from source commit `17f655b`.
 The exact payload, R8 mapping and provenance are archived locally under
 `.local/android-releases/payload-6` at the repository root.
+
+## Reports (payload 7)
+
+The native Reports screen provides the report catalog, paginated run history,
+manual preview execution and automatically refreshed run details using shared
+LelloDesign components. Runs do not send Telegram/email notifications. Admission
+request IDs are encrypted and persisted before dispatch; explicit retry recovers
+the same run after an ambiguous response or app restart. The selected report/run
+also survives restarts. Reports requires the backend's `/native/reports` endpoint
+and current administrator access. See [report behavior](../docs/reports.md).
+
+Validation: all 16 emulator tests passed, including native/gateway regressions,
+admission retry after restart, history pagination, permission revocation and
+catalog/history/result rendering. Catalog and result screenshots were reviewed.
+Android lint and the signed minified APK 3 compatibility build passed. Backend
+regression tests passed (151 library tests, 26 service tests, one CLI test; one
+pre-existing ignored service test).

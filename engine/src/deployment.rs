@@ -345,7 +345,7 @@ impl Deployment {
     }
     pub async fn gate(State(d): State<Self>, mut r: Request, next: Next) -> Response {
         let path = r.uri().path();
-        let native_request = matches!(path, "/native/overview" | "/native/session" | "/native/logout");
+        let native_request = matches!(path, "/native/overview" | "/native/session" | "/native/logout" | "/native/reports");
         let browser_alert = path == "/alerts" && !r.headers().contains_key(header::AUTHORIZATION);
         let protected = matches!(
             path,
@@ -756,6 +756,7 @@ mod tests {
     async fn native_pkce_handoff_is_one_time_scoped_and_revocable() {
         let (server,d)=fixture().await;
         let router=d.routes().route("/native/overview",get(||async{"private"}))
+            .route("/native/reports",post(||async{"private"}))
             .route("/engine",post(||async{"private"}))
             .layer(axum::middleware::from_fn_with_state(d.clone(),Deployment::gate));
         let verifier=random();
@@ -785,10 +786,13 @@ mod tests {
                 for (path,method,origin,expected) in [
                     ("/native/session","GET",None,StatusCode::OK),
                     ("/native/overview","GET",None,StatusCode::OK),
+                    ("/native/reports","POST",None,StatusCode::OK),
+                    ("/native/reports","POST",Some("https://attacker.test"),StatusCode::FORBIDDEN),
                     ("/engine","POST",Some("https://talia.test"),StatusCode::UNAUTHORIZED),
                     ("/native/logout","POST",Some("https://attacker.test"),StatusCode::FORBIDDEN),
                     ("/native/logout","POST",None,StatusCode::NO_CONTENT),
                     ("/native/session","GET",None,StatusCode::UNAUTHORIZED),
+                    ("/native/reports","POST",None,StatusCode::UNAUTHORIZED),
                 ] {
                     let mut request=Request::builder().method(method).uri(path).header(header::AUTHORIZATION,format!("Bearer {token}"));
                     if let Some(origin)=origin {request=request.header(header::ORIGIN,origin);}

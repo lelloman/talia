@@ -14,6 +14,10 @@ impl Service {
                 .unwrap()
                 .to_string()
         };
+        if r.connection == "account" && r.body["request"]["op"]=="nativeReports" {
+            let body = &r.body["request"];
+            return self.engine.store.borrow_mut().native_reports(subject, body["operation"].as_str().unwrap_or(""), body["args"].clone(), self.engine.now());
+        }
         if r.connection == "account" && r.body["request"]["op"]=="nativeOverview" {
             return self.engine.store.borrow_mut().native_overview(subject,r.body["name"].as_str().unwrap_or(subject),self.engine.now());
         }

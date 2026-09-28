@@ -153,3 +153,24 @@ against the actual HTTPS/OIDC service. This is fixture evidence; no live email t
 ## Telegram destinations
 
 Use Settings → Telegram to pair a destination, then reference its `telegram-CHAT_ID` in a report. Managed Telegram delivery is tracked per message part; each part retains its report reference. See [Telegram](telegram.md).
+
+## Native Android Reports
+
+The drawer's Reports screen lists configured definitions with schedule state,
+check count, reporting period and latest run status. Open a report to browse its
+paginated history or start a new run. App runs use `send:false`: collection,
+scripts and inference execute normally and results are retained, without email
+or Telegram delivery. A disabled schedule does not disable manual execution.
+
+Run details refresh every five seconds while visible and active, showing each
+check's status, composed content, errors and existing delivery outcomes. The run
+continues on the server when the app closes. The selected report/run is restored
+with the encrypted native session. An ambiguous admission keeps its persisted
+request ID; “Check run request” retries that exact request, including after an
+app restart, rather than admitting a duplicate.
+
+`POST /native/reports` accepts `{op,args}` for `list`, `runs`, `run_get` and `run`
+only. The native bearer session and current administrator role are checked for
+every operation. Reads expose display projections, not scripts, raw step outputs
+or source configuration. Mutations use the existing durable report request ledger
+scoped to the authenticated subject. No schema migration is required.

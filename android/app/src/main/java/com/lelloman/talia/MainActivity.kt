@@ -134,11 +134,12 @@ class MainActivity : ComponentActivity() {
                             }
                         } else if (page == "overview") {
                             Overview(connection) { page = "settings" }
+                        } else if (page == "reports") {
+                            Reports(connection) { page = "settings" }
                         } else {
                             LelloState(
                                 title = "${destinations.first { it.id == page }.label} is coming next",
                                 description = when (page) {
-                                    "reports" -> "For now, you can read recent report results in Overview. Running reports from the app is coming next."
                                     "automation" -> "Schedules and alert rules will live here. They aren’t available in the app yet."
                                     else -> "Your conversations with Talìa will live here. Chat isn’t available in the app yet."
                                 },

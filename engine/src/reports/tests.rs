@@ -504,3 +504,30 @@ fn analysis_inspection_is_admin_only_and_pruning_preserves_active_work() {
     assert_eq!(result, s.report_api(&actor, "prune", args, 2000).unwrap());
     assert!(s.ai_run("ai-result").unwrap().is_none());
 }
+
+#[test]
+fn native_reports_authority_projection_and_replay() {
+    let mut s = Store::open(":memory:").unwrap();
+    s.report_save(&definition(), 0, 1000).unwrap();
+    assert_eq!(s.native_reports("viewer", "list", json!({}), 1000).unwrap_err(), "forbidden");
+    s.user_bootstrap("admin").unwrap();
+    let list = s.native_reports("admin", "list", json!({}), 1000).unwrap();
+    assert_eq!(list["definitions"][0]["id"], "morning");
+    assert_eq!(list["definitions"][0]["available"], true);
+    assert!(list["definitions"][0].get("compose").is_none());
+    assert!(s.native_reports("admin", "save", json!({}), 1000).is_err());
+    assert!(s.native_reports("admin", "run", json!({"id":"morning","send":true,"requestId":"native-1"}), 1000).is_err());
+    let args = json!({"id":"morning","send":false,"requestId":"native-1"});
+    let admitted = s.native_reports("admin", "run", args.clone(), 1000).unwrap();
+    assert_eq!(s.native_reports("admin", "run", args, 2000).unwrap(), admitted);
+    let detail = s.native_reports("admin", "run_get", json!({"id":admitted["run_id"]}), 2000).unwrap();
+    assert_eq!(detail["run"]["steps"][0]["status"], "pending");
+    assert!(detail["run"].get("definition").is_none());
+    assert!(detail["run"].get("outputs").is_none());
+    let history = s.native_reports("admin", "runs", json!({"report":"morning","limit":1}), 2000).unwrap();
+    assert_eq!(history["runs"].as_array().unwrap().len(), 1);
+    let page = s.native_reports("admin", "runs", json!({"report":"morning","limit":1,"before":history["next_before"]}), 2000).unwrap();
+    assert_eq!(page["runs"], json!([]));
+    s.conn.execute("UPDATE dashboard_users SET admin=0 WHERE subject='admin'", []).unwrap();
+    assert_eq!(s.native_reports("admin", "run_get", json!({"id":admitted["run_id"]}), 2000).unwrap_err(), "forbidden");
+}

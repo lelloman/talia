@@ -100,6 +100,94 @@ internal class NativeConnection @JvmOverloads constructor(
     var busy by mutableStateOf(false); private set
     var message by mutableStateOf<String?>(null); private set
     var forbidden by mutableStateOf(false); private set
+    var reportDefinitions by mutableStateOf<org.json.JSONArray?>(null); private set
+    var reportHistory by mutableStateOf(org.json.JSONArray()); private set
+    var reportDetail by mutableStateOf<JSONObject?>(null); private set
+    var reportSelected by mutableStateOf(saved.optString("reportSelected", "")); private set
+    var reportRunSelected by mutableStateOf(saved.optString("reportRunSelected", "")); private set
+    var reportsBusy by mutableStateOf(false); private set
+    var reportsMessage by mutableStateOf<String?>(null); private set
+    var reportsForbidden by mutableStateOf(false); private set
+    var reportsNext by mutableStateOf<String?>(null); private set
+    var pendingReport by mutableStateOf(saved.optJSONObject("reportRequest")?.optString("id")); private set
+    private var reportOperation: Job? = null
+    private fun reportTask(block: suspend () -> Unit) {
+        if (!signedIn || reportOperation?.isActive == true) return
+        reportOperation = viewModelScope.launch {
+            reportsBusy = true
+            try { block(); reportsMessage = null; reportsForbidden = false }
+            catch (cancelled: CancellationException) { throw cancelled }
+            catch (error: Exception) {
+                reportsMessage = when {
+                    error is ApiFailure && error.status == 401 -> { clear(); "Your session expired. Sign in again." }
+                    error is ApiFailure && error.status == 403 -> {
+                        reportDefinitions = null; reportHistory = org.json.JSONArray(); reportDetail = null
+                        reportsForbidden = true; "Reports require administrator access."
+                    }
+                    error is ApiFailure && error.status in listOf(404, 405) -> "This server needs the Reports update."
+                    error is ApiFailure && error.status == 400 -> "This request was rejected. Another run may already be active, or the report is unavailable."
+                    error is RemoteAccessFailure -> error.message
+                    else -> "Could not refresh Reports. Check your connection and try again."
+                }
+            } finally { reportsBusy = false }
+        }
+    }
+    private suspend fun reportCall(op: String, args: JSONObject = JSONObject()): JSONObject =
+        call(server, "/native/reports", saved.getString("token"), JSONObject().put("op", op).put("args", args))
+    private fun saveReportSelection() {
+        saved.put("reportSelected", reportSelected).put("reportRunSelected", reportRunSelected)
+        vault.write(saved)
+    }
+    fun selectReport(id: String) {
+        if (reportsBusy) return
+        reportSelected = id; reportRunSelected = ""; reportDetail = null
+        reportHistory = org.json.JSONArray(); reportsNext = null; saveReportSelection(); refreshReports()
+    }
+    fun selectReportRun(id: String) {
+        if (reportsBusy) return
+        reportRunSelected = id; reportDetail = null; saveReportSelection(); refreshReports()
+    }
+    fun reportsBack() {
+        if (reportsBusy) return
+        if (reportRunSelected.isNotEmpty()) reportRunSelected = "" else reportSelected = ""
+        reportDetail = null; saveReportSelection(); refreshReports()
+    }
+    fun refreshReports() = reportTask {
+        when {
+            reportRunSelected.isNotEmpty() -> reportDetail = reportCall("run_get", JSONObject().put("id", reportRunSelected)).getJSONObject("run")
+            reportSelected.isNotEmpty() -> {
+                val value = reportCall("runs", JSONObject().put("report", reportSelected).put("limit", 20))
+                reportHistory = value.getJSONArray("runs")
+                reportsNext = if (value.isNull("next_before")) null else value.getString("next_before")
+            }
+            else -> reportDefinitions = reportCall("list").getJSONArray("definitions")
+        }
+    }
+    fun moreReportRuns() = reportTask {
+        val cursor = reportsNext ?: return@reportTask
+        val value = reportCall("runs", JSONObject().put("report", reportSelected).put("limit", 20).put("before", cursor))
+        val combined = org.json.JSONArray(reportHistory.toString())
+        val more = value.getJSONArray("runs")
+        for (i in 0 until more.length()) combined.put(more.getJSONObject(i))
+        reportHistory = combined
+        reportsNext = if (value.isNull("next_before")) null else value.getString("next_before")
+    }
+    fun runReport() = reportTask {
+        // Persist before dispatch. Explicit retry, including after restart, reuses the same request.
+        val args = saved.optJSONObject("reportRequest") ?: JSONObject().put("id", reportSelected)
+            .put("send", false).put("requestId", java.util.UUID.randomUUID().toString()).also {
+                saved.put("reportRequest", it); vault.write(saved); pendingReport = reportSelected
+            }
+        val response = try { reportCall("run", args) } catch (failure: ApiFailure) {
+            if (failure.status == 400 || failure.status == 403) {
+                saved.remove("reportRequest"); vault.write(saved); pendingReport = null
+            }
+            throw failure
+        }
+        reportSelected = args.getString("id"); reportRunSelected = response.getString("run_id")
+        saved.remove("reportRequest"); pendingReport = null; saveReportSelection()
+        reportDetail = reportCall("run_get", JSONObject().put("id", reportRunSelected)).getJSONObject("run")
+    }
     private var operation: Job? = null
     private fun launch(block: suspend () -> Unit) {
         if (operation?.isActive == true) return
@@ -117,7 +205,7 @@ internal class NativeConnection @JvmOverloads constructor(
                 } else if (error is ApiFailure && error.status == 401) {
                     clear(); message = "Your session expired. Sign in again."
                 } else if (error is ApiFailure && error.status == 403) {
-                    overview = null; forbidden = true; message = "Overview requires administrator access."
+                    overview = null; forbidden = true; reportDefinitions = null; reportHistory = org.json.JSONArray(); reportDetail = null; message = "Overview requires administrator access."
                 } else {
                     message = if (error is ApiFailure && error.status in listOf(404, 405)) "This server does not support the native app yet." else "Could not connect. Check your connection and try again."
                 }
@@ -191,6 +279,9 @@ internal class NativeConnection @JvmOverloads constructor(
         if (request == null && gateway.enrolled) gateway.revoke()
     }
     private fun clear() {
+        reportOperation?.cancel()
+        reportDefinitions = null; reportHistory = org.json.JSONArray(); reportDetail = null
+        reportSelected = ""; reportRunSelected = ""; reportsNext = null; pendingReport = null; reportsMessage = null; reportsForbidden = false
         vault.clear(); saved = JSONObject(); signedIn = false; pending = false
         overview = null; name = "Not signed in"; forbidden = false
     }

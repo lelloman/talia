@@ -18,6 +18,9 @@ impl Store {
     ) -> Result<Value> {
         self.agent_require_dashboard_admin(session)
             .map_err(|_| "forbidden")?;
+        self.report_authorized(op, args, session.principal(), now)
+    }
+    fn report_authorized(&mut self, op: &str, args: Value, actor: &str, now: i64) -> Result<Value> {
         let fields: &[&str] = match op {
             "list" => &[],
             "get" => &["id"],
@@ -36,11 +39,11 @@ impl Store {
             return Err("unknown report fields".into());
         }
         if ["list", "get", "runs", "run_get", "analysis_get"].contains(&op) {
-            return self.report_inner(op, &args, session.principal(), now);
+            return self.report_inner(op, &args, actor, now);
         }
         let request = text(&args, "requestId")?;
         id(request)?;
-        let key = format!("{}:{request}", session.principal());
+        let key = format!("{}:{request}", actor);
         let signature = ring::digest::digest(
             &ring::digest::SHA256,
             json!([op, args]).to_string().as_bytes(),
@@ -65,7 +68,7 @@ impl Store {
                 }
                 return serde_json::from_str(&result).map_err(err);
             }
-            let result = s.report_inner(op, &args, session.principal(), now)?;
+            let result = s.report_inner(op, &args, actor, now)?;
             s.conn
                 .execute(
                     "INSERT INTO report_requests VALUES(?,?,?)",
@@ -74,6 +77,44 @@ impl Store {
                 .map_err(err)?;
             Ok(result)
         })
+    }
+    /// Trusted native HTTP host supplies the authenticated subject, never client arguments.
+    pub fn native_reports(&mut self, subject: &str, op: &str, args: Value, now: i64) -> Result<Value> {
+        if !self.user_admin(subject).map_err(|_| "forbidden")? {
+            return Err("forbidden".into());
+        }
+        if !["list", "runs", "run_get", "run"].contains(&op) {
+            return Err("unknown report operation".into());
+        }
+        // Native runs are retained previews; delivery is a separate operator action.
+        if op == "run" && args["send"] != false {
+            return Err("native runs require send:false".into());
+        }
+        let value = self.report_authorized(op, args, &format!("native:{subject}"), now)?;
+        if op == "list" {
+            let mut definitions = vec![];
+            for d in self.report_definitions()? {
+                let latest = self.report_inner("runs", &json!({"report":d.id,"limit":1}), subject, now)?;
+                definitions.push(json!({"id":d.id,"enabled":d.enabled,"scheduled":d.schedule.is_some(),
+                    "steps":d.steps.len(),"period_ms":d.period_ms,
+                    "available":!d.steps.iter().any(|s| matches!(s.action, Action::Unavailable {..})),
+                    "latest":latest["runs"][0]}));
+            }
+            return Ok(json!({"definitions":definitions}));
+        }
+        if op == "run_get" {
+            let r = &value["run"];
+            let steps: Vec<Value> = r["definition"]["steps"].as_array().into_iter().flatten().enumerate().map(|(index, step)| {
+                let output = &r["outputs"][step["id"].as_str().unwrap_or("")];
+                let fallback = if r["status"] == "running" && r["index"].as_u64() == Some(index as u64) { "running" }
+                    else if r["status"] == "failed" { "not_run" } else { "pending" };
+                json!({"id":step["id"],"status":output["status"].as_str().unwrap_or(fallback),"error":output["error"]})
+            }).collect();
+            return Ok(json!({"run":{"id":r["id"],"report":r["definition"]["id"],"created":r["created"],
+                "period_start":r["period_start"],"status":r["status"],"send":r["send"],
+                "steps":steps,"content":r["content"],"error":r["error"],"deliveries":r["deliveries"]}}));
+        }
+        Ok(value)
     }
     fn report_inner(&mut self, op: &str, args: &Value, actor: &str, now: i64) -> Result<Value> {
         match op {
