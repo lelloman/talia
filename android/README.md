@@ -163,3 +163,18 @@ catalog/history/result rendering. Catalog and result screenshots were reviewed.
 Android lint and the signed minified APK 3 compatibility build passed. Backend
 regression tests passed (151 library tests, 26 service tests, one CLI test; one
 pre-existing ignored service test).
+
+Payload 7 is published and verified on LelloStore (publication revision 14),
+on the active APK 3 stream for `com.lelloman.talia` / APK 0.1.2 (3).
+The signed VPK is 3,782,833 bytes, SHA-256
+`19b1954f1dbb0e50bb117b8dc73e43f1401d25296b73b6debf0609f7436956c9`.
+Artifacts, R8 mapping and provenance are archived in
+`.local/android-releases/payload-7`. The signed minified shell opened Reports
+on the emulator without a crash. A Store-delivered upgrade and authenticated
+production report execution remain phone acceptance checks.
+
+Backend commit `06d59a3` is deployed to homelab. Health returned 200 and the
+Reports endpoint returned 401 without a session, both internally and through
+normal HTTPS routing. Both SQLite databases were backed up and passed integrity
+checks before deployment; container-local copies are under
+`/data/backups/reports-20260928`. No schema migration or gateway change was needed.
