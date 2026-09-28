@@ -51,7 +51,7 @@ paravoid {
     minifyPayload = true
     payloadProguardFiles.from(file('payload-rules.pro'))
     crashRecovery { enabled = true; updater = 'default' }
-    payloadVersion = providers.gradleProperty('paravoidPayloadVersion').map { it.toLong() }.getOrElse(7L)
+    payloadVersion = providers.gradleProperty('paravoidPayloadVersion').map { it.toLong() }.getOrElse(8L)
     // APK 3 introduces the gateway callback and network permission.
     baselineDirectory = layout.projectDirectory.dir(
         providers.gradleProperty('paravoidBaselineDirectory').getOrElse('../paravoid-baselines/apk-3'))

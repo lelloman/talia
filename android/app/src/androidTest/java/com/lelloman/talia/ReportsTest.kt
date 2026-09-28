@@ -26,6 +26,46 @@ class ReportsTest {
         } while (System.currentTimeMillis() < deadline)
         fail("Reports request did not finish")
     }
+    @Test fun catalogSearchFiltersAndSortingCompose() {
+        val data = org.json.JSONArray("""[
+          {"id":"alpha","enabled":true,"scheduled":true,"available":true,"latest":{"status":"complete","created":100}},
+          {"id":"beta","enabled":false,"scheduled":false,"available":true,"latest":{"status":"failed","created":300}},
+          {"id":"gamma","enabled":true,"scheduled":true,"available":true,"latest":{"status":"running","created":200}},
+          {"id":"delta","enabled":false,"scheduled":false,"available":true,"latest":null}]
+        """)
+        fun ids(query: String = "", sort: String = "newest", filter: String = "all") = catalogReports(data, query, sort, filter).map { it.getString("id") }
+        assertEquals(listOf("beta", "gamma", "alpha", "delta"), ids())
+        assertEquals(listOf("alpha", "gamma", "beta", "delta"), ids(sort = "oldest"))
+        assertEquals(listOf("alpha", "beta", "delta", "gamma"), ids(sort = "name"))
+        assertEquals(listOf("beta"), ids(query = " BE ", filter = "issues"))
+        assertEquals(listOf("gamma"), ids(filter = "active"))
+        assertEquals(listOf("gamma", "alpha"), ids(filter = "scheduled"))
+        assertEquals(listOf("delta"), ids(filter = "never"))
+        assertEquals(emptyList<String>(), ids(query = "missing"))
+    }
+    @Test fun changingHistoryFiltersResetsCursorAndAppliesToEveryPage() {
+        val queries = mutableListOf<JSONObject>()
+        lateinit var model: NativeConnection
+        instrumentation.runOnMainSync {
+            model = NativeConnection(application) { _, _, _, body ->
+                queries.add(JSONObject(body!!.getJSONObject("args").toString()))
+                JSONObject("""{"runs":[{"id":"r1"}],"next_before":"r1"}""")
+            }
+            model.selectReport("infra")
+        }
+        idle(model)
+        instrumentation.runOnMainSync { model.moreReportRuns() }
+        idle(model)
+        instrumentation.runOnMainSync { model.filterReportHistory("oldest", "failed") }
+        idle(model)
+        assertEquals(1, model.reportHistory.length())
+        assertFalse(queries.last().has("before"))
+        instrumentation.runOnMainSync { model.moreReportRuns() }
+        idle(model)
+        assertEquals("r1", queries.last().getString("before"))
+        assertEquals("oldest", queries.last().getString("sort"))
+        assertEquals("failed", queries.last().getString("status"))
+    }
     @Test fun lostAdmissionResponseRetriesSameRequestAfterRestartAndPollsResult() {
         var requestId = ""
         var admissions = 0

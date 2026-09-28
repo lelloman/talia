@@ -545,7 +545,7 @@ fn history_and_native_catalog_are_newest_first_with_stable_pages() {
         ("morning", "b-new", 3000), ("morning", "m-middle", 2000), ("recent", "c-latest", 4000)] {
         let mut run = s.report_start(name, "admin", false, created).unwrap();
         s.conn.execute("DELETE FROM report_runs WHERE id=?", [&run.id]).unwrap();
-        run.id = id.into(); run.status = "complete".into(); s.report_put(&run).unwrap();
+        run.id = id.into(); run.status = if id == "z-old" || id == "a-new" { "failed" } else { "complete" }.into(); s.report_put(&run).unwrap();
     }
     let first = s.native_reports("admin", "runs", json!({"report":"morning","limit":2}), 5000).unwrap();
     assert_eq!(first["runs"][0]["id"], "b-new");
@@ -560,6 +560,14 @@ fn history_and_native_catalog_are_newest_first_with_stable_pages() {
     assert_eq!(catalog["definitions"][1]["latest"]["id"], "b-new");
     assert_eq!(catalog["definitions"][2]["id"], "never");
     assert!(s.native_reports("admin", "runs", json!({"report":"morning","before":"c-latest"}), 5000).is_err());
+    let filtered = s.native_reports("admin", "runs", json!({"report":"morning","sort":"oldest","status":"failed","limit":1}), 5000).unwrap();
+    assert_eq!(filtered["runs"][0]["id"], "z-old");
+    let filtered_next = s.native_reports("admin", "runs", json!({"report":"morning","sort":"oldest","status":"failed","limit":1,"before":filtered["next_before"]}), 5000).unwrap();
+    assert_eq!(filtered_next["runs"][0]["id"], "a-new");
+    let active = s.native_reports("admin", "runs", json!({"report":"morning","status":"active"}), 5000).unwrap();
+    assert_eq!(active["runs"], json!([]));
+    assert!(s.native_reports("admin", "runs", json!({"report":"morning","sort":"arbitrary"}), 5000).is_err());
+    assert!(s.native_reports("admin", "runs", json!({"report":"morning","status":"arbitrary"}), 5000).is_err());
     s.conn.execute("DELETE FROM report_runs WHERE id='a-new'", []).unwrap();
     assert!(s.native_reports("admin", "runs", json!({"report":"morning","before":"a-new"}), 5000).is_err());
 }

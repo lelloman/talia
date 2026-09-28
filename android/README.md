@@ -178,3 +178,17 @@ Reports endpoint returned 401 without a session, both internally and through
 normal HTTPS routing. Both SQLite databases were backed up and passed integrity
 checks before deployment; container-local copies are under
 `/data/backups/reports-20260928`. No schema migration or gateway change was needed.
+
+## Compact Reports and browsing controls (payload 8)
+
+Catalog/history cards are replaced with compact, full-width tappable rows.
+The catalog adds name search, newest/oldest/name sorting and status/schedule
+filters. History adds newest/oldest sorting and status filters across the entire
+server history, preserving those selections for subsequent pages. Changing a
+history control starts a fresh page. Execution details remain available on tap.
+
+Validation: 18 emulator tests passed, including catalog search/sort/filter
+combinations, dropdown interaction and history cursor reset/preservation.
+Eight backend report regressions passed, including filtered ascending pagination.
+Compact catalog and history screenshots were reviewed; Android lint and the
+signed minified APK 3 compatibility build passed.

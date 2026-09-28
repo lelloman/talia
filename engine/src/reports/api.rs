@@ -24,7 +24,7 @@ impl Store {
         let fields: &[&str] = match op {
             "list" => &[],
             "get" => &["id"],
-            "runs" => &["report", "before", "limit"],
+            "runs" => &["report", "before", "limit", "sort", "status"],
             "run_get" | "analysis_get" => &["id"],
             "save" => &["definition", "expected", "requestId"],
             "run" => &["id", "send", "requestId"],
@@ -145,16 +145,24 @@ impl Store {
                 if limit == 0 || limit > 100 {
                     return Err("limit must be 1..100".into());
                 }
+                let sort = args["sort"].as_str().unwrap_or("newest");
+                if !["newest", "oldest"].contains(&sort) { return Err("invalid history sort".into()); }
+                let status = args["status"].as_str().unwrap_or("all");
+                if !["all", "active", "complete", "issues", "failed"].contains(&status) { return Err("invalid history status".into()); }
                 let (before_created, before_id) = if let Some(before) = args["before"].as_str() {
                     let created: i64 = self.conn.query_row(
                         "SELECT created FROM report_runs WHERE report=? AND id=?", params![report, before], |r| r.get(0)
                     ).optional().map_err(err)?.ok_or("history cursor expired; refresh history")?;
                     (created, before)
-                } else { (i64::MAX, "~") };
-                let mut q=self.conn.prepare("SELECT body FROM report_runs WHERE report=? AND (created,id)<(?,?) ORDER BY created DESC,id DESC LIMIT ?").map_err(err)?;
-                let rows = q
-                    .query_map(params![report, before_created, before_id, limit], |r| r.get::<_, String>(0))
-                    .map_err(err)?;
+                } else if sort == "oldest" { (i64::MIN, "") } else { (i64::MAX, "~") };
+                let (comparison, direction) = if sort == "oldest" { (">", "ASC") } else { ("<", "DESC") };
+                // Only validated, fixed SQL fragments are interpolated. User values stay bound.
+                let sql = format!("SELECT body FROM report_runs WHERE report=? AND (created,id){comparison}(?,?)
+                    AND (?='all' OR (?='active' AND status IN ('queued','running','delivering'))
+                    OR (?='issues' AND status IN ('partial','failed')) OR status=?)
+                    ORDER BY created {direction},id {direction} LIMIT ?");
+                let mut q = self.conn.prepare(&sql).map_err(err)?;
+                let rows = q.query_map(params![report, before_created, before_id, status, status, status, status, limit], |r| r.get::<_, String>(0)).map_err(err)?;
                 let runs=rows.map(|r|{let r:Run=serde_json::from_str(&r.map_err(err)?).map_err(err)?;Ok(json!({"id":r.id,"created":r.created,"status":r.status,"version":r.definition.version,"send":r.send,"error":r.error,"deliveries":r.deliveries}))}).collect::<Result<Vec<_>>>()?;
                 Ok(
                     json!({"runs":runs,"next_before":if runs.len()==limit as usize{runs.last().map(|r|r["id"].clone())}else{None}}),
@@ -218,7 +226,7 @@ pub fn tools() -> Vec<Value> {
   ("run","Run a report now. send:false executes all steps and saves a preview without delivery; send:true also delivers. One execution per report at a time. Reuse requestId only for an identical retry.",json!({"id":{"type":"string"},"send":{"type":"boolean"}}),vec!["id","send"]),
   ("analysis_get","Inspect a retained Talìa AI run, including bounded messages, tool results, model, usage and errors. Administrator only. Includes report and Telegram runs.",json!({"id":{"type":"string"}}),vec!["id"]),
   ("run_get","Read frozen definition, step results, report HTML/text and per-destination delivery outcomes for one run.",json!({"id":{"type":"string"}}),vec!["id"]),
-  ("runs","List bounded run summaries for a report, paginated by exclusive run-ID cursor.",json!({"report":{"type":"string"},"before":{"type":"string"},"limit":{"type":"integer","minimum":1,"maximum":100}}),vec!["report"]),
+  ("runs","List bounded run summaries for a report, paginated by exclusive run-ID cursor.",json!({"report":{"type":"string"},"before":{"type":"string"},"limit":{"type":"integer","minimum":1,"maximum":100},"sort":{"enum":["newest","oldest"]},"status":{"enum":["all","active","complete","issues","failed"]}}),vec!["report"]),
   ("deliver","Deliver an already-composed unsent preview without rerunning checks. An already requested delivery cannot be replayed with a different key.",json!({"id":{"type":"string"}}),vec!["id"]),
   ("prune","Delete terminal report content and AI runs before UTC millisecond cutoff. AI results owned by active workflows and request tombstones are retained.",json!({"before":{"type":"integer","minimum":0}}),vec!["before"]),
  ] {let read=["list","get","runs","run_get","analysis_get"].contains(&op);let mut props=properties;let mut req=required;if !read{props["requestId"]=json!({"type":"string","minLength":1,"maxLength":64});req.push("requestId");}tools.push(json!({"name":format!("reports_{op}"),"description":description,"inputSchema":{"type":"object","properties":props,"required":req,"additionalProperties":false},"annotations":{"readOnlyHint":read,"destructiveHint":op=="prune","idempotentHint":true,"openWorldHint":!read}}));}

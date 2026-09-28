@@ -28,6 +28,20 @@ class ReportsReviewTest {
         while (expected !in texts(instrumentation.uiAutomation.rootInActiveWindow) && System.currentTimeMillis() < deadline) Thread.sleep(50)
         assertTrue("Missing $expected", expected in texts(instrumentation.uiAutomation.rootInActiveWindow))
     }
+    private fun clickText(text: String) {
+        fun find(node: AccessibilityNodeInfo?): AccessibilityNodeInfo? {
+            if (node == null) return null
+            if (node.text?.toString() == text) return node
+            for (i in 0 until node.childCount) find(node.getChild(i))?.let { return it }
+            return null
+        }
+        var node = find(instrumentation.uiAutomation.rootInActiveWindow)
+        while (node != null) {
+            if (node.isClickable && node.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return
+            node = node.parent
+        }
+        fail("No clickable $text")
+    }
     private fun shot(name: String) {
         val directory = File(instrumentation.targetContext.externalCacheDir, "ui-review").apply { mkdirs() }
         instrumentation.uiAutomation.takeScreenshot().let { bitmap ->
@@ -45,7 +59,15 @@ class ReportsReviewTest {
                 vault.write(JSONObject().put("server", "https://talia.test").put("token", "n." + "a".repeat(43)))
                 model = NativeConnection(app) { _, _, _, body ->
                     when (body!!.getString("op")) {
-                        "list" -> JSONObject("""{"definitions":[{"id":"homelab-infrastructure","enabled":true,"scheduled":true,"steps":8,"period_ms":86400000,"available":true,"latest":{"status":"partial","created":1790578800000}}]}""")
+                        "list" -> {
+                            val rows = org.json.JSONArray()
+                            listOf("homelab-infrastructure", "service-health", "storage-capacity", "daily-summary", "network-checks", "weekly-review").forEachIndexed { i, name ->
+                                val row = JSONObject().put("id", name).put("enabled", true).put("scheduled", true).put("steps", 8).put("period_ms", 86400000).put("available", true)
+                                if (i < 5) row.put("latest", JSONObject().put("status", listOf("partial", "complete", "failed", "running", "complete")[i]).put("created", 1790578800000L - i * 3600000))
+                                rows.put(row)
+                            }
+                            JSONObject().put("definitions", rows)
+                        }
                         "runs" -> JSONObject("""{"runs":[{"id":"fixture-run","status":"complete","created":1790578800000}],"next_before":null}""")
                         else -> JSONObject("""{"run":{"id":"fixture-run","report":"homelab-infrastructure","status":"complete","period_start":1790492400000,"created":1790578800000,"send":false,"steps":[{"id":"service-health","status":"complete","error":null}],"error":null,"deliveries":[],"content":{"subject":"Infra report: Warning","summary":"One service needs attention.","sections":[{"title":"Service checks","text":"Pezzottify is reachable. Simple Agents needs attention."}]}}}""")
                     }
@@ -58,9 +80,13 @@ class ReportsReviewTest {
                     }
                 }
             }
-            awaitText("Open report"); shot("reports-catalog")
+            awaitText("6 of 6 reports"); shot("reports-catalog")
+            clickText("Filter: All reports"); awaitText("Never run"); clickText("Never run")
+            awaitText("1 of 6 reports")
+            clickText("Filter: Never run"); awaitText("All reports"); clickText("All reports")
+            awaitText("6 of 6 reports")
             instrumentation.runOnMainSync { model.selectReport("homelab-infrastructure") }
-            awaitText("View run"); shot("reports-history")
+            awaitText("Completed"); shot("reports-history")
             instrumentation.runOnMainSync { model.selectReportRun("fixture-run") }
             awaitText("Infra report: Warning"); shot("reports-result")
             assertTrue("Run completed" in texts(instrumentation.uiAutomation.rootInActiveWindow))

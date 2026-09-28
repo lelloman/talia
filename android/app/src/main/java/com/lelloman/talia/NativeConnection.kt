@@ -152,11 +152,21 @@ internal class NativeConnection @JvmOverloads constructor(
         if (reportRunSelected.isNotEmpty()) reportRunSelected = "" else reportSelected = ""
         reportDetail = null; saveReportSelection(); refreshReports()
     }
+    var reportSort by mutableStateOf("newest"); private set
+    var reportFilter by mutableStateOf("all"); private set
+    fun filterReportHistory(sort: String, status: String) {
+        if (reportsBusy) return
+        reportSort = sort; reportFilter = status
+        reportHistory = org.json.JSONArray(); reportsNext = null
+        refreshReports()
+    }
+    private fun historyArgs() = JSONObject().put("report", reportSelected).put("limit", 20)
+        .put("sort", reportSort).put("status", reportFilter)
     fun refreshReports() = reportTask {
         when {
             reportRunSelected.isNotEmpty() -> reportDetail = reportCall("run_get", JSONObject().put("id", reportRunSelected)).getJSONObject("run")
             reportSelected.isNotEmpty() -> {
-                val value = reportCall("runs", JSONObject().put("report", reportSelected).put("limit", 20))
+                val value = reportCall("runs", historyArgs())
                 reportHistory = value.getJSONArray("runs")
                 reportsNext = if (value.isNull("next_before")) null else value.getString("next_before")
             }
@@ -165,7 +175,7 @@ internal class NativeConnection @JvmOverloads constructor(
     }
     fun moreReportRuns() = reportTask {
         val cursor = reportsNext ?: return@reportTask
-        val value = reportCall("runs", JSONObject().put("report", reportSelected).put("limit", 20).put("before", cursor))
+        val value = reportCall("runs", historyArgs().put("before", cursor))
         val combined = org.json.JSONArray(reportHistory.toString())
         val more = value.getJSONArray("runs")
         for (i in 0 until more.length()) combined.put(more.getJSONObject(i))

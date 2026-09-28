@@ -177,3 +177,11 @@ only. The native bearer session and current administrator role are checked for
 every operation. Reads expose display projections, not scripts, raw step outputs
 or source configuration. Mutations use the existing durable report request ledger
 scoped to the authenticated subject. No schema migration is required.
+
+The Android catalog uses compact tappable rows with a name search, newest/oldest
+or name sorting, and filters for active, attention-needed, scheduled or never-run
+reports. History supports newest/oldest ordering and all/active/completed/issues/
+failed status filters. History filtering is server-side and applies before
+pagination; changing either control resets the cursor. The `reports_runs` API
+accepts optional `sort` (`newest` or `oldest`) and `status` (`all`, `active`,
+`complete`, `issues`, `failed`), keeping newest/all as defaults.
