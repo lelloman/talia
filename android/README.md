@@ -237,7 +237,7 @@ The VPK is 3,946,165 bytes, SHA-256
 Source commit: `e489730`; artifacts, R8 mapping and provenance are archived in
 `.local/android-releases/payload-10`. No backend deployment was required.
 
-## Report scheduling (payload 11 candidate)
+## Report scheduling (payload 11)
 
 Reports history now shows the configured schedule and server-owned next run.
 Edit schedule opens a LelloDesign form for daily time, IANA timezone and weekdays,
@@ -254,5 +254,12 @@ shell APK is required. Android notifications remain a later slice.
 
 Validation: 20 Android device tests, lint, web interaction checks, report API and
 scheduler regressions passed. The editor was reviewed on the emulator and at a
-390px web viewport. Signed minified payload 11 is compatible with APK 3; it has
-not been published.
+390px web viewport. Signed minified payload 11 is compatible with APK 3.
+
+Payload 11 is published and verified on LelloStore (publication revision 22),
+for `com.lelloman.talia` / APK 0.1.2 (3). The VPK is 3,968,409 bytes, SHA-256
+`642499686db0e620823952a3ac1696ff5ca323999ec4e88fc3b454f881a5d83e`.
+Source commit: `67778eb`; artifacts, R8 mapping and provenance are archived in
+`.local/android-releases/payload-11`. Backend/web revision `67778eb` is deployed
+and healthy. Both SQLite databases were backed up and passed integrity checks
+before deployment, under `/data/backups/schedules-20260929` in the container.
