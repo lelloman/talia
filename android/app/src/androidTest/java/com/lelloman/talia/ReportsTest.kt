@@ -147,4 +147,48 @@ class ReportsTest {
         assertNull(vault.read())
         assertEquals("", model.reportSelected)
     }
+
+    @Test fun scheduleValidationPreservesMillisecondsAndWeekdays() {
+        assertEquals(60500L, scheduleDraft("interval", "", "", "60.5", emptySet())!!.getLong("every_ms"))
+        assertEquals("Every 60.5 seconds", scheduleSummary(JSONObject("""{"enabled":true,"schedule":{"kind":"interval","every_ms":60500}}""")))
+        val daily = scheduleDraft("daily", "09:00", "Europe/Rome", "", setOf(5, 1))!!
+        assertEquals("[1,5]", daily.getJSONArray("weekdays").toString())
+        assertNull(scheduleDraft("none", "", "", "", emptySet()))
+        assertThrows(IllegalArgumentException::class.java) { scheduleDraft("daily", "25:00", "Europe/Rome", "", emptySet()) }
+        assertThrows(IllegalArgumentException::class.java) { scheduleDraft("daily", "09:00", "Mars/Base", "", emptySet()) }
+        assertThrows(IllegalArgumentException::class.java) { scheduleDraft("interval", "", "", "59", emptySet()) }
+    }
+    @Test fun scheduleSaveRecoversAcrossRestartAndRejectsStaleEdit() {
+        var first = true
+        var conflict = false
+        var admitted = ""
+        val request: suspend (String, String, String?, JSONObject?) -> JSONObject = { _, _, _, body ->
+            when (body!!.getString("op")) {
+                "schedule_save" -> {
+                    if (conflict) throw ApiFailure(409)
+                    val args = body.getJSONObject("args")
+                    if (first) { first = false; admitted = args.toString(); throw IOException("lost response") }
+                    assertEquals(admitted, args.toString())
+                    JSONObject("""{"id":"infra","version":2,"enabled":false,"schedule":null,"next_due":null,"destinations":[]}""")
+                }
+                "schedule_get" -> JSONObject("""{"id":"infra","version":1,"enabled":false,"schedule":null,"next_due":null,"destinations":[]}""")
+                else -> JSONObject("""{"runs":[],"next_before":null}""")
+            }
+        }
+        lateinit var model: NativeConnection
+        instrumentation.runOnMainSync { model = NativeConnection(application, request); model.selectReport("infra") }
+        idle(model)
+        instrumentation.runOnMainSync { model.saveReportSchedule(false, null, 1) }
+        idle(model)
+        assertTrue(model.pendingSchedule)
+        instrumentation.runOnMainSync { model = NativeConnection(application, request); model.retryReportSchedule() }
+        idle(model)
+        assertFalse(model.pendingSchedule)
+        assertEquals(2, model.reportSchedule!!.getInt("version"))
+        assertFalse(vault.read()!!.has("scheduleRequest"))
+        instrumentation.runOnMainSync { conflict = true; model.saveReportSchedule(false, null, 1) }
+        idle(model)
+        assertFalse(model.pendingSchedule)
+        assertTrue(model.scheduleMessage!!.contains("changed elsewhere"))
+    }
 }

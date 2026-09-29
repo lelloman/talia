@@ -173,7 +173,7 @@ request ID; “Check run request” retries that exact request, including after 
 app restart, rather than admitting a duplicate.
 
 `POST /native/reports` accepts `{op,args}` for `list`, `runs`, `run_get` and `run`
-only. The native bearer session and current administrator role are checked for
+plus `schedule_get` and `schedule_save`. The native bearer session and current administrator role are checked for
 every operation. Reads expose display projections, not scripts, raw step outputs
 or source configuration. Mutations use the existing durable report request ledger
 scoped to the authenticated subject. No schema migration is required.
@@ -185,3 +185,41 @@ failed status filters. History filtering is server-side and applies before
 pagination; changing either control resets the cursor. The `reports_runs` API
 accepts optional `sort` (`newest` or `oldest`) and `status` (`all`, `active`,
 `complete`, `issues`, `failed`), keeping newest/all as defaults.
+
+## Schedule management on web and Android
+
+Administrators can open Reports in either client and edit a report's schedule.
+The editor supports daily local time, an explicit IANA timezone, ISO weekdays
+(no selected days means every day), or an elapsed interval from one minute to
+365 days. Enable/pause preserves the configured timing; choosing None removes it.
+Save commits the draft; Cancel leaves the server unchanged. The displayed next
+run is the persisted scheduler timestamp, not a client-side estimate. Daily next
+runs are displayed in the schedule's timezone; interval next runs use UTC.
+
+Scheduled runs still use the report's existing email/Telegram destinations.
+The editor shows their IDs; enabling requires configured destinations. This slice
+does not change delivery preferences or add Android notifications. Pausing stops
+future scheduled admissions, not runs already admitted. Manual runs stay available.
+
+Both clients use the same restricted `schedule_get` / `schedule_save` operations.
+Native HTTP uses `POST /native/reports`; the authenticated web account endpoint
+uses `{op:"nativeReports",operation,args}`. Current administrator authority is
+checked on every request. MCP exposes the same operations as
+`reports_schedule_get` / `reports_schedule_save`.
+
+- Read: `{id}` returns `{id,version,enabled,schedule,next_due,destinations}`.
+- Save: `{id,expected,enabled,schedule,requestId}` returns that projection.
+
+Schedule saves update the existing definition atomically without changing its
+steps, composer or destinations, increment its version, and recompute the next
+run only when enabled state or timing changes. Stale versions are rejected
+(native HTTP 409); refresh and review before submitting a new edit. Daily DST and
+missed-run behavior remain the shared scheduler's rules described above.
+Both clients persist the exact pending request before dispatch and expose
+“Check schedule save” after an ambiguous response. Retrying uses the same request
+ID and body, including after restarting the client. No schema migration is needed.
+
+Validation: `cargo test --manifest-path engine/Cargo.toml --offline reports::tests`
+and `... scheduling`; `node dashboard/tests/report-schedules.mjs` after
+`bash dashboard/build-web.sh`; Android Reports tests cover validation, fractional
+interval precision, retries across restart and stale-edit rejection.

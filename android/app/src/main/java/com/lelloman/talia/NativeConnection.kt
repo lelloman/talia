@@ -101,6 +101,36 @@ internal class NativeConnection @JvmOverloads constructor(
     var message by mutableStateOf<String?>(null); private set
     var forbidden by mutableStateOf(false); private set
     var reportDefinitions by mutableStateOf<org.json.JSONArray?>(null); private set
+    var reportSchedule by mutableStateOf<JSONObject?>(null); private set
+    var scheduleMessage by mutableStateOf<String?>(null); private set
+    var pendingSchedule by mutableStateOf(saved.has("scheduleRequest")); private set
+    fun saveReportSchedule(enabled: Boolean, schedule: JSONObject?, version: Long) {
+        if (reportsBusy || pendingSchedule) return
+        val args = JSONObject().put("id", reportSelected).put("enabled", enabled)
+            .put("schedule", schedule ?: JSONObject.NULL).put("expected", version)
+            .put("requestId", java.util.UUID.randomUUID().toString())
+        saved.put("scheduleRequest", args); vault.write(saved); pendingSchedule = true
+        retryReportSchedule()
+    }
+    fun retryReportSchedule() = reportTask {
+        val args = saved.optJSONObject("scheduleRequest") ?: return@reportTask
+        try {
+            val result = reportCall("schedule_save", args)
+            if (reportSelected == args.getString("id")) reportSchedule = result
+            saved.remove("scheduleRequest"); vault.write(saved); pendingSchedule = false
+            scheduleMessage = "Schedule saved."
+        } catch (failure: ApiFailure) {
+            if (failure.status in listOf(400, 403, 409)) {
+                saved.remove("scheduleRequest"); vault.write(saved); pendingSchedule = false
+                scheduleMessage = if (failure.status == 409) "Schedule changed elsewhere. Reload before editing again."
+                    else "Schedule rejected. Check the time, timezone and delivery destinations, then reload."
+            } else scheduleMessage = "Save not confirmed. Check the saved request before editing again."
+            throw failure
+        } catch (failure: Exception) {
+            scheduleMessage = "Save not confirmed. Check the saved request before editing again."
+            throw failure
+        }
+    }
     var reportHistory by mutableStateOf(org.json.JSONArray()); private set
     var reportDetail by mutableStateOf<JSONObject?>(null); private set
     var reportSelected by mutableStateOf(saved.optString("reportSelected", "")); private set
@@ -121,10 +151,11 @@ internal class NativeConnection @JvmOverloads constructor(
                 reportsMessage = when {
                     error is ApiFailure && error.status == 401 -> { clear(); "Your session expired. Sign in again." }
                     error is ApiFailure && error.status == 403 -> {
-                        reportDefinitions = null; reportHistory = org.json.JSONArray(); reportDetail = null
+                        reportDefinitions = null; reportHistory = org.json.JSONArray(); reportDetail = null; reportSchedule = null; scheduleMessage = null
                         reportsForbidden = true; "Reports require administrator access."
                     }
                     error is ApiFailure && error.status in listOf(404, 405) -> "This server needs the Reports update."
+                    error is ApiFailure && error.status == 409 -> "Schedule changed elsewhere. Reload and review the current settings."
                     error is ApiFailure && error.status == 400 -> "This request was rejected. Another run may already be active, or the report is unavailable."
                     error is RemoteAccessFailure -> error.message
                     else -> "Could not refresh Reports. Check your connection and try again."
@@ -140,7 +171,7 @@ internal class NativeConnection @JvmOverloads constructor(
     }
     fun selectReport(id: String) {
         if (reportsBusy) return
-        reportSelected = id; reportRunSelected = ""; reportDetail = null
+        reportSelected = id; reportRunSelected = ""; reportDetail = null; reportSchedule = null; scheduleMessage = null
         reportHistory = org.json.JSONArray(); reportsNext = null; saveReportSelection(); refreshReports()
     }
     fun selectReportRun(id: String) {
@@ -166,6 +197,7 @@ internal class NativeConnection @JvmOverloads constructor(
         when {
             reportRunSelected.isNotEmpty() -> reportDetail = reportCall("run_get", JSONObject().put("id", reportRunSelected)).getJSONObject("run")
             reportSelected.isNotEmpty() -> {
+                reportSchedule = reportCall("schedule_get", JSONObject().put("id", reportSelected))
                 val value = reportCall("runs", historyArgs())
                 reportHistory = value.getJSONArray("runs")
                 reportsNext = if (value.isNull("next_before")) null else value.getString("next_before")
@@ -215,7 +247,7 @@ internal class NativeConnection @JvmOverloads constructor(
                 } else if (error is ApiFailure && error.status == 401) {
                     clear(); message = "Your session expired. Sign in again."
                 } else if (error is ApiFailure && error.status == 403) {
-                    overview = null; forbidden = true; reportDefinitions = null; reportHistory = org.json.JSONArray(); reportDetail = null; message = "Overview requires administrator access."
+                    overview = null; forbidden = true; reportDefinitions = null; reportHistory = org.json.JSONArray(); reportDetail = null; reportSchedule = null; scheduleMessage = null; message = "Overview requires administrator access."
                 } else {
                     message = if (error is ApiFailure && error.status in listOf(404, 405)) "This server does not support the native app yet." else "Could not connect. Check your connection and try again."
                 }
@@ -290,8 +322,8 @@ internal class NativeConnection @JvmOverloads constructor(
     }
     private fun clear() {
         reportOperation?.cancel()
-        reportDefinitions = null; reportHistory = org.json.JSONArray(); reportDetail = null
-        reportSelected = ""; reportRunSelected = ""; reportsNext = null; pendingReport = null; reportsMessage = null; reportsForbidden = false
+        reportDefinitions = null; reportHistory = org.json.JSONArray(); reportDetail = null; reportSchedule = null; scheduleMessage = null
+        reportSelected = ""; reportRunSelected = ""; reportsNext = null; pendingReport = null; pendingSchedule = false; reportsMessage = null; reportsForbidden = false
         vault.clear(); saved = JSONObject(); signedIn = false; pending = false
         overview = null; name = "Not signed in"; forbidden = false
     }

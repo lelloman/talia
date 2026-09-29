@@ -571,3 +571,50 @@ fn history_and_native_catalog_are_newest_first_with_stable_pages() {
     s.conn.execute("DELETE FROM report_runs WHERE id='a-new'", []).unwrap();
     assert!(s.native_reports("admin", "runs", json!({"report":"morning","before":"a-new"}), 5000).is_err());
 }
+
+#[test]
+fn schedule_edit_projection_cas_replay_and_due() {
+    let mut s = Store::open(":memory:").unwrap();
+    s.user_bootstrap("admin").unwrap();
+    let mut d = definition();
+    d.destinations = vec!["mail".into()];
+    s.alert_destination_save(&crate::alerts::delivery::Destination {
+        id:"mail".into(), version:1, channel:"email".into(), provider:"mail".into(),
+        target:"owner@example.test".into(), enabled:true,
+    },0,"operator",1000).unwrap();
+    s.report_save(&d,0,1000).unwrap();
+    let original = s.report_definition("morning").unwrap();
+    let read = s.native_reports("admin","schedule_get",json!({"id":"morning"}),1000).unwrap();
+    assert!(read.get("steps").is_none() && read.get("compose").is_none());
+    assert!(read["next_due"].is_null());
+    let args = json!({"id":"morning","expected":1,"enabled":true,"schedule":{"kind":"interval","every_ms":120000},"requestId":"schedule-1"});
+    assert!(s.native_reports("viewer","schedule_save",args.clone(),1000).is_err());
+    let saved=s.native_reports("admin","schedule_save",args.clone(),1000).unwrap();
+    assert_eq!(saved["version"],2); assert_eq!(saved["next_due"],121000);
+    assert_eq!(s.native_reports("admin","schedule_save",args.clone(),2000).unwrap(),saved);
+    let mut stale=args.clone();stale["requestId"]=json!("stale");
+    assert!(s.native_reports("admin","schedule_save",stale,2000).unwrap_err().contains("version conflict"));
+    let updated=s.report_definition("morning").unwrap();
+    assert_eq!(updated.compose,original.compose);
+    assert_eq!(serde_json::to_value(updated.steps).unwrap(),serde_json::to_value(original.steps).unwrap());
+    assert_eq!(updated.destinations,original.destinations);
+    let mut pause=args.clone();pause["expected"]=json!(2);pause["enabled"]=json!(false);pause["requestId"]=json!("pause");
+    let paused=s.native_reports("admin","schedule_save",pause,3000).unwrap();
+    assert!(paused["next_due"].is_null());assert_eq!(paused["schedule"],saved["schedule"]);
+    let daily=json!({"id":"morning","expected":3,"enabled":true,"schedule":{"kind":"daily","time":"09:00","zone":"Europe/Rome","weekdays":[1,2,3,4,5]},"requestId":"daily"});
+    assert!(s.native_reports("admin","schedule_save",daily.clone(),4000).unwrap()["next_due"].as_i64().unwrap()>4000);
+    for invalid in [json!({"kind":"daily","time":"25:00","zone":"Europe/Rome"}),json!({"kind":"daily","time":"09:00","zone":"Mars/Base"}),json!({"kind":"interval","every_ms":59999}),Value::Null] {
+        let mut bad=daily.clone();bad["expected"]=json!(4);bad["schedule"]=invalid;bad["requestId"]=json!("invalid");
+        assert!(s.native_reports("admin","schedule_save",bad,5000).is_err());
+    }
+    assert_eq!(s.report_definition("morning").unwrap().version,4);
+    let before = s.native_reports("admin","schedule_get",json!({"id":"morning"}),5000).unwrap();
+    let mut unchanged=daily.clone();unchanged["expected"]=json!(4);unchanged["requestId"]=json!("unchanged");
+    assert_eq!(s.native_reports("admin","schedule_save",unchanged,6000).unwrap()["next_due"],before["next_due"]);
+    let removed=s.native_reports("admin","schedule_save",json!({"id":"morning","expected":5,"enabled":false,"schedule":null,"requestId":"remove"}),7000).unwrap();
+    assert!(removed["schedule"].is_null() && removed["next_due"].is_null());
+    assert!(s.native_reports("admin","schedule_save",json!({"id":"morning","expected":6,"enabled":false,"schedule":null,"compose":"injected","requestId":"fields"}),8000).is_err());
+    let read_tool=api::tools().into_iter().find(|t|t["name"]=="reports_schedule_get").unwrap();
+    assert_eq!(read_tool["annotations"]["readOnlyHint"],true);
+    assert_eq!(read_tool["inputSchema"]["required"],json!(["id"]));
+}

@@ -236,3 +236,23 @@ The VPK is 3,946,165 bytes, SHA-256
 `c1f82358b4758e6b8122f17f71ed3b33893a2860a79a9639681c2cac114303e5`.
 Source commit: `e489730`; artifacts, R8 mapping and provenance are archived in
 `.local/android-releases/payload-10`. No backend deployment was required.
+
+## Report scheduling (payload 11 candidate)
+
+Reports history now shows the configured schedule and server-owned next run.
+Edit schedule opens a LelloDesign form for daily time, IANA timezone and weekdays,
+or an elapsed interval. Enable/pause preserves timing; None removes it. The form
+shows existing delivery destination IDs. Scheduled runs send to those destinations;
+manual Run report stays an unsent preview. Pausing does not cancel admitted runs.
+
+Schedule saves use version checks and durable request IDs. An unconfirmed save is
+persisted in the encrypted session and can be checked after restart without
+applying it twice. A concurrent edit requires refreshing and reviewing the current
+schedule. Both Android and the web Reports page share the new backend operations;
+deploy the backend/web update before installing this payload. No migration or new
+shell APK is required. Android notifications remain a later slice.
+
+Validation: 20 Android device tests, lint, web interaction checks, report API and
+scheduler regressions passed. The editor was reviewed on the emulator and at a
+390px web viewport. Signed minified payload 11 is compatible with APK 3; it has
+not been published.

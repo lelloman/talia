@@ -94,6 +94,7 @@ class ReportsReviewTest {
                             }
                             JSONObject().put("definitions", rows)
                         }
+                        "schedule_get" -> JSONObject("""{"id":"homelab-infrastructure","version":1,"enabled":true,"schedule":{"kind":"daily","time":"09:00","zone":"Europe/Rome","weekdays":[]},"next_due":1790665200000,"destinations":["telegram-home"]}""")
                         "runs" -> JSONObject("""{"runs":[{"id":"fixture-run","status":"complete","created":1790578800000}],"next_before":null}""")
                         else -> JSONObject("""{"run":{"id":"fixture-run","report":"homelab-infrastructure","status":"complete","period_start":1790492400000,"created":1790578800000,"send":false,"steps":[{"id":"service-health","status":"complete","error":null}],"error":null,"deliveries":[],"content":{"subject":"Infra report: Warning","summary":"One service needs attention.","sections":[{"title":"Service checks","text":"Pezzottify is reachable. Simple Agents needs attention."}]}}}""")
                     }
@@ -117,6 +118,8 @@ class ReportsReviewTest {
             awaitText("6 of 6 reports")
             instrumentation.runOnMainSync { model.selectReport("homelab-infrastructure") }
             awaitText("Completed"); refreshBySwipe(requests); shot("reports-history")
+            clickText("Edit schedule"); awaitText("Cancel schedule edit"); shot("reports-schedule-editor")
+            clickText("Cancel schedule edit"); awaitText("Edit schedule")
             instrumentation.runOnMainSync { model.selectReportRun("fixture-run") }
             awaitText("Infra report: Warning"); refreshBySwipe(requests); shot("reports-result")
             assertTrue("Run completed" in texts(instrumentation.uiAutomation.rootInActiveWindow))

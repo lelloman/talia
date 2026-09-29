@@ -106,6 +106,7 @@ internal fun Reports(connection: NativeConnection, setup: () -> Unit) {
             val definitions = connection.reportDefinitions
             val definition = (0 until (definitions?.length() ?: 0)).map { definitions!!.getJSONObject(it) }.find { it.getString("id") == connection.reportSelected }
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                ReportSchedulePanel(connection)
                 LelloButton(connection::runReport, enabled = !connection.reportsBusy && connection.pendingReport == null && definition?.optBoolean("available", true) != false) { Text("Run report") }
                 Muted("Saved in Talìa · No Telegram or email sent")
                 LelloListControls(

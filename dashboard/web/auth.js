@@ -13,7 +13,7 @@ else {
  }
  await mountChrome(identity,{signOut:async()=>{try{await window.taliaDisableBrowserPush?.();}catch{}const r=await fetch('/auth/logout',{method:'POST'});if(r.ok)location.replace('/');else document.querySelector('#shell-status').textContent='Sign out failed. Please retry.';}});
  document.querySelector('#alert-access')?.closest('label')?.setAttribute('hidden','');document.querySelector('#alert-connect')?.setAttribute('hidden','');
- const account=async body=>{const r=await fetch('/account',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});if(r.status===401){location.replace('/');throw Error('Sign in required');}if(!r.ok)throw Error('Account connection failed');const v=await r.json();if(v.error)throw Error(v.error);return v;};
+ const account=async body=>{const r=await fetch('/account',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});if(r.status===401){location.replace('/');throw Error('Sign in required');}if(!r.ok)throw Error('Account connection failed');const v=await r.json();if(v.error){const error=Error(v.error);error.serverRejected=true;throw error;}return v;};
  const {startShell}=await import('./shell.js');await startShell(identity,account);
  setInterval(async()=>{try{const r=await fetch('/auth/session',{cache:'no-store'});if(r.status===401)location.replace('/');}catch{}},30000);
 }

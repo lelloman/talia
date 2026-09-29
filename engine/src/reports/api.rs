@@ -23,7 +23,8 @@ impl Store {
     fn report_authorized(&mut self, op: &str, args: Value, actor: &str, now: i64) -> Result<Value> {
         let fields: &[&str] = match op {
             "list" => &[],
-            "get" => &["id"],
+            "get" | "schedule_get" => &["id"],
+            "schedule_save" => &["id", "enabled", "schedule", "expected", "requestId"],
             "runs" => &["report", "before", "limit", "sort", "status"],
             "run_get" | "analysis_get" => &["id"],
             "save" => &["definition", "expected", "requestId"],
@@ -38,7 +39,7 @@ impl Store {
         {
             return Err("unknown report fields".into());
         }
-        if ["list", "get", "runs", "run_get", "analysis_get"].contains(&op) {
+        if ["list", "get", "runs", "run_get", "analysis_get", "schedule_get"].contains(&op) {
             return self.report_inner(op, &args, actor, now);
         }
         let request = text(&args, "requestId")?;
@@ -83,7 +84,7 @@ impl Store {
         if !self.user_admin(subject).map_err(|_| "forbidden")? {
             return Err("forbidden".into());
         }
-        if !["list", "runs", "run_get", "run"].contains(&op) {
+        if !["list", "runs", "run_get", "run", "schedule_get", "schedule_save"].contains(&op) {
             return Err("unknown report operation".into());
         }
         // Native runs are retained previews; delivery is a separate operator action.
@@ -97,6 +98,7 @@ impl Store {
                 let latest = self.report_inner("runs", &json!({"report":d.id,"limit":1}), subject, now)?;
                 definitions.push(json!({"id":d.id,"enabled":d.enabled,"scheduled":d.schedule.is_some(),
                     "steps":d.steps.len(),"period_ms":d.period_ms,
+                    "version":d.version,"schedule":d.schedule,"next_due":self.report_schedule_view(&d)?["next_due"],
                     "available":!d.steps.iter().any(|s| matches!(s.action, Action::Unavailable {..})),
                     "latest":latest["runs"][0]}));
             }
@@ -118,10 +120,28 @@ impl Store {
         }
         Ok(value)
     }
+    fn report_schedule_view(&self, d: &Definition) -> Result<Value> {
+        let due: Option<i64> = self.conn.query_row("SELECT next_due FROM report_definitions WHERE id=?", [&d.id], |r| r.get(0)).map_err(err)?;
+        Ok(json!({"id":d.id,"version":d.version,"enabled":d.enabled,"schedule":d.schedule,
+            "next_due":due,"destinations":d.destinations}))
+    }
     fn report_inner(&mut self, op: &str, args: &Value, actor: &str, now: i64) -> Result<Value> {
         match op {
             "list" => Ok(json!({"definitions":self.report_definitions()?})),
             "get" => Ok(json!({"definition":self.report_definition(text(args,"id")?)?})),
+            "schedule_get" => self.report_schedule_view(&self.report_definition(text(args, "id")?)?),
+            "schedule_save" => {
+                let mut d = self.report_definition(text(args, "id")?)?;
+                let expected = number(args, "expected")?;
+                if d.version != expected { return Err("report version conflict; reload the schedule".into()); }
+                d.enabled = args["enabled"].as_bool().ok_or("enabled boolean required")?;
+                if !args.as_object().unwrap().contains_key("schedule") { return Err("schedule required".into()); }
+                d.schedule = serde_json::from_value(args["schedule"].clone()).map_err(|_| "invalid schedule")?;
+                if d.enabled && d.schedule.is_none() { return Err("choose a schedule before enabling".into()); }
+                d.version = expected.checked_add(1).ok_or("version overflow")?;
+                self.report_save(&d, expected, now)?;
+                self.report_schedule_view(&d)
+            }
             "save" => {
                 let d: Definition = serde_json::from_value(args["definition"].clone())
                     .map_err(|_| "invalid report definition")?;
@@ -222,6 +242,8 @@ pub fn tools() -> Vec<Value> {
     for (op,description,properties,required) in [
   ("list","List server-side reporting workflow definitions. Requires global authoring/admin access.",json!({}),vec![]),
   ("get","Read one versioned reporting definition.",json!({"id":{"type":"string"}}),vec!["id"]),
+  ("schedule_get","Read report schedule, version, configured destination IDs and stored next due time.",json!({"id":{"type":"string"}}),vec!["id"]),
+  ("schedule_save","Edit only report timing and enabled state; preserve steps and destinations. Requires the version read by schedule_get. Pausing leaves admitted runs running. Reuse requestId for identical retries.",json!({"id":{"type":"string"},"expected":{"type":"integer","minimum":1},"enabled":{"type":"boolean"},"schedule":{"description":"null or {kind:daily,time:HH:MM,zone:IANA,weekdays?:[1..7]} or {kind:interval,every_ms} (minimum 60000 ms)","type":["object","null"]}}),vec!["id","expected","enabled","schedule"]),
   ("save","Create/update a reporting workflow without restart. Ordered steps support read, source, script, analysis. Analysis uses simple-ai with explicit previous-step inputs and no tools. JavaScript is a synchronous function(ctx), with ctx.steps, ctx.period, ctx.now and ctx.decode(wire). compose returns {subject,summary,sections:[{title,text}]}; HTML is escaped.",json!({"definition":{"type":"object","description":"{id,version,enabled,schedule:null|{kind:daily,time:HH:MM,zone:IANA,weekdays?:[1..7]}|{kind:interval,every_ms},period_ms?,timeout_ms?,steps:[{id,optional?,kind:read,variable}|{id,optional?,kind:source,source,request:JS}|{id,optional?,kind:script,source:JS}|{id,optional?,kind:analysis,instructions,inputs:[stepId]}],compose:JS,destinations:[emailOrTelegramDestinationId]}"},"expected":{"type":"integer","minimum":0}}),vec!["definition","expected"]),
   ("run","Run a report now. send:false executes all steps and saves a preview without delivery; send:true also delivers. One execution per report at a time. Reuse requestId only for an identical retry.",json!({"id":{"type":"string"},"send":{"type":"boolean"}}),vec!["id","send"]),
   ("analysis_get","Inspect a retained Talìa AI run, including bounded messages, tool results, model, usage and errors. Administrator only. Includes report and Telegram runs.",json!({"id":{"type":"string"}}),vec!["id"]),
@@ -229,6 +251,6 @@ pub fn tools() -> Vec<Value> {
   ("runs","List bounded run summaries for a report, paginated by exclusive run-ID cursor.",json!({"report":{"type":"string"},"before":{"type":"string"},"limit":{"type":"integer","minimum":1,"maximum":100},"sort":{"enum":["newest","oldest"]},"status":{"enum":["all","active","complete","issues","failed"]}}),vec!["report"]),
   ("deliver","Deliver an already-composed unsent preview without rerunning checks. An already requested delivery cannot be replayed with a different key.",json!({"id":{"type":"string"}}),vec!["id"]),
   ("prune","Delete terminal report content and AI runs before UTC millisecond cutoff. AI results owned by active workflows and request tombstones are retained.",json!({"before":{"type":"integer","minimum":0}}),vec!["before"]),
- ] {let read=["list","get","runs","run_get","analysis_get"].contains(&op);let mut props=properties;let mut req=required;if !read{props["requestId"]=json!({"type":"string","minLength":1,"maxLength":64});req.push("requestId");}tools.push(json!({"name":format!("reports_{op}"),"description":description,"inputSchema":{"type":"object","properties":props,"required":req,"additionalProperties":false},"annotations":{"readOnlyHint":read,"destructiveHint":op=="prune","idempotentHint":true,"openWorldHint":!read}}));}
+ ] {let read=["list","get","runs","run_get","analysis_get","schedule_get"].contains(&op);let mut props=properties;let mut req=required;if !read{props["requestId"]=json!({"type":"string","minLength":1,"maxLength":64});req.push("requestId");}tools.push(json!({"name":format!("reports_{op}"),"description":description,"inputSchema":{"type":"object","properties":props,"required":req,"additionalProperties":false},"annotations":{"readOnlyHint":read,"destructiveHint":op=="prune","idempotentHint":true,"openWorldHint":!read}}));}
     tools
 }
