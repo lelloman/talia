@@ -43,6 +43,48 @@ fn payload(request: &Value) -> Value {
 fn classification(decision: &str) -> String {
     json!({"decision":decision,"resume_pending":false,"clarification":null}).to_string()
 }
+
+#[tokio::test]
+async fn oversized_classifier_preserves_cutoff_and_history_without_sending_request() {
+    let (w, dir, _bot, ai, ai_dir) = setup().await;
+    seed(
+        &w,
+        1,
+        "Only inspect staging; no active probes.",
+        "Understood.",
+    );
+    Mock::given(path("/v1/chat/completions"))
+        .respond_with(move |r: &wiremock::Request| {
+            let request: Value = serde_json::from_slice(&r.body).unwrap();
+            let system = request["messages"][0]["content"].as_str().unwrap();
+            assert!(!system.contains(CLASSIFY));
+            let input = payload(&request);
+            assert!(input["history"]
+                .to_string()
+                .contains("Only inspect staging"));
+            assert_eq!(input["context_unavailable"], false);
+            assert_eq!(input["question"].as_str().unwrap().len(), 9900);
+            response("Keeping the staging-only scope.")
+        })
+        .expect(1)
+        .mount(&ai)
+        .await;
+    ingest(&w, 60, &"x".repeat(9900));
+    w.conversation().await.unwrap();
+    let j = job(&w, 60);
+    assert_eq!(status(&w, 60), "done");
+    assert!(j.context_fallback);
+    assert!(!j.context_unavailable);
+    assert_eq!(state(&w.engine.store.borrow(), &j).unwrap().cutoff, Some(1));
+    assert!(j
+        .maintenance_error
+        .unwrap()
+        .contains(ai::REQUEST_CHARACTER_LIMIT_ERROR));
+    ai.verify().await;
+    drop(w);
+    std::fs::remove_dir_all(dir).unwrap();
+    std::fs::remove_dir_all(ai_dir).unwrap();
+}
 fn response(text: &str) -> ResponseTemplate {
     ResponseTemplate::new(200).set_body_json(crate::ai::tests::answer(text))
 }
@@ -96,12 +138,7 @@ fn seed(w: &Worker, id: i64, text: &str, answer: &str) {
 async fn incident_new_topic_bypasses_old_compaction_and_retry_preserves_failed_outcome() {
     let (w, dir, _bot, ai, ai_dir) = setup().await;
     for i in 1..=10 {
-        seed(
-            &w,
-            i,
-            "OLD-KNOT-QUESTION",
-            &"OLD-KNOT-EVIDENCE ".repeat(100),
-        );
+        seed(&w, i, "OLD-KNOT-QUESTION", &"OLD-KNOT-EVIDENCE ".repeat(10));
     }
     let seen = Arc::new(Mutex::new(vec![]));
     let captured = seen.clone();
@@ -523,6 +560,7 @@ async fn completed_classifier_is_reused_after_restart_without_resubmission() {
         ai::ExecutionOptions {
             max_tokens: 2048,
             max_turns: 1,
+            max_request_chars: Some(CLASSIFIER_REQUEST_CHARS),
         },
     )
     .await
@@ -736,6 +774,7 @@ async fn maintenance_reconsiders_kept_messages_and_reuses_completed_batch_after_
         ai::ExecutionOptions {
             max_tokens: 8192,
             max_turns: 1,
+            max_request_chars: None,
         },
     )
     .await

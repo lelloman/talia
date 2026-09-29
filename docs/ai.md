@@ -147,7 +147,11 @@ truncated/malformed completion fails explicitly. A record is at most 256 KiB.
 
 Telegram session classification and selective summarization use the same configured
 model through tool-free, single-completion phases. Classification requests 2,048
-output tokens with a 120-second budget. Summarization requests 8,192 tokens, with
+output tokens with a 120-second budget. Its complete serialized request body is
+hard-capped at 10,000 Unicode characters, including instructions and JSON escaping.
+An oversized classification is not sent and does not advance the session cutoff;
+normal context maintenance and answering still run with bounded history.
+Summarization requests 8,192 tokens, with
 at most two batches sharing a 180-second budget. These are internal execution
 options; report analysis and investigation tool-loop defaults are unchanged.
 Token-limit truncation is retained as an explicit error. Context maintenance

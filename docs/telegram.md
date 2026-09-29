@@ -72,6 +72,16 @@ retained for the next reply. Classification runs when the request reaches the he
 of its queue, so earlier accepted work can finish. `/new` remains an immediate
 reset that cancels older local work and pending replies.
 
+Classifier requests have a hard **10,000-character** limit on the complete
+serialized HTTP body, including model metadata, system instructions, the latest
+message, pending clarification, history and JSON escaping. Characters are Unicode
+scalar values, not UTF-8 bytes. This is checked immediately before sending.
+Oversized requests are not sent. If the required history is incomplete or the
+request cannot fit, Talìa preserves the current cutoff and proceeds through normal
+compaction and answering with the existing bounded history. It does not silently
+truncate classifier evidence to justify a cutoff. This cap applies to the current
+chat-based classifier; the experimental JEV cutoff search is not integrated yet.
+
 Original history is immutable. A separate working context references exact chat
 messages, stores selective summaries with source coverage, and retains bounded
 diagnostic evidence with AI run/tool IDs, the query, run creation time and evidence

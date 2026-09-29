@@ -7,6 +7,81 @@ use wiremock::{
     matchers::{header, method, path},
     Mock, MockServer, ResponseTemplate,
 };
+
+#[test]
+fn request_character_limit_counts_serialized_unicode_and_escaping() {
+    let request = json!({"messages":[{"content":"é🙂\n\"\\".repeat(2000)}]});
+    let body = request_body(&request, None).unwrap();
+    let size = body.chars().count();
+    assert!(body.len() > size);
+    assert_eq!(request_body(&request, Some(size)).unwrap(), body);
+    assert_eq!(
+        request_body(&request, Some(size - 1)).unwrap_err(),
+        REQUEST_CHARACTER_LIMIT_ERROR
+    );
+}
+
+#[tokio::test]
+async fn request_character_cap_is_enforced_before_http_and_includes_envelope() {
+    let http = MockServer::start().await;
+    let dir = config(&http.uri());
+    Mock::given(path("/v1/chat/completions"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(answer("done")))
+        .expect(1)
+        .mount(&http)
+        .await;
+    let s = Store::open(":memory:").unwrap();
+    let scope = telegram(&s);
+    let engine = Engine::with_clock(s, Rc::new(|| 1000));
+    let options = ExecutionOptions {
+        max_tokens: 2048,
+        max_turns: 1,
+        max_request_chars: Some(10_000),
+    };
+    // The user text alone fits, but the complete request does not.
+    assert!(execute_with_options(
+        &engine,
+        "too-long-classifier",
+        scope.clone(),
+        900000,
+        "Classify",
+        json!({"question":"a".repeat(9900)}),
+        false,
+        options
+    )
+    .await
+    .unwrap_err()
+    .contains(REQUEST_CHARACTER_LIMIT_ERROR));
+    // Multibyte Unicode is counted in characters, not UTF-8 bytes.
+    execute_with_options(
+        &engine,
+        "unicode-classifier",
+        scope,
+        900000,
+        "Classify",
+        json!({"question":"é".repeat(8000)}),
+        false,
+        options,
+    )
+    .await
+    .unwrap();
+    let requests = http.received_requests().await.unwrap();
+    assert_eq!(requests.len(), 1);
+    let wire = std::str::from_utf8(&requests[0].body).unwrap();
+    assert!(wire.chars().count() <= 10_000);
+    assert!(wire.len() > 10_000);
+    assert_eq!(
+        engine
+            .store
+            .borrow()
+            .ai_run("too-long-classifier")
+            .unwrap()
+            .unwrap()
+            .status,
+        "failed"
+    );
+    std::fs::remove_dir_all(dir).unwrap();
+}
 pub(crate) fn config(origin: &str) -> std::path::PathBuf {
     let dir = std::env::temp_dir().join(format!(
         "talia-ai-{}",

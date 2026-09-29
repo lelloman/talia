@@ -160,14 +160,27 @@ pub(crate) fn permit(engine: &Engine, scope: &Scope) -> Result<()> {
 pub(crate) struct ExecutionOptions {
     pub max_tokens: u32,
     pub max_turns: u32,
+    /// Unicode scalar values in the complete serialized HTTP request body.
+    pub max_request_chars: Option<usize>,
 }
 impl Default for ExecutionOptions {
     fn default() -> Self {
         Self {
             max_tokens: 2048,
             max_turns: 6,
+            max_request_chars: None,
         }
     }
+}
+
+pub(crate) const REQUEST_CHARACTER_LIMIT_ERROR: &str = "AI request character limit exceeded";
+
+fn request_body(request: &Value, max_chars: Option<usize>) -> Result<String> {
+    let body = serde_json::to_string(request).map_err(err)?;
+    if max_chars.is_some_and(|limit| body.chars().count() > limit) {
+        return Err(REQUEST_CHARACTER_LIMIT_ERROR.into());
+    }
+    Ok(body)
 }
 
 pub async fn execute(
@@ -306,13 +319,17 @@ async fn run(engine: &Engine, r: &mut Run, options: ExecutionOptions) -> Result<
         if r.tools {
             request["tools"] = json!(tools::definitions());
         }
+        // Check the exact body sent, including model, instructions, JSON escaping
+        // and any tool definitions. Never truncate a request at the transport layer.
+        let body = request_body(&request, options.max_request_chars)?;
         let mut response = client
             .post(format!(
                 "{}/v1/chat/completions",
                 config.origin.trim_end_matches('/')
             ))
             .bearer_auth(&session.token)
-            .json(&request)
+            .header(reqwest::header::CONTENT_TYPE, "application/json")
+            .body(body)
             .send()
             .await
             .map_err(|_| "simple-ai request failed or timed out; not automatically retried")?;
