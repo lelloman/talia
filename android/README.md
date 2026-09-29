@@ -263,3 +263,16 @@ Source commit: `67778eb`; artifacts, R8 mapping and provenance are archived in
 `.local/android-releases/payload-11`. Backend/web revision `67778eb` is deployed
 and healthy. Both SQLite databases were backed up and passed integrity checks
 before deployment, under `/data/backups/schedules-20260929` in the container.
+
+## Bottom navigation (payload 12)
+
+Phones use LelloDesign's DrawerAndBottom scaffold with Overview, Reports and
+Chats tabs. Settings and Automation remain accessible from the drawer. Chats
+continues to show its existing placeholder. Wide layouts retain the sidebar.
+Debug build, Android lint and signed minified APK 3 compatibility checks passed.
+
+Payload 12 is published and verified on LelloStore (publication revision 24),
+for `com.lelloman.talia` / APK 0.1.2 (3). The VPK is 3,968,733 bytes, SHA-256
+`24a498c87aa570869283123069665b64b0f0eb4330670cf2c52db8ef4efa00d2`.
+Source commit: `149eccf`; artifacts, R8 mapping and provenance are archived in
+`.local/android-releases/payload-12`. No backend deployment was required.
