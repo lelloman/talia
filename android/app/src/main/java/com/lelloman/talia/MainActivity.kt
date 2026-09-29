@@ -94,7 +94,8 @@ class MainActivity : ComponentActivity() {
             LelloScaffold(
                 productName = "Talìa", title = if (page == "reports" && connection.reportSelected.isNotEmpty()) connection.reportSelected else destinations.first { it.id == page }.label,
                 destinations = destinations, selectedId = page, onNavigate = { page = it },
-                mobileNavigation = LelloMobileNavigation.Drawer,
+                mobileNavigation = LelloMobileNavigation.DrawerAndBottom,
+                bottomDestinations = destinations.filter { it.id in setOf("overview", "reports", "chats") },
                 logo = { Image(painterResource(R.drawable.ic_talia), "Talìa", Modifier.size(32.dp)) },
                 account = { compact -> LelloAccount(connection.name, { page = "settings" }, compact = compact) },
             ) { insets ->
