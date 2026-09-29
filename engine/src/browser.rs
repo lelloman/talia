@@ -14,6 +14,15 @@ impl Service {
                 .unwrap()
                 .to_string()
         };
+        if r.connection == "account" && r.body["request"]["op"]=="nativeNotifications" {
+            let worker=self.notifications.as_ref().ok_or("notifications disabled")?;
+            let args=&r.body["request"]["args"];
+            return match args["op"].as_str() {
+                Some("enroll")=>worker.enroll(subject,r.body["authSession"].as_str().ok_or("unauthenticated")?,args).await,
+                Some("disable")=>worker.disable(subject,args).await,
+                _=>Err("invalid_input".into()),
+            };
+        }
         if r.connection == "account" && r.body["request"]["op"]=="nativeReports" {
             let body = &r.body["request"];
             return self.engine.store.borrow_mut().native_reports(subject, body["operation"].as_str().unwrap_or(""), body["args"].clone(), self.engine.now());

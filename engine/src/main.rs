@@ -1,6 +1,7 @@
 mod http_mcp;
 mod browser;
 mod deployment;
+mod store_notifications;
 mod oidc;
 use axum::{
     extract::{DefaultBodyLimit, State},
@@ -37,6 +38,7 @@ struct Request {
 }
 #[derive(Clone)]
 struct Service {
+    notifications: Option<store_notifications::Worker>,
     engine: Engine,
     alert_policies: talia_engine::alerts::policy::Policies,
     alert_sender: talia_engine::alerts::providers::Sender,
@@ -341,6 +343,14 @@ async fn native_overview(State(tx):State<mpsc::Sender<Request>>, identity:Option
  let status=match value["error"].as_str(){Some("forbidden")=>axum::http::StatusCode::FORBIDDEN,Some(_)=>axum::http::StatusCode::SERVICE_UNAVAILABLE,None=>axum::http::StatusCode::OK};
  (status,Json(value)).into_response()
 }
+async fn native_notifications(State(tx):State<mpsc::Sender<Request>>, identity:Option<axum::Extension<deployment::Identity>>, Json(body):Json<Value>)->axum::response::Response {
+ use axum::response::IntoResponse;
+ let Some(identity)=identity else {return axum::http::StatusCode::UNAUTHORIZED.into_response()};
+ if body.to_string().len()>4096 {return axum::http::StatusCode::BAD_REQUEST.into_response()}
+ let Json(value)=account_rpc(State(tx),Some(identity),Json(json!({"op":"nativeNotifications","args":body}))).await;
+ let status=match value["error"].as_str(){Some("forbidden")=>axum::http::StatusCode::FORBIDDEN,Some("unauthenticated")=>axum::http::StatusCode::UNAUTHORIZED,Some(_)=>axum::http::StatusCode::SERVICE_UNAVAILABLE,None=>axum::http::StatusCode::OK};
+ (status,Json(value)).into_response()
+}
 async fn native_reports(State(tx):State<mpsc::Sender<Request>>, identity:Option<axum::Extension<deployment::Identity>>, Json(body):Json<Value>)->axum::response::Response {
  use axum::response::IntoResponse;
  let Some(identity)=identity else {return axum::http::StatusCode::UNAUTHORIZED.into_response()};
@@ -420,7 +430,10 @@ async fn run(args:Vec<String>)->Result<()> {
     let pipelines = Pipelines::new(engine.clone())?;
     let watches = Watches::new(pipelines.clone());
     let agent_engine=talia_engine::mcp_engine::AgentEngine::new(engine.clone(),pipelines.clone(),watches.clone());
+    let deployment = deployment::Deployment::load().await?;
+    let notifications=store_notifications::Worker::load(engine.clone(),deployment.clone())?;
     let service = Service {
+        notifications,
         live: talia_engine::mcp_live::Live::new(engine.clone(),agent_engine.clone()),
         agent_engine,
         alert_policies: talia_engine::alerts::policy::Policies::new(engine.clone()),
@@ -436,13 +449,13 @@ async fn run(args:Vec<String>)->Result<()> {
         leases: Default::default(),
     };
     let (tx, mut rx) = mpsc::channel::<Request>(128);
-    let deployment = deployment::Deployment::load().await?;
     let mut router = Router::new()
         .route("/engine", post(rpc))
         .route("/clients", post(client_rpc))
         .route("/account", post(account_rpc))
         .route("/native/overview", axum::routing::get(native_overview))
         .route("/native/reports", axum::routing::post(native_reports))
+        .route("/native/notifications", axum::routing::post(native_notifications))
         .route("/agent", post(agent_rpc))
         .route("/alerts", post(alerts_rpc))
         .layer(DefaultBodyLimit::max(2_359_296))
@@ -465,6 +478,16 @@ async fn run(args:Vec<String>)->Result<()> {
     );
     let local = tokio::task::LocalSet::new();
     local.run_until(async move{
+  if let Some(notifications)=service.notifications.clone() {tokio::task::spawn_local(async move {
+    let mut delay=5u64;
+    loop {
+      match notifications.tick().await {
+        Ok(())=>delay=5,
+        Err(error)=>{eprintln!("Store notification worker: {error}");delay=(delay*2).min(120);}
+      }
+      tokio::time::sleep(Duration::from_secs(delay)).await;
+    }
+  });}
   let monitoring=service.clone();tokio::task::spawn_local(async move{
     let scheduler=Scheduler{pipelines:monitoring.pipelines.clone()};
     loop {

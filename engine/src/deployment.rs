@@ -345,7 +345,7 @@ impl Deployment {
     }
     pub async fn gate(State(d): State<Self>, mut r: Request, next: Next) -> Response {
         let path = r.uri().path();
-        let native_request = matches!(path, "/native/overview" | "/native/session" | "/native/logout" | "/native/reports");
+        let native_request = matches!(path, "/native/overview" | "/native/session" | "/native/logout" | "/native/reports" | "/native/notifications");
         let browser_alert = path == "/alerts" && !r.headers().contains_key(header::AUTHORIZATION);
         let protected = matches!(
             path,

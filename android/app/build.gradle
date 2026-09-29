@@ -15,8 +15,12 @@ android {
         applicationId 'com.lelloman.talia'
         minSdk 30
         targetSdk 36
-        versionCode 3
-        versionName '0.1.2'
+        versionCode 4
+        versionName '0.2.0'
+        def storePins = System.getenv('LELLOSTORE_SIGNING_CERTIFICATES') ?: ''
+        if (storePins && !(storePins ==~ /[0-9a-f]{64}(,[0-9a-f]{64})*/)) throw new GradleException('Invalid Store certificate pins')
+        buildConfigField 'String', 'STORE_CERTIFICATES', '"' + storePins + '"'
+        buildConfigField 'String', 'STORE_PACKAGE', '"com.lelloman.store"'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
     productFlavors {
@@ -52,9 +56,11 @@ paravoid {
     payloadProguardFiles.from(file('payload-rules.pro'))
     crashRecovery { enabled = true; updater = 'default' }
     payloadVersion = providers.gradleProperty('paravoidPayloadVersion').map { it.toLong() }.getOrElse(12L)
-    // APK 3 introduces the gateway callback and network permission.
-    baselineDirectory = layout.projectDirectory.dir(
-        providers.gradleProperty('paravoidBaselineDirectory').getOrElse('../paravoid-baselines/apk-3'))
+    // APK 4 adds the verified notification receiver; payload-only updates cannot add it.
+    if (!providers.gradleProperty('paravoidNewShell').map { it.toBoolean() }.getOrElse(false)) {
+        baselineDirectory = layout.projectDirectory.dir(
+            providers.gradleProperty('paravoidBaselineDirectory').getOrElse('../paravoid-baselines/apk-4'))
+    }
     signing {
         keyId = System.getenv('PARAVOID_SIGNING_KEY_ID') ?: 'talia-release'
         privateKeyFile = file(System.getenv('PARAVOID_SIGNING_KEY') ?: new File(releaseDirectory, 'talia-release.pk8').path)
@@ -112,6 +118,7 @@ tasks.matching { it.name.startsWith('packageParavoidAndroid') && it.name.endsWit
     dependsOn(collectPayloadConsumerRules)
 }
 dependencies {
+    implementation 'com.lelloman.store:notification-client:0.1.0'
     implementation 'it.lelloman.homelab:access-gateway-client:1.0.0'
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'
     androidTestImplementation 'androidx.test:runner:1.6.2'

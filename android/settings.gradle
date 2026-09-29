@@ -5,12 +5,12 @@ pluginManagement {
 }
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-    repositories { google(); mavenCentral() }
+    repositories { google(); mavenCentral(); maven { url = uri(System.getenv("LELLOSTORE_NOTIFICATION_REPOSITORY") ?: "../../lellostore/android/build/notification-repository") } }
 }
 rootProject.name = 'Talia'
 include ':app'
 def source = file(System.getenv('PARAVOID_SOURCE_DIRECTORY') ?: '../../paravoid-android')
-for (name in ['paravoid-api','paravoid-contract','paravoid-runtime','paravoid-update-api','paravoid-recovery-api']) {
+for (name in ['paravoid-api','paravoid-contract','paravoid-runtime','paravoid-update-api','paravoid-update-ipc','paravoid-recovery-api']) {
     include ":${name}"
     project(":${name}").projectDir = new File(source, name)
 }

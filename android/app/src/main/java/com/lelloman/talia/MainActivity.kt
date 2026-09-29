@@ -30,10 +30,16 @@ import com.lelloman.lellodesign.*
 import com.lelloman.paravoidandroid.runtime.ParavoidUpdates
 
 class MainActivity : ComponentActivity() {
+    private var notificationDestination by mutableStateOf<Intent?>(null)
+    private val notificationPermission = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) androidx.lifecycle.ViewModelProvider(this)[NativeConnection::class.java].enableNotifications()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         handleGatewayIntent(intent)
+        if (intent?.hasExtra("notificationPage") == true) notificationDestination = Intent(intent)
         setContent { TaliaApp() }
     }
 
@@ -41,6 +47,7 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         handleGatewayIntent(intent)
+        if (intent?.hasExtra("notificationPage") == true) notificationDestination = Intent(intent)
     }
     private fun handleGatewayIntent(intent: Intent?) {
         val uri = intent?.data?.toString()?.let { runCatching { java.net.URI(it) }.getOrNull() } ?: return
@@ -71,6 +78,13 @@ class MainActivity : ComponentActivity() {
             LelloAppearance.valueOf(preferences.getString("mode", "System")!!)
         }.getOrDefault(LelloAppearance.System)) }
         var page by rememberSaveable { mutableStateOf("overview") }
+        LaunchedEffect(notificationDestination) {
+            notificationDestination?.let { destination ->
+                page = if (destination.getStringExtra("notificationPage") == "reports") "reports" else "overview"
+                connection.openNotification(destination.getStringExtra("notificationReport").orEmpty(), destination.getStringExtra("notificationRun").orEmpty())
+                notificationDestination = null
+            }
+        }
         val pageState = androidx.compose.runtime.saveable.rememberSaveableStateHolder()
         val dark = when (appearance) {
             LelloAppearance.Light -> false
@@ -107,6 +121,14 @@ class MainActivity : ComponentActivity() {
                         if (page == "settings") {
                             ConnectionPanel(connection, openBrowser)
                             ConnectionSettings(connection, openBrowser)
+                            LelloSettingsSection("Notifications") {
+                                Text(connection.notificationsMessage ?: "Receive report results and incident changes through LelloStore.")
+                                Button(enabled = connection.signedIn && !connection.busy, onClick = {
+                                    if (connection.notificationsEnabled) connection.disableNotifications()
+                                    else if (android.os.Build.VERSION.SDK_INT >= 33) notificationPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                                    else connection.enableNotifications()
+                                }) { Text(if (connection.notificationsEnabled) "Disable notifications" else "Enable notifications") }
+                            }
                             LelloSettingsSection("Appearance") {
                                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(16.dp)) {

@@ -93,6 +93,33 @@ internal class NativeConnection @JvmOverloads constructor(
     private val vault = SessionVault(application)
     private var saved = vault.read() ?: JSONObject()
     var server by mutableStateOf(saved.optString("server", "https://talia.lan.lelloman.com")); private set
+    var notificationsMessage by mutableStateOf<String?>(null); private set
+    var notificationsEnabled by mutableStateOf(saved.has("notificationSubscription")); private set
+    fun enableNotifications() = launch {
+        check(BuildConfig.STORE_CERTIFICATES.isNotBlank()) { "Store signing certificate missing from this build" }
+        val identity = call(server, "/native/session", saved.getString("token"), null).getString("subject")
+        val split = identity.lastIndexOf('#'); check(split > 0)
+        val client = TaliaNotifications.client(getApplication())
+        client.beginSession(identity.substring(0, split), identity.substring(split + 1))
+        val proof = client.enrollment()
+        val enrollment = call(server, "/native/notifications", saved.getString("token"), JSONObject().put("op", "enroll").put("proof", proof.getString("proof")))
+        val subscription = enrollment.getString("subscription_id")
+        client.confirm(subscription)
+        saved.put("notificationSubscription", subscription); vault.write(saved)
+        notificationsEnabled = true; notificationsMessage = "Notifications enabled through LelloStore."
+    }
+    fun disableNotifications() = launch {
+        TaliaNotifications.client(getApplication()).endSession()
+        notificationsEnabled = false
+        val id = saved.optString("notificationSubscription")
+        if (id.isNotEmpty()) call(server, "/native/notifications", saved.getString("token"), JSONObject().put("op", "disable").put("subscription_id", id))
+        saved.remove("notificationSubscription"); vault.write(saved)
+        notificationsMessage = "Notifications disabled."
+    }
+    fun openNotification(report: String, run: String) {
+        // Opening a notification only selects a destination; normal APIs still authorize its content.
+        if (report.isNotEmpty()) { reportSelected = report; reportRunSelected = run; refreshReports() }
+    }
     var signedIn by mutableStateOf(saved.has("token")); private set
     var pending by mutableStateOf(saved.has("attempt")); private set
     var name by mutableStateOf("Not signed in"); private set
@@ -316,11 +343,14 @@ internal class NativeConnection @JvmOverloads constructor(
     }
     fun cancelSignIn() { operation?.cancel(); clear(); message = null }
     fun signOut() = launch {
+        TaliaNotifications.client(getApplication()).endSession()
         call(server, "/native/logout", saved.getString("token"), JSONObject())
         clear(); message = null
         if (request == null && gateway.enrolled) gateway.revoke()
     }
     private fun clear() {
+        TaliaNotifications.client(getApplication()).endSession()
+        notificationsEnabled = false; notificationsMessage = null
         reportOperation?.cancel()
         reportDefinitions = null; reportHistory = org.json.JSONArray(); reportDetail = null; reportSchedule = null; scheduleMessage = null
         reportSelected = ""; reportRunSelected = ""; reportsNext = null; pendingReport = null; pendingSchedule = false; reportsMessage = null; reportsForbidden = false

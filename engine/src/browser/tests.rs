@@ -61,6 +61,7 @@ fn setup() -> Service {
         watches.clone(),
     );
     Service {
+        notifications: None,
         live: talia_engine::mcp_live::Live::new(engine.clone(), agent_engine.clone()),
         agent_engine,
         alert_policies: talia_engine::alerts::policy::Policies::new(engine.clone()),

@@ -37,3 +37,5 @@ pub mod telegram;
 pub mod ai;
 
 pub mod native_overview;
+
+pub mod notification_outbox;
