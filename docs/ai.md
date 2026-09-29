@@ -138,11 +138,22 @@ cannot prove the remote model did no computation; Talìa does not claim to cance
 simple-ai inference remotely.
 
 Limits per run: six model requests, at most four tool calls per response, 2,048
-requested output tokens per completion, 120 seconds per HTTP request and at most
-15 minutes overall (also bounded by the owner deadline). Inputs allow 16 KiB of
+requested output tokens per normal completion. Telegram requests have a fifteen-minute
+overall owner deadline; report analysis follows its report deadline, capped at twenty
+minutes. Each HTTP request uses the remaining execution deadline. Inputs allow 16 KiB of
 instructions and 64 KiB of context; accumulated messages and HTTP responses each
 allow 128 KiB; one tool result allows 32 KiB; final text allows 24,000 bytes. A
 truncated/malformed completion fails explicitly. A record is at most 256 KiB.
+
+Telegram session classification and selective summarization use the same configured
+model through tool-free, single-completion phases. Classification requests 2,048
+output tokens with a 120-second budget. Summarization requests 8,192 tokens, with
+at most two batches sharing a 180-second budget. These are internal execution
+options; report analysis and investigation tool-loop defaults are unchanged.
+Token-limit truncation is retained as an explicit error. Context maintenance
+failures use the [bounded Telegram fallback](telegram.md#investigation-setup-and-conversation)
+instead of discarding a self-contained question. Phase IDs and completed outputs
+are durable; interrupted requests are never automatically resubmitted.
 
 Up to four report steps and one Telegram conversation can await inference at once.
 Telegram polling/delivery runs separately; database transactions never span I/O.

@@ -369,8 +369,13 @@ impl Worker {
                 .map_err(err)?
                 .collect::<std::result::Result<Vec<_>, _>>()
                 .map_err(err)?;
-            let mut jobs=s.conn.prepare("SELECT id,status,json_extract(body,'$.error'),json_extract(body,'$.ai_run') FROM telegram_jobs ORDER BY id DESC LIMIT 20").map_err(err)?;
-            let jobs=jobs.query_map([],|r|Ok(json!({"id":r.get::<_,i64>(0)?,"status":r.get::<_,String>(1)?,"error":r.get::<_,Option<String>>(2)?,"run":r.get::<_,Option<String>>(3)?}))).map_err(err)?.collect::<std::result::Result<Vec<_>,_>>().map_err(err)?;
+            let mut jobs=s.conn.prepare("SELECT id,status,json_extract(body,'$.error'),json_extract(body,'$.ai_run'),body FROM telegram_jobs ORDER BY id DESC LIMIT 20").map_err(err)?;
+            let jobs=jobs.query_map([],|r|{
+                let body:Value=serde_json::from_str(&r.get::<_,String>(4)?).unwrap_or(Value::Null);
+                Ok(json!({"id":r.get::<_,i64>(0)?,"status":r.get::<_,String>(1)?,"error":r.get::<_,Option<String>>(2)?,"run":r.get::<_,Option<String>>(3)?,
+                    "phase":body["phase"],"sessionCutoff":body["session_cutoff"],"contextRevision":body["context_revision"],
+                    "maintenanceError":body["maintenance_error"],"contextFallback":body["context_fallback"]}))
+            }).map_err(err)?.collect::<std::result::Result<Vec<_>,_>>().map_err(err)?;
             return Ok(
                 json!({"jobs":jobs,"version":c.version,"enabled":c.enabled,"bot":c.username,"investigationsAvailable":ai["configured"],"ai":ai,"investigations":c.investigations,"sources":c.sources,"lastPoll":c.last_poll,"error":c.error,"peers":peers,"users":users,"pairs":pairs,"deliveries":deliveries}),
             );

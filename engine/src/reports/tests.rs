@@ -362,7 +362,7 @@ async fn retired_integration_migration_preserves_history_and_delivery() {
         s.conn
             .query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
             .unwrap(),
-        17
+        18
     );
     let d = s.report_definition("morning").unwrap();
     assert!(!d.enabled);

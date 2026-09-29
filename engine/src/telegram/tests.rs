@@ -1,7 +1,7 @@
 use super::*;
 use std::sync::{Arc, Mutex};
 use wiremock::{matchers::path, Mock, MockServer, ResponseTemplate};
-fn fixture() -> (Worker, std::path::PathBuf) {
+pub(super) fn fixture() -> (Worker, std::path::PathBuf) {
     let dir = std::env::temp_dir().join(format!("talia-telegram-{}", random().unwrap()));
     std::fs::create_dir(&dir).unwrap();
     let mut s = Store::open(dir.join("engine.db")).unwrap();
@@ -9,7 +9,7 @@ fn fixture() -> (Worker, std::path::PathBuf) {
     s.user_seen("viewer", "viewer").unwrap();
     (Worker::new(Engine::with_clock(s, Rc::new(|| 1000))), dir)
 }
-async fn bot_fixture() -> MockServer {
+pub(super) async fn bot_fixture() -> MockServer {
     let server = MockServer::start().await;
     transport::TEST_BASE.with(|v| *v.borrow_mut() = Some(server.uri()));
     Mock::given(path("/bot123:fixture/getMe"))
@@ -26,7 +26,7 @@ async fn bot_fixture() -> MockServer {
         .await;
     server
 }
-async fn connect(w: &Worker) {
+pub(super) async fn connect(w: &Worker) {
     w.admin(
         "admin",
         json!({"op":"telegramConnect","token":"123:fixture","expected":0}),
@@ -34,7 +34,7 @@ async fn connect(w: &Worker) {
     .await
     .unwrap();
 }
-async fn pair(w: &Worker, chat: i64, user: i64, investigate: bool) {
+pub(super) async fn pair(w: &Worker, chat: i64, user: i64, investigate: bool) {
     let code = w
         .admin("admin", json!({"op":"telegramPair"}))
         .await
@@ -42,7 +42,7 @@ async fn pair(w: &Worker, chat: i64, user: i64, investigate: bool) {
         .as_str()
         .unwrap()
         .to_owned();
-    w.engine.store.borrow_mut().telegram_ingest(&json!({"update_id":chat.abs(),"message":{"chat":{"id":chat,"type":if chat>0{"private"}else{"group"},"title":"Fixture"},"from":{"id":user,"is_bot":false,"username":"fixture"},"text":format!("/pair {code}")}}),1000).unwrap();
+    w.engine.store.borrow_mut().telegram_ingest_legacy(&json!({"update_id":chat.abs(),"message":{"chat":{"id":chat,"type":if chat>0{"private"}else{"group"},"title":"Fixture"},"from":{"id":user,"is_bot":false,"username":"fixture"},"text":format!("/pair {code}")}}),1000).unwrap();
     w.admin(
         "admin",
         json!({"op":"telegramApprove","code":code,"delivery":true,"investigate":investigate}),
@@ -100,7 +100,7 @@ async fn pairing_encryption_authority_and_revocation() {
             .execute("INSERT INTO telegram_users VALUES(42,'fixture')", [])
             .unwrap();
     }
-    w.engine.store.borrow_mut().telegram_ingest(&json!({"update_id":100,"message":{"chat":{"id":42,"type":"private"},"from":{"id":42,"is_bot":false},"text":"/ask check my server"}}),1000).unwrap();
+    w.engine.store.borrow_mut().telegram_ingest_legacy(&json!({"update_id":100,"message":{"chat":{"id":42,"type":"private"},"from":{"id":42,"is_bot":false},"text":"/ask check my server"}}),1000).unwrap();
     assert_eq!(
         w.engine
             .store
@@ -308,7 +308,7 @@ async fn conversations_select_reports_compact_and_start_fresh() {
         w.engine
             .store
             .borrow_mut()
-            .telegram_ingest(&json!({"update_id":id,"message":m}), 1000)
+            .telegram_ingest_legacy(&json!({"update_id":id,"message":m}), 1000)
             .unwrap();
     };
     ingest(60, "What is happening?", false);
@@ -420,7 +420,7 @@ async fn inference_does_not_block_bot_delivery_and_revocation_suppresses_answer(
         .expect(1)
         .mount(&bot_server)
         .await;
-    w.engine.store.borrow_mut().telegram_ingest(&json!({"update_id":60,"message":{"chat":{"id":55,"type":"private"},"from":{"id":55,"is_bot":false},"text":"Investigate"}}),1000).unwrap();
+    w.engine.store.borrow_mut().telegram_ingest_legacy(&json!({"update_id":60,"message":{"chat":{"id":55,"type":"private"},"from":{"id":55,"is_bot":false},"text":"Investigate"}}),1000).unwrap();
     w.admin("admin", json!({"op":"telegramTest","chat":55}))
         .await
         .unwrap();
@@ -506,8 +506,8 @@ async fn requests_acknowledge_once_and_refresh_typing_until_complete() {
         let mut s = w.engine.store.borrow_mut();
         s.telegram_enqueue("older-report", 55, "report", None, "Report backlog")
             .unwrap();
-        s.telegram_ingest(&update, 1000).unwrap();
-        s.telegram_ingest(&update, 1000).unwrap();
+        s.telegram_ingest_legacy(&update, 1000).unwrap();
+        s.telegram_ingest_legacy(&update, 1000).unwrap();
         assert_eq!(
             s.conn
                 .query_row(
@@ -603,7 +603,7 @@ async fn queued_requests_expire_once_without_starting_inference() {
     {
         let mut s = w.engine.store.borrow_mut();
         for id in [60, 61] {
-            s.telegram_ingest(&json!({"update_id":id,"message":{"chat":{"id":55,"type":"private"},"from":{"id":55,"is_bot":false},"text":"Check"}}), -899000).unwrap();
+            s.telegram_ingest_legacy(&json!({"update_id":id,"message":{"chat":{"id":55,"type":"private"},"from":{"id":55,"is_bot":false},"text":"Check"}}), -899000).unwrap();
         }
         // A retained job with an excessive deadline must use the current bound too.
         s.conn
@@ -662,7 +662,7 @@ async fn active_request_uses_remaining_budget_and_discards_late_answer() {
         .mount(&ai)
         .await;
     // 899.8 seconds were already spent queued; only 200 ms remain.
-    w.engine.store.borrow_mut().telegram_ingest(&json!({"update_id":60,"message":{"chat":{"id":55,"type":"private"},"from":{"id":55,"is_bot":false},"text":"Check"}}), -898800).unwrap();
+    w.engine.store.borrow_mut().telegram_ingest_legacy(&json!({"update_id":60,"message":{"chat":{"id":55,"type":"private"},"from":{"id":55,"is_bot":false},"text":"Check"}}), -898800).unwrap();
     w.conversation().await.unwrap();
     tokio::time::sleep(Duration::from_millis(550)).await;
     w.conversation().await.unwrap();
@@ -733,7 +733,7 @@ async fn failed_questions_reach_followups_and_compaction_but_not_new_conversatio
         .mount(&ai)
         .await;
     let ingest = |id, text: &str| {
-        w.engine.store.borrow_mut().telegram_ingest(&json!({"update_id":id,"message":{"chat":{"id":55,"type":"private"},"from":{"id":55,"is_bot":false},"text":text}}),1000).unwrap();
+        w.engine.store.borrow_mut().telegram_ingest_legacy(&json!({"update_id":id,"message":{"chat":{"id":55,"type":"private"},"from":{"id":55,"is_bot":false},"text":text}}),1000).unwrap();
     };
     ingest(60, "Check the external disk free space");
     w.conversation().await.unwrap();
@@ -782,4 +782,14 @@ async fn failed_questions_reach_followups_and_compaction_but_not_new_conversatio
     drop(w);
     std::fs::remove_dir_all(dir).unwrap();
     std::fs::remove_dir_all(ai_dir).unwrap();
+}
+
+// Preserve qualification of jobs admitted before schema 18. New-context ingress
+// and behavior are covered independently in conversation/context/tests.rs.
+impl Store {
+    fn telegram_ingest_legacy(&mut self, update: &Value, now: i64) -> Result<()> {
+        self.telegram_ingest(update, now)?;
+        self.conn.execute("UPDATE telegram_jobs SET body=json_set(body,'$.context_version',0,'$.phase',CASE json_extract(body,'$.phase') WHEN 'classify' THEN 'answer' WHEN 'maintain' THEN 'compact' ELSE json_extract(body,'$.phase') END) WHERE id=?", [update["update_id"].as_i64().unwrap_or(-1)]).map_err(err)?;
+        Ok(())
+    }
 }

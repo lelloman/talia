@@ -156,6 +156,20 @@ pub(crate) fn permit(engine: &Engine, scope: &Scope) -> Result<()> {
 }
 /// Stable IDs are supplied by the owning report step or Telegram job/phase. A saved
 /// outcome is reused; an interrupted in-flight request is never sent again.
+#[derive(Clone, Copy)]
+pub(crate) struct ExecutionOptions {
+    pub max_tokens: u32,
+    pub max_turns: u32,
+}
+impl Default for ExecutionOptions {
+    fn default() -> Self {
+        Self {
+            max_tokens: 2048,
+            max_turns: 6,
+        }
+    }
+}
+
 pub async fn execute(
     engine: &Engine,
     id: &str,
@@ -165,6 +179,32 @@ pub async fn execute(
     context: Value,
     with_tools: bool,
 ) -> Result<Value> {
+    execute_with_options(
+        engine,
+        id,
+        scope,
+        deadline,
+        instructions,
+        context,
+        with_tools,
+        ExecutionOptions::default(),
+    )
+    .await
+}
+
+pub(crate) async fn execute_with_options(
+    engine: &Engine,
+    id: &str,
+    scope: Scope,
+    deadline: i64,
+    instructions: &str,
+    context: Value,
+    with_tools: bool,
+    options: ExecutionOptions,
+) -> Result<Value> {
+    if !(1..=8192).contains(&options.max_tokens) || !(1..=6).contains(&options.max_turns) {
+        return Err("invalid AI execution options".into());
+    }
     permit(engine, &scope)?;
     if with_tools && !matches!(scope, Scope::Telegram { .. }) {
         return Err("Tools are not available to report analysis".into());
@@ -206,7 +246,7 @@ pub async fn execute(
     };
     engine.store.borrow().ai_put(&r)?;
     let duration = Duration::from_millis(r.deadline.saturating_sub(engine.now()).max(0) as u64);
-    let result = tokio::time::timeout(duration, run(engine, &mut r))
+    let result = tokio::time::timeout(duration, run(engine, &mut r, options))
         .await
         .unwrap_or_else(|_| Err("AI execution deadline exceeded".into()));
     match result {
@@ -233,7 +273,7 @@ fn outcome(r: &Run) -> Result<Value> {
         ))
     }
 }
-async fn run(engine: &Engine, r: &mut Run) -> Result<String> {
+async fn run(engine: &Engine, r: &mut Run, options: ExecutionOptions) -> Result<String> {
     let mut session = account::session(engine).await?;
     let revision = session.revision;
     let config = session.config.clone();
@@ -241,11 +281,13 @@ async fn run(engine: &Engine, r: &mut Run) -> Result<String> {
         .redirect(reqwest::redirect::Policy::none())
         .no_proxy()
         .connect_timeout(Duration::from_secs(10))
-        .timeout(Duration::from_millis(r.deadline.saturating_sub(engine.now()).max(1) as u64))
+        .timeout(Duration::from_millis(
+            r.deadline.saturating_sub(engine.now()).max(1) as u64,
+        ))
         .build()
         .map_err(|_| "AI HTTP client unavailable")?;
     r.model = config.model.clone();
-    for turn in 0..6 {
+    for turn in 0..options.max_turns {
         account::check(engine, revision)?;
         if turn > 0 && revision.is_some() {
             session = account::session(engine).await?;
@@ -260,8 +302,7 @@ async fn run(engine: &Engine, r: &mut Run) -> Result<String> {
         }
         r.turns += 1;
         engine.store.borrow().ai_put(r)?;
-        let mut request =
-            json!({"model":config.model,"messages":r.messages,"stream":false,"max_tokens":2048});
+        let mut request = json!({"model":config.model,"messages":r.messages,"stream":false,"max_tokens":options.max_tokens});
         if r.tools {
             request["tools"] = json!(tools::definitions());
         }
@@ -368,7 +409,12 @@ async fn run(engine: &Engine, r: &mut Run) -> Result<String> {
             engine.store.borrow().ai_put(r)?;
         } else {
             if choice["finish_reason"] != "stop" {
-                return Err("simple-ai did not finish its answer".into());
+                return Err(if choice["finish_reason"] == "length" {
+                    "simple-ai output truncated at token limit"
+                } else {
+                    "simple-ai did not finish its answer"
+                }
+                .into());
             }
             let text = message["content"]
                 .as_str()

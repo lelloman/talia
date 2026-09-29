@@ -1,5 +1,6 @@
 use super::*;
 use crate::ai;
+mod context;
 const MESSAGE_TIMEOUT_MS: i64 = 15 * 60 * 1000;
 #[derive(Clone, Serialize, Deserialize)]
 struct Job {
@@ -16,6 +17,26 @@ struct Job {
     through: i64,
     ai_run: Option<String>,
     error: Option<String>,
+    #[serde(default)]
+    context_version: u8,
+    #[serde(default)]
+    context_revision: i64,
+    #[serde(default)]
+    session_cutoff: Option<i64>,
+    #[serde(default)]
+    maintenance_error: Option<String>,
+    #[serde(default)]
+    context_fallback: bool,
+    #[serde(default)]
+    context_unavailable: bool,
+    #[serde(default)]
+    maintenance_deadline: Option<i64>,
+    #[serde(default)]
+    batches: u8,
+    #[serde(default)]
+    offered: Vec<String>,
+    #[serde(default)]
+    resumed: Option<context::Pending>,
 }
 impl Store {
     pub fn telegram_ingest(&mut self, update: &Value, now: i64) -> Result<()> {
@@ -52,7 +73,7 @@ impl Store {
             if count>=100||own>=4{s.telegram_enqueue(&format!("busy-{uid}"),chat,"chat",Some(&user.to_string()),"Investigation queue is full. Please wait for the current work to finish.")?;return Ok(());}
             let epoch=s.conn.query_row("SELECT epoch FROM telegram_context WHERE chat=? AND user=?",params![chat,user],|r|r.get(0)).map_err(err)?;
             let report=reference.filter(|(kind,_)|kind=="report").and_then(|(_,id)|id);
-            let job=Job{id:uid,chat,user,epoch,text:text.into(),report,created:now,deadline:now.saturating_add(MESSAGE_TIMEOUT_MS),revision:c.version,phase:if command=="/compact"{"compact"}else{"answer"}.into(),through:0,ai_run:None,error:None};
+            let job=Job{id:uid,chat,user,epoch,text:text.into(),report,created:now,deadline:now.saturating_add(MESSAGE_TIMEOUT_MS),revision:c.version,phase:if command=="/compact"{"maintain"}else{"classify"}.into(),through:0,ai_run:None,error:None,context_version:2,context_revision:0,session_cutoff:None,maintenance_error:None,context_fallback:false,context_unavailable:false,maintenance_deadline:None,batches:0,offered:vec![],resumed:None};
             s.conn.execute("INSERT INTO telegram_jobs VALUES(?,?,?,'queued',?)",params![uid,chat,user,serde_json::to_string(&job).map_err(err)?]).map_err(err)?;
             let acknowledgement=if command=="/compact"{"Got it — I’ll compact this conversation and let you know when it’s ready."}else if count>0{"Got it — your request is queued. I’ll reply here when it’s ready."}else{"Got it — I’ll look into it and reply here."};
             s.telegram_enqueue(&format!("ack-{uid}"),chat,"chat",Some(&user.to_string()),acknowledgement)?;Ok(())
@@ -106,8 +127,12 @@ impl Worker {
             } else {
                 "[Talìa request outcome: failed. No completed answer is available; this does not mean no diagnostic work was attempted.]"
             };
+            if job.context_version == 2 {
+                context::record_turn(s, job, outcome, self.engine.now())?;
+            } else {
             for (role, text) in [("user", job.question()), ("assistant", outcome.into())] {
                 s.conn.execute("INSERT INTO telegram_history(chat,user,epoch,role,body) VALUES(?,?,?,?,?)",params![job.chat,job.user,job.epoch,role,text]).map_err(err)?;
+            }
             }
             // An old acknowledgement must not arrive after the timeout notice.
             s.conn.execute("UPDATE telegram_outbox SET status='failed' WHERE id=? AND status='pending'", [format!("ack-{}-000", job.id)]).map_err(err)?;
@@ -195,6 +220,12 @@ impl Worker {
         }
     }
     async fn advance_job(&self, j: &mut Job) -> Result<()> {
+        if j.context_version == 2 {
+            return self.advance_context_job(j).await;
+        }
+        self.advance_legacy_job(j).await
+    }
+    async fn advance_legacy_job(&self, j: &mut Job) -> Result<()> {
         if self.engine.now() >= j.deadline {
             return Err("Investigation deadline exceeded".into());
         }

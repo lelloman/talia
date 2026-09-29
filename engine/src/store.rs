@@ -59,7 +59,7 @@ impl Store {
         let version: i64 = conn
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .map_err(err)?;
-        if version > 17 {
+        if version > 18 {
             return Err("database schema newer than engine".into());
         }
         if version == 0 {
@@ -125,6 +125,7 @@ PRAGMA user_version=3;").map_err(err)?;
         if version < 15 {let tx=conn.transaction().map_err(err)?;tx.execute_batch(include_str!("../migrations/015_retire_agents.sql")).map_err(err)?;tx.commit().map_err(err)?;}
         if version < 16 {let tx=conn.transaction().map_err(err)?;tx.execute_batch(include_str!("../migrations/016_ai.sql")).map_err(err)?;tx.commit().map_err(err)?;}
         if version < 17 {let tx=conn.transaction().map_err(err)?;tx.execute_batch(include_str!("../migrations/017_ai_account.sql")).map_err(err)?;tx.commit().map_err(err)?;}
+        if version < 18 {let tx=conn.transaction().map_err(err)?;tx.execute_batch(include_str!("../migrations/018_conversation_context.sql")).map_err(err)?;tx.commit().map_err(err)?;}
         Ok(Self { conn })
     }
     pub fn definition(&self, id: &str) -> Result<Definition> {

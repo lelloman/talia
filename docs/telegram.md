@@ -63,14 +63,57 @@ On timeout Talìa stops waiting, stops typing, retains failure evidence and queu
 a clear timeout reply; late results are discarded. Sending a new message starts
 a new request. Provider/network failures may still end a request earlier.
 
-Conversation state is per chat/account. `/new` starts a fresh epoch and cancels
-older local work/replies. `/compact` requests a summary; automatic compaction runs
-before an answer at 16 messages or 16 KB of recent context. Summaries keep at most
-4,000 characters. Large histories compact in bounded batches with durable progress;
-exceptionally large old individual messages are marked as truncated. Original
-history stays in SQLite. Reports are not appended to history or compaction inputs;
-a user's question retains only its report ID reference, while the assistant's
-answer is ordinary conversation history.
+Conversation state is per chat/account. Each ordinary question first goes through a
+tool-free session classifier using the configured simple-ai model. A new topic
+advances a durable request-ID cutoff; older chat, summaries and diagnostic
+evidence are excluded. Follow-ups continue the active session. Ambiguous boundaries
+produce a short clarification before diagnostics; the unresolved question is
+retained for the next reply. Classification runs when the request reaches the head
+of its queue, so earlier accepted work can finish. `/new` remains an immediate
+reset that cancels older local work and pending replies.
+
+Original history is immutable. A separate working context references exact chat
+messages, stores selective summaries with source coverage, and retains bounded
+diagnostic evidence with AI run/tool IDs, the query, run creation time and evidence
+capture time. Capture time is not a fresh measurement: timestamps inside the
+original result remain authoritative. Assistant reasoning is not copied.
+Each tool result excerpt is limited to 4 KiB and its query to 2 KiB, with explicit
+truncation markers. Copies remain usable after the original AI run is pruned.
+
+Selective compaction runs after classification when active history exceeds
+16 KiB or 16 unprocessed chat messages. It processes bounded batches, keeping
+useful exact details and condensing repetition; previously kept messages can be
+reconsidered. Source coverage is checked for unknown IDs, duplicates and dropped
+entries. Summary coverage can reference an earlier summary, preserving its
+provenance without loading all original messages again. `/compact` requests one
+selective batch without changing the cutoff. Original messages are never deleted.
+
+Automatic maintenance allows at most two 32-KiB batches in a shared 180-second
+budget, with 8,192 output tokens per completion. Classification allows 120 seconds
+and 2,048 output tokens. Both use the existing model and stay within the request's
+fifteen-minute deadline. Compaction aims for 12 KiB per replacement batch; answer
+history is capped at 24 KiB, prioritizing the latest turn and summaries. At most
+512 active entries are considered per pass. Any omitted context is explicitly
+marked; the incoming question and explicitly selected report are included
+separately within the AI input-size limit.
+
+Classification failure leaves the cutoff unchanged and answers with only the
+current question and selected report, asking for clarification if that is
+insufficient. Compaction failure preserves the last valid working context and
+continues with bounded history. Incomplete model output is never accepted as a
+summary. Failed manual compaction reports that the context was unchanged.
+No automatic retry repeats interrupted inference; completed phase results are
+reused after restart.
+
+Schema 18 adds request ownership and working-context records. Existing chats begin
+fresh context on their next newly admitted request; old history and summaries
+remain available for inspection. Jobs admitted before the upgrade finish using
+the legacy conversation path. Back up SQLite before upgrading. Older binaries
+reject schema 18; binary-only rollback is not supported.
+
+Reports are not automatically appended to chat or compaction inputs. Replying to
+a stored report selects that report explicitly; a question retains its report ID,
+and a diagnostic report read may supply a bounded historical evidence excerpt.
 
 Failed and timed-out requests also retain their question (including any report ID)
 and a bounded outcome notice in conversation history, so follow-ups such as “try
@@ -108,7 +151,8 @@ delivery state and report reference. A restart or uncertain response during send
 becomes `unknown`, with no automatic retry or duplicate send. Report delivery is
 complete only when all parts are confirmed. Telegram acceptance is not a read
 receipt. The settings page displays polling errors, delivery counts and recent
-investigation failures and local AI run IDs.
+investigation failures and local AI run IDs. Job status also exposes the execution
+phase, session cutoff, context revision, maintenance error and fallback flag.
 
 Bounds: 100 paired chats, ten outstanding pairing codes, 100 active jobs, four per
 chat/account, 10,000 retained jobs and 10,000 outgoing parts. Capacity exhaustion
