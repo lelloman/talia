@@ -41,7 +41,10 @@ with `String(...)` if their display is needed.
 `compose(ctx)` returns `{subject,summary,sections:[{title,text}]}`. Talìa builds a
 formatted email and escapes all supplied text, including source output. Raw HTML,
 remote images and scripts are not accepted from scripts. Both HTML and plain
-text are retained with the run.
+text are retained with the run. The optional `severity` field accepts `nominal`,
+`warning`, `error` or `unknown`; older composers default to `unknown`. Native run
+details expose outcome severity separately from execution status: failed runs
+are `error`, and partial runs are at least `warning`.
 
 The [morning homelab example](../reports/examples/morning-homelab.json) queries
 Prometheus, computes observations, asks simple-ai for analysis, and composes an email. Replace `prometheus`

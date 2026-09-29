@@ -21,5 +21,5 @@ ctx => {
     return icons[item.state]+' '+item.name+' — '+item.state+'\n'+explanation+'\n   Assessment: '+note;
   }).join('\n');
   const statusIcons = {Nominal:'🟢', Warning:'🟡', Error:'🔴'};
-  return {subject:'Infra report: '+statusIcons[f.state]+' '+f.state.toLowerCase(),summary:'',sections:[{title:'',text}]};
+  return {severity:f.state.toLowerCase(),subject:'Infra report: '+statusIcons[f.state]+' '+f.state.toLowerCase(),summary:'',sections:[{title:'',text}]};
 }

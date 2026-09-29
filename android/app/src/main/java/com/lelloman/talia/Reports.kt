@@ -230,6 +230,12 @@ private fun CompactReportRow(title: String, subtitle: String, status: String, en
 @Composable
 internal fun ReportRunDetails(run: JSONObject) {
     RunStatus(run.getString("status"))
+    when (run.optString("severity")) {
+        "warning" -> LelloAlert("Report findings: warning", tone = LelloTone.Warning)
+        "error" -> LelloAlert("Report findings: error", tone = LelloTone.Error)
+        "nominal" -> Muted("Report findings: nominal")
+        "unknown" -> Muted("Report severity unavailable")
+    }
     if (reportActive(run.getString("status"))) Muted("Progress refreshes automatically while this screen is open. You can leave and return later.")
     if (!run.isNull("error")) LelloAlert(run.getString("error"), tone = LelloTone.Error)
     run.optJSONObject("content")?.let { content ->

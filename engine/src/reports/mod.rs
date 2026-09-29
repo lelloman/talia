@@ -86,9 +86,20 @@ pub struct Output {
     pub value: Value,
     pub error: Option<String>,
 }
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Severity {
+    Nominal,
+    Warning,
+    Error,
+    #[default]
+    Unknown,
+}
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Content {
+    #[serde(default)]
+    pub severity: Severity,
     pub subject: String,
     pub summary: String,
     pub sections: Vec<Section>,
@@ -403,3 +414,12 @@ impl Store {
 
 #[cfg(test)]
 mod tests;
+
+/// Outcome severity is separate from execution status. Legacy composers remain unknown.
+pub fn run_severity(run: &Run) -> Severity {
+    if run.status == "failed" { return Severity::Error; }
+    let severity = run.content.as_ref().map(|c| c.severity).unwrap_or_default();
+    if severity == Severity::Error { return severity; }
+    if run.status == "partial" { return Severity::Warning; }
+    severity
+}

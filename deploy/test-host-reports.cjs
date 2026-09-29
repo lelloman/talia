@@ -21,3 +21,11 @@ console.log('11-item checklist: healthy output, thresholds, host grouping, missi
 c=context();for(const r of c.steps.extras.value.wire.result) if(r.metric.__name__==='talia_report_probe_checked_timestamp_seconds' && r.metric.host==='VPS-EU') r.samples[0][1]=800;f=facts(c);assert.equal(f.items[1].state,'WARN');assert.equal(f.items[0].state,'OK');assert(f.items[1].problems.every(p=>p.text.includes('120 seconds')));
 c=context();for(const r of c.steps.extras.value.wire.result) if(r.metric.__name__==='talia_report_probe_success' && r.metric.host==='VPS-US' && r.metric.kind==='https') r.samples[0][1]=0;f=facts(c);assert.equal(f.items[2].state,'WARN');assert.deepEqual(f.items[2].problems,[{severity:'WARN',text:'External HTTPS connection: probe failed.'}]);
 console.log('Stale cached successes and real per-host HTTPS failures are distinguished.');
+
+for (const [edit, expected] of [[()=>{}, "nominal"], [c=>c.steps.cpu.value.wire.result[1].samples[0][1]=94, "warning"], [c=>c.steps.reachability.value.wire.result[2].samples[0][1]=0, "error"]]) {
+  const c=context(); edit(c); c.steps.facts={value:facts(c)}; assert.equal(compose(c).severity,expected);
+}
+for (const definition of JSON.parse(fs.readFileSync(__dirname+"/homelab-telegram-reports.json","utf8"))) {
+  assert.equal(definition.compose,fs.readFileSync(__dirname+"/report-checklist-compose.js","utf8"),definition.id+" composer must match deployment source");
+}
+console.log("Composer severity and deployment template consistency passed.");

@@ -618,3 +618,24 @@ fn schedule_edit_projection_cas_replay_and_due() {
     assert_eq!(read_tool["annotations"]["readOnlyHint"],true);
     assert_eq!(read_tool["inputSchema"]["required"],json!(["id"]));
 }
+
+#[test]
+fn findings_severity_is_separate_from_execution_status() {
+    let mut s = Store::open(":memory:").unwrap();
+    s.report_save(&definition(), 0, 1000).unwrap();
+    let mut run = s.report_start("morning", "admin", false, 1000).unwrap();
+    for (status, severity, expected) in [
+        ("complete", "warning", Severity::Warning),
+        ("complete", "error", Severity::Error),
+        ("complete", "nominal", Severity::Nominal),
+        ("partial", "nominal", Severity::Warning),
+        ("partial", "error", Severity::Error),
+        ("failed", "nominal", Severity::Error),
+    ] {
+        run.status = status.into();
+        run.content = Some(serde_json::from_value(json!({"severity":severity,"subject":"Test","summary":"","sections":[]})).unwrap());
+        assert_eq!(run_severity(&run), expected);
+    }
+    let legacy: Content = serde_json::from_value(json!({"subject":"Old","summary":"","sections":[]})).unwrap();
+    assert_eq!(legacy.severity, Severity::Unknown);
+}
