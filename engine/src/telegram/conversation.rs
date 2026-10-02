@@ -89,6 +89,23 @@ impl Store {
         Ok(())
     }
 }
+/// Short, user-safe cause for a failed run; never exposes run ids or upstream bodies.
+fn failure_reason(error: &str) -> Option<String> {
+    let detail = error.split_once(": ").map_or(error, |(_, d)| d);
+    if let Some(code) = detail.strip_prefix("simple-ai returned HTTP ") {
+        let code: String = code.chars().take_while(char::is_ascii_digit).collect();
+        return Some(match code.as_str() {
+            "500" | "502" | "503" | "504" => format!("the AI backend is unavailable (HTTP {code}); its inference runner may be down."),
+            _ => format!("the AI backend returned HTTP {code}."),
+        });
+    }
+    match detail {
+        "AI turn limit exceeded" => Some("the investigation used too many steps without reaching an answer.".into()),
+        "simple-ai did not finish its answer" => Some("the AI model stopped before finishing its answer.".into()),
+        "simple-ai request failed or timed out; not automatically retried" => Some("the AI backend could not be reached.".into()),
+        _ => None,
+    }
+}
 impl Worker {
     // Queue expiry runs independently of the active inference so a backlog does
     // not extend another message's deadline.
@@ -141,7 +158,12 @@ impl Worker {
             } else {
                 "The investigation failed. Its run and error are retained in Talìa; please ask an administrator to check the Telegram status."
             };
-            s.telegram_enqueue(&format!("error-{}",job.id),job.chat,"chat",Some(&job.user.to_string()),text)
+            let reason = failure_reason(job.error.as_deref().unwrap_or_default());
+            let text = match (timed_out, reason) {
+                (false, Some(reason)) => format!("{text}\n\nReason: {reason}"),
+                _ => text.to_string(),
+            };
+            s.telegram_enqueue(&format!("error-{}",job.id),job.chat,"chat",Some(&job.user.to_string()),&text)
         })
     }
     pub(super) async fn conversation(&self) -> Result<()> {
@@ -339,5 +361,18 @@ impl Job {
             epoch: self.epoch,
             revision: self.revision,
         }
+    }
+}
+
+#[cfg(test)]
+mod failure_reason_tests {
+    use super::failure_reason;
+
+    #[test]
+    fn maps_known_failures_without_run_ids() {
+        let r = failure_reason("AI run telegram-1-answer: simple-ai returned HTTP 500").unwrap();
+        assert!(r.contains("HTTP 500") && !r.contains("telegram-1"));
+        assert!(failure_reason("AI run x: AI turn limit exceeded").is_some());
+        assert!(failure_reason("something internal").is_none());
     }
 }
