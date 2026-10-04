@@ -27,6 +27,9 @@ dependencyResolutionManagement {
 }
 rootProject.name = 'Talia'
 include ':app'
+// Shared dashboard runtime and LelloDesign renderer, also usable by other Talìa clients.
+include ':dashboard-compose'
+project(':dashboard-compose').projectDir = file('../dashboard/compose')
 includeBuild(System.getenv('LELLODESIGN_COMPOSE_DIRECTORY') ?: '../../lellodesign/packages/compose') {
     dependencySubstitution {
         substitute module('com.lelloman:lellodesign-compose') using project(':lellodesign')

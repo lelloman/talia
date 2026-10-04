@@ -216,3 +216,23 @@ pub extern "system" fn Java_com_lelloman_talia_dashboard_MainActivity_retireLive
 ) {
     LIVE.with(|s| *s.borrow_mut() = None);
 }
+
+// Shared Compose host (`com.lelloman.talia.dashboard.compose.QuickJs`). Contexts are
+// thread-local, so the host must call these from one dedicated runtime thread.
+#[no_mangle]
+pub extern "system" fn Java_com_lelloman_talia_dashboard_compose_QuickJs_evaluate(
+    env: jni::JNIEnv,
+    class: jni::objects::JClass,
+    source: jni::objects::JString,
+    ui: jni::sys::jboolean,
+    reset: jni::sys::jboolean,
+) -> jni::sys::jstring {
+    Java_com_lelloman_talia_dashboard_MainActivity_evaluate(env, class, source, ui, reset)
+}
+#[no_mangle]
+pub extern "system" fn Java_com_lelloman_talia_dashboard_compose_QuickJs_retire(
+    env: jni::JNIEnv,
+    class: jni::objects::JClass,
+) {
+    Java_com_lelloman_talia_dashboard_MainActivity_retire(env, class)
+}

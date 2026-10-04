@@ -114,7 +114,7 @@ internal class HomelabGateway(context: Context) : AutoCloseable {
         if (tunnelCreated) tunnel.disconnect()
     }
 
-    suspend fun request(server: String, path: String, token: String?, body: JSONObject?): JSONObject = requests.withLock {
+    suspend fun request(server: String, path: String, token: String?, body: JSONObject?, headers: Map<String, String> = emptyMap()): JSONObject = requests.withLock {
         val managed = server == HOME
         val lan = if (managed) lanClient() else null
         val client = when {
@@ -130,6 +130,7 @@ internal class HomelabGateway(context: Context) : AutoCloseable {
             withContext(Dispatchers.IO) {
                 val request = Request.Builder().url(server + path).header("Accept", "application/json")
                 token?.let { request.header("Authorization", "Bearer $it") }
+                headers.forEach { (name, value) -> request.header(name, value) }
                 body?.let { request.post(it.toString().toRequestBody("application/json".toMediaType())) }
                 client.newCall(request.build()).execute().use { response ->
                     if (!response.isSuccessful) throw ApiFailure(response.code)

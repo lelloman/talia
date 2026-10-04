@@ -99,6 +99,7 @@ class MainActivity : ComponentActivity() {
         }
         val destinations = listOf(
             LelloDestination("overview", "Overview") { Icon(Icons.Default.Home, null) },
+            LelloDestination("dashboards", "Dashboards") { Icon(DashboardIcon, null) },
             LelloDestination("reports", "Reports") { Icon(Icons.AutoMirrored.Filled.List, null) },
             LelloDestination("automation", "Automation") { Icon(Icons.Default.DateRange, null) },
             LelloDestination("chats", "Chats") { Icon(Icons.Default.Email, null) },
@@ -106,16 +107,22 @@ class MainActivity : ComponentActivity() {
         )
         LelloTheme(product = "blue", dark = dark) {
             LelloScaffold(
-                productName = "Talìa", title = if (page == "reports" && connection.reportSelected.isNotEmpty()) connection.reportSelected else destinations.first { it.id == page }.label,
+                productName = "Talìa", title = when {
+                    page == "reports" && connection.reportSelected.isNotEmpty() -> connection.reportSelected
+                    page == "dashboards" -> dashboardTitle(connection)
+                    else -> destinations.first { it.id == page }.label
+                },
                 destinations = destinations, selectedId = page, onNavigate = { page = it },
                 mobileNavigation = LelloMobileNavigation.DrawerAndBottom,
-                bottomDestinations = destinations.filter { it.id in setOf("overview", "reports", "chats") },
+                bottomDestinations = destinations.filter { it.id in setOf("overview", "dashboards", "reports", "chats") },
                 logo = { Image(painterResource(R.drawable.ic_talia), "Talìa", Modifier.size(32.dp)) },
                 account = { compact -> LelloAccount(connection.name, { page = "settings" }, compact = compact) },
             ) { insets ->
                 pageState.SaveableStateProvider(page) {
                     if (page == "reports") {
                         ReportsScreen(connection, Modifier.fillMaxSize().padding(insets).consumeWindowInsets(insets).imePadding()) { page = "settings" }
+                    } else if (page == "dashboards") {
+                        DashboardsScreen(connection, Modifier.fillMaxSize().padding(insets).consumeWindowInsets(insets)) { page = "settings" }
                     } else LelloWorkspace(Modifier.fillMaxSize().padding(insets).consumeWindowInsets(insets)
                         .imePadding().verticalScroll(rememberScrollState())) {
                         if (page == "settings") {

@@ -9,6 +9,8 @@ import androidx.compose.runtime.*
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.*
+import com.lelloman.talia.dashboard.compose.DashboardSession
+import com.lelloman.talia.dashboard.compose.DashboardTransport
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.net.URI
@@ -87,9 +89,28 @@ internal class NativeConnection @JvmOverloads constructor(
     private val request: (suspend (String, String, String?, JSONObject?) -> JSONObject)? = null
 ) : AndroidViewModel(application) {
     val gateway by lazy { HomelabGateway(application) }
-    private suspend fun call(server: String, path: String, token: String?, body: JSONObject?): JSONObject =
-        request?.invoke(server, path, token, body) ?: gateway.request(server, path, token, body)
-    override fun onCleared() { if (request == null) CoroutineScope(Dispatchers.IO).launch { gateway.close() } }
+    private suspend fun call(server: String, path: String, token: String?, body: JSONObject?, headers: Map<String, String> = emptyMap()): JSONObject =
+        request?.invoke(server, path, token, body) ?: gateway.request(server, path, token, body, headers)
+    /** Shared dashboards use the same server, route and session as the rest of the app. */
+    private val dashboardSession = lazy {
+        DashboardSession(application, object : DashboardTransport {
+            private suspend fun send(path: String, body: JSONObject, headers: Map<String, String> = emptyMap()): JSONObject {
+                val token = saved.optString("token").ifEmpty { throw ApiFailure(401) }
+                return try { call(server, path, token, body, headers) } catch (failure: ApiFailure) {
+                    if (failure.status == 401) withContext(Dispatchers.Main) { clear() }
+                    throw failure
+                }
+            }
+            override suspend fun dashboards(body: JSONObject) = send("/native/dashboards", body)
+            override suspend fun clients(body: JSONObject, installation: String) = send("/native/clients", body, mapOf("X-Talia-Client" to installation))
+            override suspend fun engine(body: JSONObject) = send("/native/engine", body)
+        })
+    }
+    val dashboards by dashboardSession
+    override fun onCleared() {
+        if (dashboardSession.isInitialized()) dashboardSession.value.close()
+        if (request == null) CoroutineScope(Dispatchers.IO).launch { gateway.close() }
+    }
     private val vault = SessionVault(application)
     private var saved = vault.read() ?: JSONObject()
     var server by mutableStateOf(saved.optString("server", "https://talia.lan.lelloman.com")); private set

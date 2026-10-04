@@ -1,0 +1,38 @@
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+    id 'org.jetbrains.kotlin.plugin.compose'
+}
+// Shared Compose host for Talìa dashboards: QuickJS runtime, engine bridge and LelloDesign renderer.
+def runtimeLibs = layout.buildDirectory.dir('runtime/jniLibs')
+def runtimeAssets = layout.buildDirectory.dir('runtime/assets')
+def buildRuntime = tasks.register('buildDashboardRuntime', Exec) {
+    inputs.dir('../native/src'); inputs.file('../native/Cargo.toml'); inputs.file('../native/Cargo.lock'); inputs.file('build-runtime.sh')
+    outputs.dir(runtimeLibs)
+    commandLine 'bash', file('build-runtime.sh').path, runtimeLibs.get().asFile.path
+}
+def copyScripts = tasks.register('copyDashboardScripts', Copy) {
+    from('../shared') { include 'ui.js', 'vm.js' }
+    from('../../engine/shared') { include 'value.js' }
+    into runtimeAssets.map { it.dir('dashboard') }
+}
+android {
+    namespace 'com.lelloman.talia.dashboard.compose'
+    compileSdk 36
+    defaultConfig {
+        minSdk 30
+        consumerProguardFiles 'consumer-rules.pro'
+    }
+    sourceSets.main {
+        jniLibs.srcDirs += runtimeLibs.get().asFile
+        assets.srcDirs += runtimeAssets.get().asFile
+    }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+    kotlinOptions { jvmTarget = '17' }
+    buildFeatures { compose true }
+}
+tasks.named('preBuild') { dependsOn(buildRuntime, copyScripts) }
+dependencies {
+    implementation 'com.lelloman:lellodesign-compose:0.3.0-local'
+    implementation 'androidx.lifecycle:lifecycle-runtime-compose:2.9.4'
+}

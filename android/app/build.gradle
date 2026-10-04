@@ -55,7 +55,7 @@ paravoid {
     minifyPayload = true
     payloadProguardFiles.from(file('payload-rules.pro'))
     crashRecovery { enabled = true; updater = 'default' }
-    payloadVersion = providers.gradleProperty('paravoidPayloadVersion').map { it.toLong() }.getOrElse(13L)
+    payloadVersion = providers.gradleProperty('paravoidPayloadVersion').map { it.toLong() }.getOrElse(14L)
     // APK 4 adds the verified notification receiver; payload-only updates cannot add it.
     if (!providers.gradleProperty('paravoidNewShell').map { it.toBoolean() }.getOrElse(false)) {
         baselineDirectory = layout.projectDirectory.dir(
@@ -80,6 +80,7 @@ dependencies {
     androidTestImplementation 'androidx.test:runner:1.6.2'
     implementation "com.github.lelloman.paravoid-android:paravoid-runtime:${paravoidVersion}"
     implementation 'com.lelloman:lellodesign-compose:0.3.0-local'
+    implementation project(':dashboard-compose')
     implementation 'androidx.activity:activity-compose:1.11.0'
     implementation 'androidx.lifecycle:lifecycle-runtime-compose:2.9.4'
     implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.9.4'
