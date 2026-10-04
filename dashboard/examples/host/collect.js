@@ -35,7 +35,7 @@
   try {
    const result=await ctx.source('prom',{kind:'query',query:'{'+labels+',host='+JSON.stringify(p.host)+',__name__=~"talia_git_.*"}'});
    const metric=name=>number(result.result.find(s=>s.metric.__name__==='talia_git_'+name));
-   gitWorkspaces={checked:metric('checked_timestamp_seconds'),lastClean:metric('last_clean_timestamp_seconds'),success:metric('success'),repositories:metric('repositories'),
+   gitWorkspaces={automatic:metric('automatic'),checked:metric('checked_timestamp_seconds'),lastClean:metric('last_clean_timestamp_seconds'),success:metric('success'),repositories:metric('repositories'),
     dirty:result.result.filter(s=>s.metric.__name__==='talia_git_worktree_dirty'&&number(s)===1).map(s=>s.metric.path),
     errors:result.result.filter(s=>s.metric.__name__==='talia_git_worktree_error'&&number(s)===1).map(s=>s.metric.path),
     worktrees:result.result.filter(s=>s.metric.__name__==='talia_git_worktree_dirty').length,

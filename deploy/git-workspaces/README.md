@@ -136,3 +136,38 @@ To remove the button, remove the dashboard's action parameter and extra grants,
 then the dedicated pipeline instance/definition and source. Remove the trigger
 container/network and the matching deployment-ceiling entries after grants no
 longer refer to them. The daily cron probe continues to work without the trigger.
+
+## Daily Telegram warnings
+
+`alert.js` is the `git-workspaces-daily` Talìa alert policy, bound to
+`host-homelab` by `git-workspaces-homelab`. It uses the already-approved Telegram
+destination. Each non-green automatic check sends one warning naming dirty and
+unreadable worktrees; clean checks send nothing. The probe records whether it ran
+automatically or from **Check now** / `--force`, and exports `talia_git_automatic`.
+Manual checks update the card without sending another Telegram notification.
+
+The binding evaluates every 30 seconds. New automatic check timestamps select
+alternating `daily-a`/`daily-b` stages so another dirty check tomorrow sends another
+warning even if the condition never recovered. Repeated observations of the same
+check do not send again. Both stages have one `telegram` action with the existing
+destination, no repeat interval, `until_ack: false`, three attempts, 30-second
+retry delay and 24-hour expiry. `quiet` has no actions; recovery has no actions.
+Delivery uses Talìa's existing tracking, destination checks and silences.
+
+Missing or overdue checks also warn after 24 hours plus five minutes, at most once
+per subsequent overdue day. A newly enabled binding waits that long for its first
+check, using `params.enabledAt` (UTC milliseconds). Normal parameters are
+`{host:"Homelab", enabledAt:...}`, input alias `host` maps to `host-homelab`, and
+its stable alert key is `git-workspaces:homelab`. Repository checks that fail before
+writing any result are therefore covered by overdue detection.
+
+Configure through `alerts_policy_save` and `alerts_binding_save`, reading existing
+versions first. Keep recipient IDs in deployment configuration. Disable this
+binding to stop Git Telegram warnings while keeping daily probes and the dashboard.
+The deployed collector is `host-collect` version 7. No test message was sent during
+setup; pure-policy tests cover clean silence, daily deduplication, consecutive
+dirty days, manual silence, failed checks and daily overdue reminders:
+
+```sh
+node dashboard/tests/git-workspace-alert.mjs
+```

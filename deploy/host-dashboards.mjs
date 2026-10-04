@@ -8,7 +8,7 @@ export const changes=[
  put('ui','host-metric-card',{source:load('host/metric-card.ui')}),
  put('ui','host-layout',{source:load('host/layout.ui'),references:[{kind:'ui',id:'host-metric-card'}]}),
  put('function','host-present',{source:load('host/present.js')}),
- put('monitor_definition','host-collect',{id:'host-collect',version:6,kind:'pipeline',source:load('host/collect.js')}),
+ put('monitor_definition','host-collect',{id:'host-collect',version:7,kind:'pipeline',source:load('host/collect.js')}),
  put('variable_definition','host-snapshot',{id:'host-snapshot',version:1,kind:'stored',source:'',value_schema:'any',state_schema:'any',dependencies:[]}),
  put('data_source','homelab-git-trigger',{id:'homelab-git-trigger',kind:'http',url:'http://talia-git-probe-trigger:8080',timeout_ms:5000,max_bytes:4096}),
  put('monitor_definition','git-recheck',{id:'git-recheck',version:1,kind:'pipeline',source:readFileSync(new URL('./git-workspaces/recheck.js',import.meta.url),'utf8')}),

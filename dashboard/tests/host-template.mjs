@@ -3,7 +3,7 @@ import '../shared/ui.js';import {changes,hosts} from '../../deploy/host-dashboar
 const source=id=>changes.find(c=>c.key.id===id).document.source;
 const present=vm.runInNewContext('('+source('host-present')+')');
 const collect=vm.runInNewContext('('+source('host-collect')+')');
-assert.equal(changes.find(c=>c.key.kind==='monitor_definition'&&c.key.id==='host-collect').document.version,6);
+assert.equal(changes.find(c=>c.key.kind==='monitor_definition'&&c.key.id==='host-collect').document.version,7);
 const disk={metric:{device:'/dev/sda1',mountpoint:'/'},samples:[[1,68700000000]]};
 for(const p of hosts){
  const queries=[];let published;

@@ -64,6 +64,7 @@ class ProbeTests(unittest.TestCase):
             self.assertEqual(trigger.enqueue(requests, result_path), first)
         result = probe.run(config, output, now=100002)
         self.assertEqual(result['checked'], 100002)
+        self.assertFalse(result['automatic'])
         with patch.object(probe, 'check', side_effect=AssertionError('must consume once')):
             self.assertEqual(probe.run(config, output, now=100003), result)
 
@@ -78,6 +79,7 @@ class ProbeTests(unittest.TestCase):
         output = self.root / 'git.prom'
         first = probe.run(config, output, now=100000)
         self.assertEqual(first['last_clean'], 100000)
+        self.assertTrue(first['automatic'])
         (self.repo / 'untracked').write_text('new')
         with patch.object(probe, 'check', side_effect=AssertionError('must not run before due')):
             self.assertEqual(probe.run(config, output, now=100001), first)

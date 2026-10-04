@@ -1,0 +1,35 @@
+import {readFileSync} from 'node:fs';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+const policy=vm.runInNewContext('('+readFileSync('deploy/git-workspaces/alert.js','utf8')+')');
+let now=1800000000000;
+let g={checked:now/1000,automatic:1,success:1,repositories:11,worktrees:11,dirty:[],errors:[]};
+let quality='good';
+const ctx={state:{},params:{host:'Homelab',enabledAt:now},alert:null,now:()=>now,read:async()=>({hasValue:true,quality,timestamp:now,value:{gitWorkspaces:g}})};
+let sends=0;
+async function evaluate(){
+ const r=await policy.evaluate(ctx);
+ if(r.active&&r.stage!=='quiet'&&(!ctx.alert?.active||ctx.alert.stage!==r.stage))sends++;
+ ctx.alert=r;return r;
+}
+assert.equal((await evaluate()).active,false);
+g.dirty=['/home/lelloman/example'];
+assert.match((await evaluate()).message,/Dirty worktrees: ~\/example/);
+assert.equal(sends,1);
+for(let i=0;i<20;i++)await evaluate();assert.equal(sends,1);
+now+=86400000;g.checked=now/1000;
+await evaluate();assert.equal(sends,2,'another dirty daily check must notify again');
+g.automatic=0;g.checked+=1;
+assert.equal((await evaluate()).stage,'quiet');assert.equal(sends,2,'manual checks stay quiet');
+g.dirty=[];assert.equal((await evaluate()).active,false);
+now+=86400000;g.checked=now/1000;g.automatic=1;g.success=0;g.errors=['/missing'];
+assert.match((await evaluate()).message,/Could not check: \/missing/);assert.equal(sends,3);
+quality='stale';await evaluate();assert.equal(sends,3);
+now+=86700001;assert.match((await evaluate()).message,/overdue/);assert.equal(sends,4);
+await evaluate();assert.equal(sends,4);
+now+=86400000;await evaluate();assert.equal(sends,5,'overdue reminders are daily');
+quality='good';g={...g,checked:now/1000,success:1,dirty:[],errors:[]};assert.equal((await evaluate()).active,false);assert.equal(sends,5);
+ctx.alert=null;ctx.state={};ctx.params.enabledAt=now;g=undefined;
+assert.equal((await evaluate()).active,false,'new installations wait for the first daily check');
+now+=86700001;assert.match((await evaluate()).message,/none recorded/);assert.equal(sends,6);
+console.log('PASS: clean silence, one notification per daily warning, repeated dirty days, manual silence, errors and overdue checks');

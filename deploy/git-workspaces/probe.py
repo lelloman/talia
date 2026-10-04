@@ -70,6 +70,7 @@ def metrics(result):
     for name, value in [('checked_timestamp_seconds', result['checked']),
                         ('last_clean_timestamp_seconds', result['last_clean']),
                         ('success', int(result['success'])),
+                        ('automatic', int(result.get('automatic', False))),
                         ('repositories', len(result['repositories']))]:
         lines.append('talia_git_' + name + '{' + host + '} ' + str(value))
     for row in result['worktrees']:
@@ -106,7 +107,7 @@ def run(config_path, output, force=False, now=None):
     worktrees = check(repositories)
     success = bool(worktrees) and all(r['state'] != 'error' for r in worktrees)
     clean = success and all(r['state'] == 'clean' for r in worktrees)
-    result = dict(host=config['host'], repositories=repositories, checked=now,
+    result = dict(host=config['host'], repositories=repositories, checked=now, automatic=not force,
                   last_clean=now if clean else previous.get('last_clean', 0) if same else 0,
                   success=success, worktrees=worktrees)
     atomic(state_path, json.dumps(result, indent=2) + '\n')
