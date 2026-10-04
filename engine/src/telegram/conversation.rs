@@ -89,23 +89,7 @@ impl Store {
         Ok(())
     }
 }
-/// Short, user-safe cause for a failed run; never exposes run ids or upstream bodies.
-fn failure_reason(error: &str) -> Option<String> {
-    let detail = error.split_once(": ").map_or(error, |(_, d)| d);
-    if let Some(code) = detail.strip_prefix("simple-ai returned HTTP ") {
-        let code: String = code.chars().take_while(char::is_ascii_digit).collect();
-        return Some(match code.as_str() {
-            "500" | "502" | "503" | "504" => format!("the AI backend is unavailable (HTTP {code}); its inference runner may be down."),
-            _ => format!("the AI backend returned HTTP {code}."),
-        });
-    }
-    match detail {
-        "AI turn limit exceeded" => Some("the investigation used too many steps without reaching an answer.".into()),
-        "simple-ai did not finish its answer" => Some("the AI model stopped before finishing its answer.".into()),
-        "simple-ai request failed or timed out; not automatically retried" => Some("the AI backend could not be reached.".into()),
-        _ => None,
-    }
-}
+use crate::conversation::failure_reason;
 impl Worker {
     // Queue expiry runs independently of the active inference so a backlog does
     // not extend another message's deadline.

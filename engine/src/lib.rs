@@ -37,6 +37,8 @@ pub mod telegram;
 pub mod ai;
 // Transport-agnostic conversation context shared by Telegram and app chat.
 pub(crate) mod conversation;
+// Server-owned app chat sessions for web and native clients.
+pub mod chat;
 
 pub mod native_overview;
 

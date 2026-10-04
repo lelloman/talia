@@ -346,7 +346,7 @@ impl Deployment {
     pub async fn gate(State(d): State<Self>, mut r: Request, next: Next) -> Response {
         let path = r.uri().path().to_owned();
         let path = path.as_str();
-        let native_request = matches!(path, "/native/overview" | "/native/session" | "/native/logout" | "/native/reports" | "/native/notifications" | "/native/dashboards" | "/native/clients" | "/native/engine");
+        let native_request = matches!(path, "/native/overview" | "/native/session" | "/native/logout" | "/native/reports" | "/native/notifications" | "/native/dashboards" | "/native/clients" | "/native/engine" | "/native/chats");
         let browser_alert = path == "/alerts" && !r.headers().contains_key(header::AUTHORIZATION);
         let protected = matches!(
             path,
@@ -768,6 +768,7 @@ mod tests {
             .route("/native/reports",post(||async{"private"}))
             .route("/native/dashboards",post(||async{"private"}))
             .route("/native/engine",post(||async{"private"}))
+            .route("/native/chats",post(||async{"private"}))
             .route("/native/clients",post(|h:HeaderMap|async move{h[header::AUTHORIZATION].to_str().unwrap().to_owned()}))
             .route("/engine",post(||async{"private"}))
             .layer(axum::middleware::from_fn_with_state(d.clone(),Deployment::gate));
@@ -806,6 +807,8 @@ mod tests {
                 for (path,method,origin,expected) in [
                     ("/native/dashboards","POST",None,StatusCode::OK),
                     ("/native/engine","POST",None,StatusCode::OK),
+                    ("/native/chats","POST",None,StatusCode::OK),
+                    ("/native/chats","POST",Some("https://attacker.test"),StatusCode::FORBIDDEN),
                     ("/native/engine","POST",Some("https://attacker.test"),StatusCode::FORBIDDEN),
                     ("/native/session","GET",None,StatusCode::OK),
                     ("/native/overview","GET",None,StatusCode::OK),
@@ -818,6 +821,7 @@ mod tests {
                     ("/native/reports","POST",None,StatusCode::UNAUTHORIZED),
                     ("/native/engine","POST",None,StatusCode::UNAUTHORIZED),
                     ("/native/dashboards","POST",None,StatusCode::UNAUTHORIZED),
+                    ("/native/chats","POST",None,StatusCode::UNAUTHORIZED),
                 ] {
                     let mut request=Request::builder().method(method).uri(path).header(header::AUTHORIZATION,format!("Bearer {token}"));
                     if let Some(origin)=origin {request=request.header(header::ORIGIN,origin);}

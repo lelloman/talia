@@ -85,6 +85,12 @@ pub enum Scope {
         epoch: i64,
         revision: u64,
     },
+    /// App chat request owned by an administrator's session.
+    Chat {
+        request: i64,
+        session: String,
+        subject: String,
+    },
 }
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Run {
@@ -149,6 +155,23 @@ pub(crate) fn permit(engine: &Engine, scope: &Scope) -> Result<()> {
                 || !s.telegram_authorized(*chat, *user)?
             {
                 return Err("Investigation permission or conversation changed".into());
+            }
+        }
+        Scope::Chat {
+            request,
+            session,
+            subject,
+        } => {
+            let active: bool = s
+                .conn
+                .query_row(
+                    "SELECT EXISTS(SELECT 1 FROM chat_requests r JOIN chat_sessions c ON c.id=r.session WHERE r.id=? AND r.session=? AND c.subject=? AND c.deleted=0 AND r.status IN ('queued','running'))",
+                    params![request, session, subject],
+                    |r| r.get(0),
+                )
+                .map_err(err)?;
+            if !active || !s.user_admin(subject).map_err(|_| "forbidden")? {
+                return Err("Chat permission or session changed".into());
             }
         }
     }
@@ -219,7 +242,7 @@ pub(crate) async fn execute_with_options(
         return Err("invalid AI execution options".into());
     }
     permit(engine, &scope)?;
-    if with_tools && !matches!(scope, Scope::Telegram { .. }) {
+    if with_tools && !matches!(scope, Scope::Telegram { .. } | Scope::Chat { .. }) {
         return Err("Tools are not available to report analysis".into());
     }
     if let Some(r) = engine.store.borrow().ai_run(id)? {

@@ -27,6 +27,17 @@ impl Service {
             let body = &r.body["request"];
             return self.engine.store.borrow_mut().native_reports(subject, body["operation"].as_str().unwrap_or(""), body["args"].clone(), self.engine.now());
         }
+        if r.connection == "account" && r.body["request"]["op"]=="nativeChats" {
+            let body = &r.body["request"];
+            return talia_engine::chat::request(&mut self.engine.store.borrow_mut(), subject, body["operation"].as_str().unwrap_or(""), body["args"].clone(), self.engine.now());
+        }
+        // Web chat: {"op":"chatList"|"chatCreate"|…, …args}.
+        if r.connection == "account" && r.body["request"]["op"].as_str().is_some_and(|op| op.starts_with("chat")) {
+            let mut args = r.body["request"].clone();
+            let op = args["op"].as_str().unwrap_or("")[4..].to_ascii_lowercase();
+            args.as_object_mut().map(|o| o.remove("op"));
+            return talia_engine::chat::request(&mut self.engine.store.borrow_mut(), subject, &op, args, self.engine.now());
+        }
         if r.connection == "account" && r.body["request"]["op"]=="nativeOverview" {
             return self.engine.store.borrow_mut().native_overview(subject,r.body["name"].as_str().unwrap_or(subject),self.engine.now());
         }

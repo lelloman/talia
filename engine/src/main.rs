@@ -44,6 +44,7 @@ struct Service {
     alert_sender: talia_engine::alerts::providers::Sender,
     reports: talia_engine::reports::worker::Worker,
     telegram: talia_engine::telegram::Worker,
+    chat: talia_engine::chat::Worker,
     pipelines: Pipelines,
     watches: Watches,
     live: talia_engine::mcp_live::Live,
@@ -368,6 +369,14 @@ async fn native_dashboards(State(tx):State<mpsc::Sender<Request>>, identity:Opti
  let status=match value["error"].as_str(){Some("forbidden")=>axum::http::StatusCode::FORBIDDEN,Some("unauthenticated")=>axum::http::StatusCode::UNAUTHORIZED,Some("limit_exceeded"|"internal_error")=>axum::http::StatusCode::SERVICE_UNAVAILABLE,Some(_)=>axum::http::StatusCode::BAD_REQUEST,None=>axum::http::StatusCode::OK};
  (status,Json(value)).into_response()
 }
+async fn native_chats(State(tx):State<mpsc::Sender<Request>>, identity:Option<axum::Extension<deployment::Identity>>, Json(body):Json<Value>)->axum::response::Response {
+ use axum::response::IntoResponse;
+ let Some(identity)=identity else {return axum::http::StatusCode::UNAUTHORIZED.into_response()};
+ if body.as_object().is_none_or(|o|o.keys().any(|k|k!="op"&&k!="args"))||body.to_string().len()>32768 {return axum::http::StatusCode::BAD_REQUEST.into_response()}
+ let Json(value)=account_rpc(State(tx),Some(identity),Json(json!({"op":"nativeChats","operation":body["op"],"args":body.get("args").cloned().unwrap_or_else(||json!({}))}))).await;
+ let status=match value["error"].as_str(){Some("forbidden")=>axum::http::StatusCode::FORBIDDEN,Some("unauthenticated")=>axum::http::StatusCode::UNAUTHORIZED,Some("not_found")=>axum::http::StatusCode::NOT_FOUND,Some("limit_exceeded")=>axum::http::StatusCode::TOO_MANY_REQUESTS,Some("internal_error")=>axum::http::StatusCode::SERVICE_UNAVAILABLE,Some(_)=>axum::http::StatusCode::BAD_REQUEST,None=>axum::http::StatusCode::OK};
+ (status,Json(value)).into_response()
+}
 async fn account_rpc(State(tx):State<mpsc::Sender<Request>>, browser:Option<axum::Extension<deployment::Identity>>, Json(mut body):Json<Value>)->Json<Value>{
  let Some(axum::Extension(identity))=browser else{return Json(json!({"error":"unauthenticated"}))};
  // Internal envelope keeps trusted identity separate from untrusted operation arguments.
@@ -449,6 +458,7 @@ async fn run(args:Vec<String>)->Result<()> {
         alert_sender: talia_engine::alerts::providers::Sender::new(engine.clone()),
         reports: talia_engine::reports::worker::Worker::new(engine.clone()),
         telegram: talia_engine::telegram::Worker::new(engine.clone()),
+        chat: talia_engine::chat::Worker::new(engine.clone()),
         engine,
         pipelines,
         watches,
@@ -468,6 +478,7 @@ async fn run(args:Vec<String>)->Result<()> {
         .route("/native/dashboards", axum::routing::post(native_dashboards))
         .route("/native/clients", post(client_rpc))
         .route("/native/engine", post(rpc))
+        .route("/native/chats", axum::routing::post(native_chats))
         .route("/agent", post(agent_rpc))
         .route("/alerts", post(alerts_rpc))
         .layer(DefaultBodyLimit::max(2_359_296))
@@ -511,6 +522,7 @@ async fn run(args:Vec<String>)->Result<()> {
       if let Err(e)=monitoring.alert_sender.tick(){errors.push(e);}
       if let Err(e)=monitoring.reports.tick(){errors.push(e);}
       if let Err(e)=monitoring.telegram.tick(){errors.push(e);}
+      if let Err(e)=monitoring.chat.tick(){errors.push(e);}
       *monitoring.monitoring_error.borrow_mut()=if errors.is_empty(){None}else{Some(errors.join("; "))};
       tokio::time::sleep(Duration::from_millis(50)).await;
     }

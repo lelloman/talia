@@ -54,6 +54,13 @@ impl ContextKey {
             values: vec![Sql::Integer(chat), Sql::Integer(user), Sql::Integer(epoch)],
         }
     }
+    pub(crate) fn chat(session: &str) -> Self {
+        Self {
+            prefix: "chat",
+            columns: &["session"],
+            values: vec![Sql::Text(session.into())],
+        }
+    }
     fn table(&self, name: &str) -> String {
         format!("{}_{name}", self.prefix)
     }
@@ -607,4 +614,30 @@ pub(crate) fn answer_input(
         input["context_omitted"] = json!(true);
     }
     Ok(input)
+}
+
+/// Short, user-safe cause for a failed run; never exposes run ids or upstream bodies.
+pub(crate) fn failure_reason(error: &str) -> Option<String> {
+    let detail = error.split_once(": ").map_or(error, |(_, d)| d);
+    if let Some(code) = detail.strip_prefix("simple-ai returned HTTP ") {
+        let code: String = code.chars().take_while(char::is_ascii_digit).collect();
+        return Some(match code.as_str() {
+            "500" | "502" | "503" | "504" => format!(
+                "the AI backend is unavailable (HTTP {code}); its inference runner may be down."
+            ),
+            _ => format!("the AI backend returned HTTP {code}."),
+        });
+    }
+    match detail {
+        "AI turn limit exceeded" => {
+            Some("the investigation used too many steps without reaching an answer.".into())
+        }
+        "simple-ai did not finish its answer" => {
+            Some("the AI model stopped before finishing its answer.".into())
+        }
+        "simple-ai request failed or timed out; not automatically retried" => {
+            Some("the AI backend could not be reached.".into())
+        }
+        _ => None,
+    }
 }

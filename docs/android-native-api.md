@@ -64,6 +64,14 @@ authenticates the native bearer, then hands requests to the browser handlers:
 The app runs dashboards with the shared Compose host in `dashboard/compose`: the
 bounded QuickJS runtime, the contract v1 validator/resolver and a LelloDesign renderer.
 
+## Chat
+
+`POST /native/chats` takes `{"op":…,"args":{…}}` with the operations described in
+[App chat](ai.md#app-chat). It is administrator-only: viewers receive 403, a
+missing or deleted session 404, admission limits 429 and invalid input 400. Clients
+poll `get` with `after` while a request is queued or running and send a fresh
+`requestId` per message, reusing it only to retry the same send.
+
 ## Overview projection
 
 Overview checks the current Talìa administrator role on every request. Viewers

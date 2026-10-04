@@ -123,6 +123,38 @@ that the model can explain. Permissions are checked before and after awaited I/O
 revocation, settings changes or `/new` suppress delayed results and subsequent work.
 Already completed external reads are not undone.
 
+The approved diagnostic source IDs are the shared **AI investigation sources**:
+Telegram investigations and app chat both probe only those IDs, checked before and
+after each probe. They are still edited in Settings → Telegram.
+
+## App chat
+
+Administrators can hold server-owned chat sessions from the web client and the
+native app, with the same read-only tools. Viewers receive `forbidden`; tools read
+global monitoring data, so chat is not scoped by dashboard grants. Chat sessions are
+independent of Telegram conversations and share only the engine code.
+
+- Operations: `list`, `create` (`requestId`, `text`, optional `title` and report run
+  `report`), `get` (`session`, optional `after` request ID), `send` (`session`,
+  `requestId`, `text`), `stop`, `rename`, `delete`. The browser sends them through
+  `/account` as `chatList`, `chatCreate`, …; the app uses `POST /native/chats`
+  (`{"op","args"}`, see `android-native-api.md`).
+- `requestId` (1–64 of `[A-Za-z0-9_-]`) makes create and send idempotent: retrying
+  returns the original session/request instead of duplicating a message.
+- Each request is maintained and answered through the shared conversation core
+  (`engine/src/conversation.rs`): explicit sessions replace Telegram's classifier,
+  and long sessions are selectively summarized. A referenced report run is attached
+  like a Telegram reply to a report.
+- Up to four sessions advance concurrently; requests within a session run in order.
+  Limits: 2 active requests per session, 4 per user, 200 sessions per user, 20,000
+  retained requests, 8,000 characters per message, 10-minute request deadline.
+- While a request runs, `get` returns progress steps derived from its AI run's tool
+  calls (for example "Read host-homelab history"), never raw tool output.
+- Stop marks the session's active requests `stopped`; delete also hides the session.
+  The chat scope is rechecked around every AI step, so stopped, deleted or
+  de-authorized work never records an answer. Failures store a short, user-safe
+  reason, and the failed outcome is kept in the session context.
+
 ## Execution and persistence
 
 Schema 16 adds `ai_runs`. A report step or Telegram job/phase supplies a stable

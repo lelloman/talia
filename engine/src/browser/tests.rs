@@ -68,6 +68,7 @@ fn setup() -> Service {
         alert_sender: talia_engine::alerts::providers::Sender::new(engine.clone()),
         reports: talia_engine::reports::worker::Worker::new(engine.clone()),
         telegram: talia_engine::telegram::Worker::new(engine.clone()),
+        chat: talia_engine::chat::Worker::new(engine.clone()),
         engine,
         pipelines,
         watches,

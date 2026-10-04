@@ -1,4 +1,10 @@
 use super::*;
+/// Shared "AI investigation sources": DataSource IDs approved for live probes by both
+/// Telegram investigations and app chat. Stored with the Telegram settings, where
+/// administrators already manage it.
+pub(crate) fn approved_sources(s: &crate::store::Store) -> Result<Vec<String>> {
+    Ok(s.telegram_config()?.sources)
+}
 pub fn definitions() -> Vec<Value> {
     vec![
         json!({"name":"monitoring_snapshot","description":"Read monitoring values and alerts, source IDs and available reports. No writes. Values retain tagged wire encoding. history_count and history_age_ms are retention limits, not actual sample counts or guarantees of history; old samples may have expired. state is private computation/cache state, independent of exposed value: undefined state with a populated value is valid. has_value, quality and timestamp describe the cached value. Empty alerts means no recorded alerts, not verified health. Reports are scheduled report runs, not conversation or investigation history.","inputSchema":{"type":"object","properties":{},"additionalProperties":false}}),
@@ -14,13 +20,13 @@ pub async fn execute(engine: &Engine, name: &str, args: Value) -> Result<Value> 
     let result = match name {
         "monitoring_snapshot" => {
             let s = engine.store.borrow();
-            let c = s.telegram_config()?;
+            let approved = approved_sources(&s)?;
             let values = s.instances()?;
             let sources: Vec<_> = s
                 .monitoring_config()?
                 .sources
                 .into_iter()
-                .map(|v| json!({"id":v.id,"kind":v.kind,"probe_allowed":c.sources.contains(&v.id)}))
+                .map(|v| json!({"id":v.id,"kind":v.kind,"probe_allowed":approved.contains(&v.id)}))
                 .collect();
             let mut q=s.conn.prepare("SELECT id,report,status,created FROM report_runs ORDER BY created DESC LIMIT 30").map_err(err)?;
             let reports=q.query_map([],|r|Ok(json!({"id":r.get::<_,String>(0)?,"report":r.get::<_,String>(1)?,"status":r.get::<_,String>(2)?,"created":r.get::<_,i64>(3)?}))).map_err(err)?.collect::<std::result::Result<Vec<_>,_>>().map_err(err)?;
@@ -43,7 +49,7 @@ pub async fn execute(engine: &Engine, name: &str, args: Value) -> Result<Value> 
             let id = args["source"].as_str().ok_or("source required")?;
             let source = {
                 let s = engine.store.borrow();
-                if !s.telegram_config()?.sources.iter().any(|v| v == id) {
+                if !approved_sources(&s)?.iter().any(|v| v == id) {
                     return Err("probe source not approved".into());
                 }
                 s.monitoring_config()?.source(id)?.clone()
@@ -58,14 +64,7 @@ pub async fn execute(engine: &Engine, name: &str, args: Value) -> Result<Value> 
                 .fetch(&source, &request)
                 .await?;
             // Revalidate revocation and source permission before releasing delayed data.
-            if !engine
-                .store
-                .borrow()
-                .telegram_config()?
-                .sources
-                .iter()
-                .any(|v| v == id)
-            {
+            if !approved_sources(&engine.store.borrow())?.iter().any(|v| v == id) {
                 return Err("probe source permission revoked".into());
             }
             let current = engine
