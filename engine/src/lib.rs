@@ -35,6 +35,8 @@ pub mod reports;
 pub mod telegram;
 
 pub mod ai;
+// Transport-agnostic conversation context shared by Telegram and app chat.
+pub(crate) mod conversation;
 
 pub mod native_overview;
 
