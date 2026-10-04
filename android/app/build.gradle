@@ -55,7 +55,7 @@ paravoid {
     minifyPayload = true
     payloadProguardFiles.from(file('payload-rules.pro'))
     crashRecovery { enabled = true; updater = 'default' }
-    payloadVersion = providers.gradleProperty('paravoidPayloadVersion').map { it.toLong() }.getOrElse(14L)
+    payloadVersion = providers.gradleProperty('paravoidPayloadVersion').map { it.toLong() }.getOrElse(15L)
     // APK 4 adds the verified notification receiver; payload-only updates cannot add it.
     if (!providers.gradleProperty('paravoidNewShell').map { it.toBoolean() }.getOrElse(false)) {
         baselineDirectory = layout.projectDirectory.dir(
