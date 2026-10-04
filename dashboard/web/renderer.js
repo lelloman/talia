@@ -49,7 +49,8 @@ export class Renderer {
      const caption=document.createElement('span'),input=document.createElement('input');input.type=n.type==='Slider'?'range':'checkbox';el.append(caption,input);
      input.addEventListener(n.type==='Slider'?'input':'change',()=>this.emit(n.id,n.type==='Slider'?Number(input.value):input.checked));
     }
-    if(n.type==='Button')el.addEventListener('click',()=>this.emit(n.id,null));
+    if(n.type==='Button'){el.className='lv-button lv-button--neutral';el.addEventListener('click',()=>this.emit(n.id,null));}
+    if(n.type==='Meter'){el.setAttribute('role','meter');el.append(document.createElement('span'));}
     this.cache.set(n.id,el);
    }
    const p=n.props;el.dataset.surface=p.surface||'plain';el.dataset.variant=p.variant||'body';el.dataset.tone=p.tone||'neutral';el.hidden=p.visibility==='collapsed';el.style.visibility=p.visibility==='hidden'?'hidden':'';
@@ -72,6 +73,10 @@ export class Renderer {
    }else if(n.type==='Slider'||n.type==='Switch'){
     el.firstChild.textContent=p.label;const input=el.lastChild;input.setAttribute('aria-label',p.label);input.disabled=p.enabled===false;
     if(n.type==='Slider'){input.min=p.min;input.max=p.max;input.step=p.step??1;if(!this.pending.has(n.id))input.value=p.value;}else{if(!this.pending.has(n.id))input.checked=p.value;input.setAttribute('role','switch');}
+   }else if(n.type==='Meter'){
+    const ratio=p.unavailable!==undefined?0:(p.value-p.min)/(p.max-p.min);el.firstChild.style.width=(ratio*100).toFixed(2)+'%';
+    el.setAttribute('aria-label',p.label);el.setAttribute('aria-valuemin',p.min);el.setAttribute('aria-valuemax',p.max);
+    if(p.unavailable!==undefined){el.removeAttribute('aria-valuenow');el.setAttribute('aria-valuetext','Unavailable');}else{el.setAttribute('aria-valuenow',p.value);el.removeAttribute('aria-valuetext');}
    }else if(n.type==='Chart'){
     const signature=JSON.stringify([p.values,p.label,p.sampleLabels,p.min,p.max,p.unit,p.threshold,p.startLabel,p.endLabel]);
     if(el.dataset.chart!==signature){

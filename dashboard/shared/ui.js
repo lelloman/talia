@@ -11,6 +11,7 @@
     Scroll:{...base,width:'size',height:'size'},
     Text:{...base,text:'text!',label:'string',variant:'variant',tone:'tone'}, Status:{...base,text:'text!',label:'string',variant:'variant',tone:'tone'},
     Chart:{...base,values:'numbers!',label:'string!',height:'length',min:'number',max:'number',unit:'string',threshold:'number',startLabel:'string',endLabel:'string'},
+    Meter:{...base,value:'number!',label:'string!',min:'number',max:'number',tone:'tone'},
     Button:{...base,text:'string!',label:'string',enabled:'boolean',selected:'boolean',onClick:'action!'},
     SegmentedControl:{...base,label:'string!'},
     Slider:{...base,value:'number!',min:'number!',max:'number!',step:'positive',label:'string!',enabled:'boolean',onChange:'action!'},
@@ -90,7 +91,7 @@
           if(spec[key].startsWith('key'))checkValue('key',v,n);
         }else checkValue(spec[key],v,n);
       }
-      const leaf=['Text','Status','Chart','Button','Slider','Switch','ScreenRef','Use'];
+      const leaf=['Text','Status','Chart','Meter','Button','Slider','Switch','ScreenRef','Use'];
       if(leaf.includes(n.type)&&n.children.length)fail(n,'leaf cannot have children');
       if(n.type==='SegmentedControl'&&(!n.children.length||n.children.some(c=>c.type!=='Button'||!Object.hasOwn(c.props,'selected'))))fail(n,'segmented control needs selectable buttons');
       if(['Screen','Surface','Scroll','If','For','Width'].includes(n.type)&&n.children.length!==1)fail(n,'expected one child');
@@ -103,6 +104,7 @@
         if(typeof n.props.min==='number'&&typeof n.props.max==='number'&&n.props.max<=n.props.min)fail(n,'invalid chart range');
         if(typeof n.props.threshold==='number'&&typeof n.props.min==='number'&&typeof n.props.max==='number'&&(n.props.threshold<n.props.min||n.props.threshold>n.props.max))fail(n,'chart threshold outside range');
       }
+      if(n.type==='Meter'&&(('min' in n.props)!==('max' in n.props)||typeof n.props.min==='number'&&typeof n.props.max==='number'&&n.props.max<=n.props.min))fail(n,'invalid meter range');
       if(n.type==='Use'&&typeof n.props.definition!=='string')fail(n,'definition must be literal');
       for(const child of n.children){
         if(['Screen','Surface','Dashboard'].includes(child.type)&&n.type!=='Dashboard')fail(child,'invalid structural nesting');
@@ -152,12 +154,13 @@
         const exceptional=x=>x===undefined||x===null||typeof x==='number'&&!Number.isFinite(x);
         const label=x=>x===Infinity?'∞':x===-Infinity?'−∞':String(x);
         if(['Text','Status'].includes(n.type)&&key==='text'&&exceptional(p[key]))p[key]=label(p[key]);
-        if(['Slider','Switch'].includes(n.type)&&key==='value'&&exceptional(p[key])){p.unavailable=label(p[key]);continue;}
+        if(['Slider','Switch','Meter'].includes(n.type)&&key==='value'&&exceptional(p[key])){p.unavailable=label(p[key]);continue;}
         if(n.type==='Chart'&&key==='values'&&Array.isArray(p[key])){p.sampleLabels=p[key].map(label);p[key]=p[key].map(x=>exceptional(x)?null:x);}
         checkValue(schema[n.type][key],p[key],n);
       }
       if(n.type==='Switch'&&p.unavailable!==undefined){p.value=false;p.enabled=false;p.label+=': '+p.unavailable+' (unavailable)';}
       if(n.type==='Slider'&&p.unavailable!==undefined){p.value=p.min;p.enabled=false;p.label+=': '+p.unavailable+' (unavailable)';}
+      if(n.type==='Meter'){if(p.min===undefined){p.min=0;p.max=100;}if(p.max<=p.min)fail(n,'invalid meter range');if(p.unavailable!==undefined){p.value=p.min;p.label+=' (unavailable)';}else p.value=Math.min(p.max,Math.max(p.min,p.value));}
       if(n.type==='Slider'&&(p.max<=p.min||p.value<p.min||p.value>p.max))fail(n,'invalid slider range/value');
       if(n.type==='Chart'&&((p.min===undefined)!==(p.max===undefined)||p.min!==undefined&&p.max<=p.min||p.threshold!==undefined&&p.min!==undefined&&(p.threshold<p.min||p.threshold>p.max)))fail(n,'invalid chart range');
       if(['Grid','For'].includes(n.type)&&p.columns!==undefined&&!Number.isInteger(p.columns))fail(n,'columns must be integral');

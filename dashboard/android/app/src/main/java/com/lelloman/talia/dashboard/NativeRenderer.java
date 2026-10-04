@@ -43,6 +43,7 @@ final class NativeRenderer {
     slider.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){public void onStartTrackingTouch(SeekBar s){}public void onStopTrackingTouch(SeekBar s){}public void onProgressChanged(SeekBar s,int progress,boolean user){if(user){try{JSONObject props=nodes.get(id).getJSONObject("props");double value=Math.min(props.getDouble("max"),props.getDouble("min")+progress*props.optDouble("step",1));emit(id,value);}catch(JSONException e){throw new IllegalArgumentException(e);}}}});v=box;break;
    }
    case "Chart":v=new Chart(context);break;
+   case "Meter":v=new ProgressBar(context,null,android.R.attr.progressBarStyleHorizontal);break;
    case "Scroll":v=new ScrollView(context);break;
    case "Grid":v=new GridLayout(context);break;
    default:LinearLayout box=new LinearLayout(context);box.setOrientation(type.equals("Row")||type.equals("SegmentedControl")?0:1);v=box;
@@ -80,6 +81,12 @@ final class NativeRenderer {
    case "Switch":((Switch)v).setText(p.getString("label"));v.setContentDescription(p.getString("label"));((Switch)v).setChecked(p.getBoolean("value"));break;
    case "Slider":{
     LinearLayout box=(LinearLayout)v;((TextView)box.getChildAt(0)).setText(p.getString("label"));SeekBar s=(SeekBar)box.getChildAt(1);s.setContentDescription(p.getString("label"));s.setEnabled(p.optBoolean("enabled",true));double step=p.optDouble("step",1);s.setMax((int)Math.ceil((p.getDouble("max")-p.getDouble("min"))/step));s.setProgress((int)Math.round((p.getDouble("value")-p.getDouble("min"))/step));break;
+   }
+   case "Meter":{
+    ProgressBar bar=(ProgressBar)v;double min=p.getDouble("min"),max=p.getDouble("max");String tone=p.optString("tone","neutral");
+    bar.setMax(1000);bar.setProgress((int)Math.round((p.getDouble("value")-min)/(max-min)*1000));bar.setContentDescription(p.getString("label"));
+    String color=tone.equals("warning")?(dark?"#fcd34d":"#b45309"):tone.equals("error")?(dark?"#fca5a5":"#b91c1c"):tone.equals("success")?(dark?"#86efac":"#15803d"):tone.equals("muted")?(dark?"#6b7280":"#9ca3af"):(dark?"#60a5fa":"#2563eb");
+    bar.setProgressTintList(android.content.res.ColorStateList.valueOf(Color.parseColor(color)));break;
    }
    case "Chart":((Chart)v).set(p.getJSONArray("values"),p.getString("label"),p.optJSONArray("sampleLabels"),p);break;
    default:{

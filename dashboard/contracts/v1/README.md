@@ -50,6 +50,7 @@ Source diagnostics identify line and column. Source is parsed, never evaluated.
 | Scroll | width, height, visibility | One child, vertical scrolling |
 | Text, Status | text, label, variant, tone, visibility | Wrapping text; Status is a live status |
 | Chart | values, label, height, visibility, min, max, unit, threshold, startLabel, endLabel | Finite numeric array, optional fixed scale and high reference, accessible summary |
+| Meter | value, label, min, max, tone, visibility | Horizontal level bar; range defaults to 0–100, values are clamped, non-finite values show as unavailable |
 | Button | text, enabled, onClick, visibility | Named action |
 | Slider | value, min, max, step, label, enabled, onChange, visibility | Numeric event value, accessible label required |
 | Switch | value, label, enabled, onChange, visibility | Boolean event value, accessible label required |

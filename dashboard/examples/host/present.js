@@ -37,8 +37,12 @@
   status:!good?'Collection '+sample.quality+' · showing last known readings':up?'Host metrics reachable':'Host metrics unreachable',
   statusTone:!good?'warning':up?'success':'error',
   updated:Number.isFinite(v.updated)?'Last sample: '+new Date(v.updated).toISOString().replace('T',' ').replace(/\.\d{3}Z$/,' UTC')+' · refreshes every 30s':'No collection available yet',
-  cpu:{...metric('CPU usage',v.cpu,range==='hour'?v.cpuMinuteHistory:v.cpuHistory,'Current: 5-minute average across cores','Dashed line: 90% high usage',range==='hour'?'Past hour · 1-minute CPU averages':'Past 24 hours · 5-minute CPU averages',range==='hour'?'1h ago':'24h ago',true),daySelected:range==='day',hourSelected:range==='hour'},
+  cpu:{...metric('CPU usage',v.cpu,range==='hour'?v.cpuMinuteHistory:v.cpuHistory,'Current: 5-minute average across cores','',range==='hour'?'Past hour · 1-minute CPU averages':'Past 24 hours · 5-minute CPU averages',range==='hour'?'1h ago':'24h ago',true),daySelected:range==='day',hourSelected:range==='hour'},
   memory:metric('Memory usage',v.memory,v.memoryHistory,memoryDetail,'Used = total − available (Linux estimate)','Past 24 hours · 5-minute readings','24h ago'),
-  disks:(v.disks||[]).filter(d=>!/^\/(boot|efi)(\/|$)/.test(d.mount)).map(d=>({id:d.id,mount:d.mount,device:d.device,value:pct(d.free),detail:Number.isFinite(d.availableBytes)&&d.availableBytes>=0&&Number.isFinite(d.totalBytes)&&d.totalBytes>0&&d.availableBytes<=d.totalBytes?bytes(d.availableBytes)+' available of '+bytes(d.totalBytes):'Absolute capacity unavailable',tone:!good||!up||!Number.isFinite(d.free)?'muted':d.free<10?'warning':'neutral'}))
+  disks:(v.disks||[]).filter(d=>!/^\/(boot|efi)(\/|$)/.test(d.mount)).map(d=>disk(d))
  };
+ function disk(d){
+  const known=Number.isFinite(d.free)&&good&&up,item={id:d.id,mount:d.mount,device:d.device,value:pct(d.free),detail:Number.isFinite(d.availableBytes)&&d.availableBytes>=0&&Number.isFinite(d.totalBytes)&&d.totalBytes>0&&d.availableBytes<=d.totalBytes?bytes(d.availableBytes)+' available of '+bytes(d.totalBytes):'Absolute capacity unavailable',tone:!good||!up||!Number.isFinite(d.free)?'muted':d.free<10?'warning':'neutral'};
+  return {...item,free:Number.isFinite(d.free)?pct(d.free)+' free':'Unavailable',used:known?100-d.free:null,meterLabel:d.mount+' used space',summary:item.detail+(d.device?' · '+d.device:'')};
+ }
 }
