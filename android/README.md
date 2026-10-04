@@ -337,3 +337,21 @@ payload 14. The VPK is 10,805,089 bytes, SHA-256
 `ad0f2409ee8912d3bdcf01eb53a56994fd9c0902c23002c8ca20be8a001555d3`. Source commit:
 `ba90b13`; artifacts, R8 mapping and provenance are archived in
 `.local/android-releases/payload-15`.
+
+## Automatic updates (APK 5)
+
+APK 0.3.0 (5) is a new shell generation built against Paravoid `1fee1e8b01`. It
+checks and downloads updates on schedule, stages them with a restart prompt, and
+accepts LelloStore's local update trigger (`com.lelloman.store`, pinned to its
+release certificate), so the Store app can wake Talìa when releases change. The
+accepted baseline is `paravoid-baselines/apk-5` (contract `78ad1bb3…6b9f`),
+embedding payload 16.
+
+Validation: all 24 emulator tests passed; the signed minified shell launched to
+Overview in a clean profile, started its update service, and exposed the exported
+trigger service. The publisher dry-run reported `valid`. APK 5 is published on
+LelloStore (publication revision 32), replacing APK 4. The shell is 11,351,065
+bytes, SHA-256 `1740bf2d2f3ab52e4f4a1be90cf56af53219b73644d6c331825936eacd2af93f`;
+source commit `b1979c7`. Artifacts and provenance are archived in
+`.local/android-releases/apk-5`. A Store-triggered update on a phone remains an
+acceptance check.
