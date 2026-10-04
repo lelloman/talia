@@ -60,6 +60,8 @@ export function mountReportSchedules(account,subject){
   current.value?[
    h('p',scheduleSummary(current.value)),
    h('p',current.value.next_due?`Next run: ${new Intl.DateTimeFormat(undefined,{dateStyle:'full',timeStyle:'long',timeZone:current.value.schedule?.zone||'UTC'}).format(new Date(current.value.next_due))}`:'No scheduled run'),
+   (latest=>latest?.id?h('div',{class:'lv-row'},[h('p',`Latest run: ${latest.status} · ${new Date(latest.created).toLocaleString()}`),
+    button('Investigate latest run',()=>window.taliaInvestigate?.(latest.id))]):null)(rows.value.find(r=>r.id===current.value.id)?.latest),
    !draft.value?button('Edit schedule',edit,!!pending.value):h('div',{class:'lv-stack'},[
     h(LelloCheckbox,{label:'Schedule enabled',modelValue:draft.value.enabled,disabled:busy.value||!!pending.value||draft.value.kind==='none','onUpdate:modelValue':v=>draft.value.enabled=v}),
     h(LelloSelect,{label:'Repeat',options:[{value:'none',label:'None'},{value:'daily',label:'Daily'},{value:'interval',label:'Interval'}],modelValue:draft.value.kind,disabled:busy.value||!!pending.value,'onUpdate:modelValue':v=>{draft.value.kind=v;if(v==='none')draft.value.enabled=false;}}),

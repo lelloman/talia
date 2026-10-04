@@ -54,6 +54,8 @@ internal class ChatModel(
     var busy by mutableStateOf(false); private set
     var draft by mutableStateOf(""); private set
     var unsent by mutableStateOf<JSONObject?>(null); private set
+    /** Report run attached to the next new chat; sent only when the session is created. */
+    var attached by mutableStateOf<String?>(null); private set
     val running get() = requests.any { it.optString("status") in setOf("queued", "running") }
     val title get() = sessions.firstOrNull { it.optString("id") == open }?.optString("title")
 
@@ -94,23 +96,26 @@ internal class ChatModel(
         }
     }
     fun openSession(id: String?) {
-        open = id; requests = emptyList(); message = null; loadDraft()
+        attached = null; open = id; requests = emptyList(); message = null; loadDraft()
         if (!id.isNullOrEmpty()) scope.launch { refreshSession() }
     }
     fun close() { open = null; message = null; scope.launch { refreshList() } }
     fun send() {
         val text = draft.trim()
         if (text.isEmpty() || busy) return
-        val pending = unsent?.takeIf { it.optString("text") == text } ?: JSONObject().put("requestId", UUID.randomUUID().toString()).put("text", text)
+        val report = if (open.isNullOrEmpty()) attached else null
+        val pending = unsent?.takeIf { it.optString("text") == text && it.optString("report").ifEmpty { null } == report }
+            ?: JSONObject().put("requestId", UUID.randomUUID().toString()).put("text", text).apply { report?.let { put("report", it) } }
         // Persist before dispatch so a lost response can be retried as the same request.
         unsent = pending; prefs.edit().putString(key("unsent"), pending.toString()).apply()
         busy = true; message = null
         scope.launch {
             try {
-                val result = if (open.isNullOrEmpty()) rpc("create", pending) else rpc("send", JSONObject(pending.toString()).put("session", open))
+                val result = if (open.isNullOrEmpty()) rpc("create", pending)
+                    else rpc("send", JSONObject(pending.toString()).put("session", open).apply { remove("report") })
                 prefs.edit().remove(key("unsent")).remove(key("draft")).apply()
                 unsent = null; draft = ""
-                if (open.isNullOrEmpty()) { open = result.getString("session") }
+                if (open.isNullOrEmpty()) { open = result.getString("session"); attached = null }
                 refreshSession(); refreshList()
             } catch (c: CancellationException) { throw c } catch (e: Exception) {
                 // An explicit rejection admitted nothing; a transport failure is ambiguous.
@@ -119,6 +124,16 @@ internal class ChatModel(
             } finally { busy = false }
         }
     }
+    /** Investigate from Reports: a new chat with the run attached and an editable first message. */
+    fun investigate(run: String) {
+        openSession(""); attached = run
+        // Repeated taps reuse an unconfirmed create for the same run instead of starting another.
+        if (unsent?.optString("report") != run) {
+            prefs.edit().remove(key("unsent")).apply(); unsent = null
+            edit("Investigate report run $run: what needs attention, and why?")
+        }
+    }
+    fun cancelInvestigation() { prefs.edit().remove(key("unsent")).remove(key("draft")).apply(); unsent = null; draft = ""; attached = null; open = null }
     fun again(request: JSONObject) { prefs.edit().remove(key("unsent")).apply(); unsent = null; edit(request.optString("text")) }
     private fun act(block: suspend () -> Unit) {
         if (busy) return
@@ -137,7 +152,7 @@ internal class ChatModel(
 }
 
 @Composable
-internal fun ChatsScreen(connection: NativeConnection, modifier: Modifier, openSettings: () -> Unit) {
+internal fun ChatsScreen(connection: NativeConnection, modifier: Modifier, openReports: () -> Unit = {}, openSettings: () -> Unit) {
     if (!connection.signedIn) {
         LelloWorkspace(modifier.verticalScroll(rememberScrollState())) {
             LelloState(title = "Connect to chat with Talìa", description = "Sign in to your Talìa server to ask about your homelab.",
@@ -166,7 +181,7 @@ internal fun ChatsScreen(connection: NativeConnection, modifier: Modifier, openS
                 modifier = Modifier.fillMaxWidth(), icon = { Icon(Icons.Default.Email, null) })
         }
         chats.open == null -> ChatList(chats, modifier)
-        else -> Conversation(chats, modifier)
+        else -> Conversation(chats, modifier, openReports)
     }
 }
 
@@ -195,7 +210,7 @@ private fun ChatList(chats: ChatModel, modifier: Modifier) {
 }
 
 @Composable
-private fun Conversation(chats: ChatModel, modifier: Modifier) {
+private fun Conversation(chats: ChatModel, modifier: Modifier, openReports: () -> Unit) {
     val palette = LocalLelloPalette.current
     var menu by remember { mutableStateOf(false) }
     var renaming by remember { mutableStateOf<String?>(null) }
@@ -225,6 +240,13 @@ private fun Conversation(chats: ChatModel, modifier: Modifier) {
                     modifier = Modifier.fillMaxWidth().padding(top = 32.dp), icon = { Icon(Icons.Default.Email, null) })
             }
             items(chats.requests, key = { it.optLong("id") }) { r -> Turn(r) { chats.again(r) } }
+        }
+        chats.attached?.takeIf { chats.open == "" }?.let { run ->
+            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("Report run $run", Modifier.weight(1f), style = MaterialTheme.typography.labelLarge, color = palette["info"],
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                LelloTextButton({ chats.cancelInvestigation(); openReports() }) { Text("Cancel") }
+            }
         }
         chats.message?.let { LelloAlert(it, Modifier.fillMaxWidth().padding(horizontal = 16.dp), tone = LelloTone.Error) }
         HorizontalDivider(color = palette["border-subtle"])

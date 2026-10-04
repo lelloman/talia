@@ -120,9 +120,10 @@ class MainActivity : ComponentActivity() {
             ) { insets ->
                 pageState.SaveableStateProvider(page) {
                     if (page == "reports") {
-                        ReportsScreen(connection, Modifier.fillMaxSize().padding(insets).consumeWindowInsets(insets).imePadding()) { page = "settings" }
+                        ReportsScreen(connection, Modifier.fillMaxSize().padding(insets).consumeWindowInsets(insets).imePadding(),
+                            investigate = { run -> connection.chats.investigate(run); page = "chats" }) { page = "settings" }
                     } else if (page == "chats") {
-                        ChatsScreen(connection, Modifier.fillMaxSize().padding(insets).consumeWindowInsets(insets)) { page = "settings" }
+                        ChatsScreen(connection, Modifier.fillMaxSize().padding(insets).consumeWindowInsets(insets), openReports = { page = "reports" }) { page = "settings" }
                     } else if (page == "dashboards") {
                         DashboardsScreen(connection, Modifier.fillMaxSize().padding(insets).consumeWindowInsets(insets)) { page = "settings" }
                     } else LelloWorkspace(Modifier.fillMaxSize().padding(insets).consumeWindowInsets(insets)

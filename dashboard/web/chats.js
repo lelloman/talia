@@ -19,6 +19,8 @@ export function mountChats(account,subject){
  const error=ref(''),forbidden=ref(false),showList=ref(true);
  // A send whose response was lost keeps its requestId so a retry cannot duplicate it.
  const unsent=ref(null);
+ // Report run attached to the next new chat (Investigate from Reports); sent only on create.
+ const attached=ref(null);
  const rpc=(op,args={})=>account({op:'chat'+op[0].toUpperCase()+op.slice(1),...args});
  const draftKey=()=>prefix+'draft.'+(current.value||'new');
  const pendingKey=()=>prefix+'unsent.'+(current.value||'new');
@@ -41,18 +43,20 @@ export function mountChats(account,subject){
   current.value=id;requests.value=[];title.value=null;error.value='';showList.value=false;loadDraft();
   await refreshSession();scrollToEnd();
  }
- function startNew(){current.value=null;requests.value=[];title.value=null;error.value='';showList.value=false;loadDraft();
+ function startNew(){attached.value=null;current.value=null;requests.value=[];title.value=null;error.value='';showList.value=false;loadDraft();
   nextTick(()=>document.querySelector('.talia-chat-composer textarea')?.focus());}
  function scrollToEnd(){nextTick(()=>{const log=document.querySelector('.talia-chat-log');if(log)log.scrollTop=log.scrollHeight;});}
  async function send(){
   const text=draft.value.trim();if(!text||busy.value)return;
-  const pending=unsent.value&&unsent.value.text===text?unsent.value:{requestId:crypto.randomUUID(),text};
+  const report=current.value?null:attached.value;
+  const pending=unsent.value&&unsent.value.text===text&&(unsent.value.report??null)===report?unsent.value:{requestId:crypto.randomUUID(),text,...(report?{report}:{})};
   // Persist before dispatch, so a reload can safely retry the same request.
   unsent.value=pending;store.set(pendingKey(),pending);busy.value=true;error.value='';
   try{
-   const result=current.value?await rpc('send',{session:current.value,...pending}):await rpc('create',pending);
+   const {report:_,...message}=pending;
+   const result=current.value?await rpc('send',{session:current.value,...message}):await rpc('create',pending);
    store.set(pendingKey(),null);unsent.value=null;draft.value='';store.set(draftKey(),null);
-   if(!current.value){current.value=result.session;}
+   if(!current.value){current.value=result.session;attached.value=null;}
    await Promise.all([refreshSession(),refreshList()]);scrollToEnd();
   }catch(e){
    // An explicit server rejection did not admit the message; a lost response is ambiguous.
@@ -103,6 +107,8 @@ export function mountChats(account,subject){
   h('ol',{class:'talia-chat-log'},requests.value.length?requests.value.map(message):[h('li',{class:'talia-chat-intro'},[
    h('h3','Ask Talìa about your homelab'),
    h('p','Talìa can read current monitoring values, history, alerts and report runs, and query approved diagnostic sources. It never changes anything.')])]),
+  attached.value&&!current.value?h('div',{class:'talia-chat-attachment'},[h(LelloBadge,{tone:'info'},{default:()=>'Report run '+attached.value}),
+   h(LelloButton,{variant:'ghost',onClick:()=>{attached.value=null;draft.value='';store.set(pendingKey(),null);unsent.value=null;location.hash='#reports';}},{default:()=>'Cancel'})]):null,
   error.value?h(LelloAlert,{tone:'error',class:'talia-chat-error'},{default:()=>error.value}):null,
   h('form',{class:'talia-chat-composer',onSubmit:e=>{e.preventDefault();send();}},[
    h(LelloTextarea,{label:'Message',modelValue:draft.value,'onUpdate:modelValue':v=>draft.value=v,rows:1,maxlength:8000,placeholder:'Ask a question…',
@@ -115,4 +121,9 @@ export function mountChats(account,subject){
  const enter=()=>{if(location.hash==='#chats'){refreshList();refreshSession();}};
  addEventListener('hashchange',enter);document.addEventListener('visibilitychange',()=>{if(!document.hidden)enter();});
  loadDraft();enter();schedule();
+ window.taliaInvestigate=run=>{
+  location.hash='#chats';startNew();attached.value=run;
+  // Repeated taps reuse an unconfirmed create for the same run instead of starting another.
+  if(unsent.value?.report===run)draft.value=unsent.value.text;else{unsent.value=null;draft.value=`Investigate report run ${run}: what needs attention, and why?`;}
+ };
 }

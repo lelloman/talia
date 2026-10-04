@@ -138,6 +138,12 @@ In the web client, administrators open **Chats** from the navigation: a session 
 beside the conversation (one pane at a time on phones), live tool steps while an
 answer runs, drafts kept per session, and Stop, Rename and Delete with confirmation.
 
+**Investigate** on a report run (web Reports latest run; Android run details) opens a
+new chat with that run attached and an editable first message. The run is sent only
+when the session is created, so follow-ups never re-attach it; an unconfirmed create
+keeps its request ID, so repeated taps or retries cannot start a second session.
+Cancel returns to Reports.
+
 - Operations: `list`, `create` (`requestId`, `text`, optional `title` and report run
   `report`), `get` (`session`, optional `after` request ID), `send` (`session`,
   `requestId`, `text`), `stop`, `rename`, `delete`. The browser sends them through

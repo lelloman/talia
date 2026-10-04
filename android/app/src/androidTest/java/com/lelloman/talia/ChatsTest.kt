@@ -132,6 +132,32 @@ class ChatsTest {
         assertTrue(application.getSharedPreferences("chats", 0).all.isEmpty())
     }
 
+    @Test fun investigateAttachesTheRunOnlyToTheNewSession() {
+        val server = FakeServer()
+        val chats = model(server).chats
+        val run = "infra-20261004-0900"
+        main { chats.investigate(run); chats.investigate(run) }
+        assertEquals(run, chats.attached)
+        assertTrue(chats.draft.contains(run))
+        // Cancelling leaves no draft behind.
+        main { chats.cancelInvestigation() }
+        assertNull(chats.open); assertNull(chats.attached)
+        main { chats.investigate(run); server.loseNext = true; chats.send() }
+        until("lost create") { !chats.busy }
+        // A repeated Investigate tap keeps the unconfirmed create, so the retry reuses it.
+        main { chats.investigate(run); chats.send() }
+        until("created") { !chats.busy && chats.requests.size == 1 }
+        val creates = server.calls.filter { it.getString("op") == "create" }
+        assertEquals(2, creates.size)
+        assertEquals(creates[0].getJSONObject("args").getString("requestId"), creates[1].getJSONObject("args").getString("requestId"))
+        assertTrue(creates.all { it.getJSONObject("args").getString("report") == run })
+        assertEquals(1, server.sessions.size)
+        assertNull(chats.attached)
+        main { server.finish("The data volume crossed its threshold overnight."); chats.edit("Is it still shrinking?"); chats.send() }
+        until("follow-up") { !chats.busy && chats.requests.size == 2 }
+        assertFalse(server.calls.last { it.getString("op") == "send" }.getJSONObject("args").has("report"))
+    }
+
     @Test fun reviewConversationLightAndDark() {
         val server = FakeServer()
         val model = model(server)

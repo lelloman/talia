@@ -23,6 +23,10 @@ const fake=`
   const r={id:next++,session,requestId,status:'running',text,answer:null,error:null,report:null,created:Date.now(),
    steps:[{label:'Checked the monitoring overview',done:true},{label:'Read host-homelab history',done:false}]};
   requests.push(r);byClient.set(key,r.id);const s=sessions.find(s=>s.id===session);s.updated=Date.now();return r.id;};
+ window.taliaReportSchedules(async ({operation,args})=>{
+  if(operation==='list')return {definitions:[{id:'infra',enabled:true,scheduled:false,available:true,latest:{id:'infra-20261004-0900',status:'complete',created:Date.now()}}]};
+  if(operation==='schedule_get')return {id:'infra',version:1,enabled:false,schedule:null,next_due:null,destinations:[]};
+ });
  window.taliaChats(async body=>{
   window.calls.push(body);
   if(window.forbid){const e=Error('forbidden');e.serverRejected=true;throw e;}
@@ -94,10 +98,33 @@ try{
  await page.getByRole('button',{name:'New chat'}).waitFor();
  await page.screenshot({path:'.local/chats/list-dark-390.png'});
  assert.equal(await page.evaluate(()=>document.querySelector('.lv-main').scrollWidth<=document.querySelector('.lv-main').clientWidth),true);
+ // Investigate a report run: a prefilled draft with the run attached only to the new session.
+ await page.setViewportSize({width:1280,height:860});
+ await page.evaluate(()=>location.hash='#reports');
+ await page.getByRole('button',{name:'infra',exact:true}).click();
+ await page.getByRole('button',{name:'Investigate latest run'}).click();
+ await page.getByText('Report run infra-20261004-0900').waitFor();
+ assert.match(await box.inputValue(),/Investigate report run infra-20261004-0900/);
+ await page.getByRole('button',{name:'Cancel'}).click();
+ await page.waitForFunction(()=>location.hash==='#reports');
+ await page.getByRole('button',{name:'Investigate latest run'}).click();
+ await page.evaluate(()=>location.hash='#reports');
+ await page.getByRole('button',{name:'Investigate latest run'}).click();
+ await box.fill('Why did infra flag /mnt/data?');await box.press('Enter');
+ await page.getByText('Investigating…').waitFor();
+ await page.evaluate(()=>window.finish('The data volume crossed the 10% free threshold overnight.'));
+ await page.getByText('crossed the 10% free threshold',{exact:false}).waitFor({timeout:5000});
+ await box.fill('Is it still shrinking?');await box.press('Enter');
+ await page.getByText('Investigating…').waitFor();
+ const investigation=await page.evaluate(()=>window.calls.filter(c=>c.op==='chatCreate'||c.op==='chatSend').slice(-2));
+ assert.equal(investigation[0].op,'chatCreate');assert.equal(investigation[0].report,'infra-20261004-0900');
+ assert.equal(investigation[1].op,'chatSend');assert.equal(investigation[1].report,undefined);
+ assert.equal(await page.evaluate(()=>window.calls.filter(c=>c.op==='chatCreate'&&c.report).length),1);
+ await page.screenshot({path:'.local/chats/investigate-1280.png'});
  // Viewers (or revoked admins) see a clear forbidden state.
  await page.evaluate(()=>{window.forbid=true;location.hash='#dashboard';});
  await page.evaluate(()=>location.hash='#chats');
  await page.getByText('Chat requires administrator access.').waitFor();
  assert.deepEqual(errors,[]);
- console.log('PASS: chat send/steps/answer, lost-response retry without duplicates, parallel sessions, stop, rename, delete, forbidden, light/dark/390');
+ console.log('PASS: chat send/steps/answer, report investigation (single create, attachment only on the new session, cancel), lost-response retry without duplicates, parallel sessions, stop, rename, delete, forbidden, light/dark/390');
 }finally{await browser.close();server.close();}

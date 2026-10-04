@@ -52,14 +52,14 @@ internal fun RunStatus(status: String) = StatusLabel(when (status) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun ReportsScreen(connection: NativeConnection, modifier: Modifier = Modifier, setup: () -> Unit) {
+internal fun ReportsScreen(connection: NativeConnection, modifier: Modifier = Modifier, investigate: ((String) -> Unit)? = null, setup: () -> Unit) {
     val refresh = { if (connection.signedIn && !connection.reportsBusy) connection.refreshReports() }
     val content: @Composable () -> Unit = {
         LelloWorkspace(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).semantics {
             if (connection.signedIn) customActions = listOf(CustomAccessibilityAction("Refresh reports") {
                 refresh(); true
             })
-        }) { Reports(connection, setup) }
+        }) { Reports(connection, setup, investigate) }
     }
     if (connection.signedIn) {
         PullToRefreshBox(isRefreshing = connection.reportsBusy, onRefresh = refresh, modifier = modifier) { content() }
@@ -69,7 +69,7 @@ internal fun ReportsScreen(connection: NativeConnection, modifier: Modifier = Mo
 }
 
 @Composable
-internal fun Reports(connection: NativeConnection, setup: () -> Unit) {
+internal fun Reports(connection: NativeConnection, setup: () -> Unit, investigate: ((String) -> Unit)? = null) {
     var query by rememberSaveable { mutableStateOf("") }
     var sort by rememberSaveable { mutableStateOf("newest") }
     var filter by rememberSaveable { mutableStateOf("all") }
@@ -101,7 +101,7 @@ internal fun Reports(connection: NativeConnection, setup: () -> Unit) {
         LelloButton(connection::runReport, enabled = !connection.reportsBusy) { Text("Check run request") }
     }
     when {
-        connection.reportRunSelected.isNotEmpty() -> connection.reportDetail?.let { ReportRunDetails(it) }
+        connection.reportRunSelected.isNotEmpty() -> connection.reportDetail?.let { ReportRunDetails(it, investigate) }
         connection.reportSelected.isNotEmpty() -> {
             val definitions = connection.reportDefinitions
             val definition = (0 until (definitions?.length() ?: 0)).map { definitions!!.getJSONObject(it) }.find { it.getString("id") == connection.reportSelected }
@@ -228,8 +228,11 @@ private fun CompactReportRow(title: String, subtitle: String, status: String, en
 }
 
 @Composable
-internal fun ReportRunDetails(run: JSONObject) {
+internal fun ReportRunDetails(run: JSONObject, investigate: ((String) -> Unit)? = null) {
     RunStatus(run.getString("status"))
+    if (investigate != null && !reportActive(run.getString("status"))) {
+        LelloOutlinedButton({ investigate(run.getString("id")) }) { Text("Investigate") }
+    }
     when (run.optString("severity")) {
         "warning" -> LelloAlert("Report findings: warning", tone = LelloTone.Warning)
         "error" -> LelloAlert("Report findings: error", tone = LelloTone.Error)

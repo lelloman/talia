@@ -132,6 +132,7 @@ html,body{margin:0;height:100%;font-family:var(--ld-font-family,Inter,system-ui,
 .talia-chat-steps li.done::before{content:'✓';color:var(--ld-success)}
 .talia-chat-steps li.current{color:var(--ld-text)}
 .talia-chat-error{margin:0 16px}
+.talia-chat-attachment{display:flex;align-items:center;gap:8px;padding:8px 16px 0}
 .talia-chat-composer{display:flex;align-items:flex-end;gap:8px;padding:12px 16px 16px;border-top:1px solid var(--ld-border-subtle)}
 .talia-chat-composer>:first-child{flex:1}
 .talia-chat-composer textarea{resize:vertical;min-height:48px;max-height:240px;max-width:none!important;width:100%}
