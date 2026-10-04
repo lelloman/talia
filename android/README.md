@@ -279,3 +279,21 @@ for `com.lelloman.talia` / APK 0.1.2 (3). The VPK is 3,968,733 bytes, SHA-256
 `24a498c87aa570869283123069665b64b0f0eb4330670cf2c52db8ef4efa00d2`.
 Source commit: `149eccf`; artifacts, R8 mapping and provenance are archived in
 `.local/android-releases/payload-12`. No backend deployment was required.
+
+## Store notifications shell (APK 4)
+
+APK 0.2.0 (4) is a new shell generation adding the verified LelloStore
+notification receiver, built with embedded payload 13 and Store signing pin
+`5d35a11c…9350` (`LELLOSTORE_SIGNING_CERTIFICATES`). Paravoid is now pinned to
+JitPack commit `170fac4b4c` instead of a sibling checkout; the accepted baseline
+is `paravoid-baselines/apk-4` (contract `290b87fd…bcffa`). Payload R8 needs the
+coroutines service interfaces and Android implementations kept by name, or the
+app fails to start with "Module with the Main dispatcher is missing".
+
+A clean emulator user launched the signed shell to Overview with no crash output.
+The publisher dry-run reported `valid`. APK 4 is published on LelloStore
+(publication revision 26). The shell is 4,535,321 bytes, SHA-256
+`15ce270dde9f7d88581e83c5366a86941246af56af4fce7c643b89e3c3088105`; source
+commit `342405e`. Artifacts, R8 mapping and provenance are archived in
+`.local/android-releases/apk-4`. An authenticated Store upgrade from APK 3 and
+notification enrollment remain phone acceptance checks.
