@@ -93,3 +93,57 @@ html,body{margin:0;height:100%;font-family:var(--ld-font-family,Inter,system-ui,
 .dashboard-canvas [data-type=Meter][data-tone=success]>span{background:var(--ld-success)}
 .dashboard-canvas [data-type=Meter][data-tone=muted]>span{background:var(--ld-text-muted,var(--ld-text-secondary))}
 @media(prefers-reduced-motion:reduce){.dashboard-canvas [data-type=Meter]>span{transition:none}}
+
+/* Chats: session list beside the conversation; one pane at a time on phones. */
+[data-shell-page=chats]{height:calc(100dvh - var(--ld-header-height,64px) - 48px);min-height:420px}
+#chats{height:100%}
+.talia-chat{display:grid;grid-template-columns:280px minmax(0,1fr);height:100%;border:1px solid var(--ld-border-subtle);border-radius:var(--ld-radius-panel);background:var(--ld-surface);overflow:hidden}
+.talia-chat-list{display:flex;flex-direction:column;gap:12px;padding:16px;border-right:1px solid var(--ld-border-subtle);overflow:auto;min-height:0}
+.talia-chat-new{align-self:stretch}
+.talia-chat-list ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.talia-chat-item{display:flex;flex-direction:column;gap:2px;width:100%;padding:10px 12px;border:0;border-radius:var(--ld-radius-control);background:transparent;color:var(--ld-text);font:inherit;text-align:left;cursor:pointer}
+.talia-chat-item:hover{background:var(--ld-surface-hover)}
+.talia-chat-item.selected{background:var(--ld-selected,var(--ld-primary-container));color:var(--ld-on-selected,var(--ld-on-primary-container))}
+.talia-chat-item-title{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.talia-chat-item-meta{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ld-text-secondary)}
+.talia-chat-empty-list{color:var(--ld-text-secondary);margin:0}
+.talia-chat-conversation{display:flex;flex-direction:column;min-height:0;min-width:0}
+.talia-chat-header{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--ld-border-subtle);min-height:64px;box-sizing:border-box}
+.talia-chat-title{flex:1;margin:0;font-size:18px;line-height:28px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.talia-chat-actions{display:flex;gap:4px;flex-shrink:0}
+.talia-chat-rename{flex:1;display:flex;align-items:flex-end;gap:8px}
+.talia-chat-rename>:first-child{flex:1}
+.talia-chat-back{display:none}
+.talia-chat-log{flex:1;overflow:auto;list-style:none;margin:0;padding:20px 16px;display:flex;flex-direction:column;gap:20px;min-height:0}
+.talia-chat-intro{margin:auto;max-width:440px;text-align:center;color:var(--ld-text-secondary)}
+.talia-chat-intro h3{color:var(--ld-text);margin:0 0 8px;font-size:18px}
+.talia-chat-turn{display:flex;flex-direction:column;gap:10px;max-width:760px;width:100%;margin:0 auto}
+.talia-chat-question{align-self:flex-end;max-width:85%;padding:10px 14px;border-radius:16px 16px 4px 16px;background:var(--ld-primary-container);color:var(--ld-on-primary-container)}
+.talia-chat-question p,.talia-chat-answer p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.talia-chat-meta{font-size:12px;opacity:.8}
+.talia-chat-answer{align-self:flex-start;max-width:92%;display:flex;flex-direction:column;align-items:flex-start;gap:8px;line-height:1.55}
+.talia-chat-working{padding:12px 14px;border:1px solid var(--ld-border-subtle);border-radius:4px 16px 16px 16px;background:var(--ld-surface-sunken);color:var(--ld-text-secondary)}
+.talia-chat-working-title{display:flex;align-items:center;gap:10px;font-weight:600;color:var(--ld-text)}
+.talia-chat-spinner{width:14px;height:14px;border-radius:50%;border:2px solid var(--ld-border-control);border-top-color:var(--ld-primary);animation:talia-spin .8s linear infinite;flex-shrink:0}
+@keyframes talia-spin{to{transform:rotate(360deg)}}
+.talia-chat-steps{list-style:none;margin:0;padding:0;font-size:13px;line-height:22px}
+.talia-chat-steps li{display:flex;gap:8px}
+.talia-chat-steps li::before{content:'○';width:12px;flex-shrink:0;text-align:center;color:var(--ld-text-secondary)}
+.talia-chat-steps li.done::before{content:'✓';color:var(--ld-success)}
+.talia-chat-steps li.current{color:var(--ld-text)}
+.talia-chat-error{margin:0 16px}
+.talia-chat-composer{display:flex;align-items:flex-end;gap:8px;padding:12px 16px 16px;border-top:1px solid var(--ld-border-subtle)}
+.talia-chat-composer>:first-child{flex:1}
+.talia-chat-composer textarea{resize:vertical;min-height:48px;max-height:240px;max-width:none!important;width:100%}
+.talia-chat-composer>:first-child>*{max-width:none}
+@media(max-width:759px){
+ [data-shell-page=chats]{height:calc(100dvh - var(--ld-header-height,56px) - 32px)}
+ .talia-chat{grid-template-columns:1fr;border-radius:0;border-left:0;border-right:0}
+ .talia-chat.show-list .talia-chat-conversation,.talia-chat:not(.show-list) .talia-chat-list{display:none}
+ .talia-chat-list{border-right:0}
+ .talia-chat-back{display:inline-flex;margin-right:auto}
+ .talia-chat-header{flex-wrap:wrap;row-gap:4px;padding:8px 12px}
+ .talia-chat-title{order:3;flex:1 1 100%;padding:0 4px;font-size:17px}
+ .talia-chat-question{max-width:92%}
+}
+@media(prefers-reduced-motion:reduce){.talia-chat-spinner{animation:none}}

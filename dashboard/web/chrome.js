@@ -1,4 +1,5 @@
 import {mountReportSchedules} from './report-schedules.js';
+import {mountChats} from './chats.js';
 // Framework-owned application chrome. The dashboard host owns one retained DOM island.
 import {createApp,h,ref,computed,nextTick,watch,render} from 'vue';
 import {LelloSection,LelloSegmentedControl,LelloTheme,LelloScaffold,LelloAccount,LelloDialog,LelloButton,LelloConnectionStatus,LelloThemeSelector} from '@lelloman/lellodesign-vue';
@@ -7,14 +8,14 @@ import '@lelloman/lellodesign-vue/style.css';
 export function renderSegmentedControl(root,props){render(props?h(LelloSegmentedControl,props):null,root);}
 const read=(key,fallback)=>{try{return localStorage.getItem(key)??fallback;}catch{return fallback;}};
 const save=(key,value)=>{try{localStorage.setItem(key,value);}catch{}};
-const paths={reports:'M5 3h14v18H5zM8 7h8M8 11h8M8 15h5',dashboard:'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z',alerts:'M12 3a6 6 0 0 0-6 6v5l-2 3h16l-2-3V9a6 6 0 0 0-6-6ZM9 21h6',settings:'M4 6h16M4 12h16M4 18h16M8 3v6M16 9v6M10 15v6',sharing:'M8 12l8-6M8 12l8 6M8 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM22 4a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM22 20a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z',users:'M9 10a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM2 22v-4a7 7 0 0 1 14 0v4M17 3a4 4 0 0 1 0 8M20 22v-4a7 7 0 0 0-2-5'};
+const paths={chats:'M4 5h16v11H9l-5 4zM8 9h8M8 12h5',reports:'M5 3h14v18H5zM8 7h8M8 11h8M8 15h5',dashboard:'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z',alerts:'M12 3a6 6 0 0 0-6 6v5l-2 3h16l-2-3V9a6 6 0 0 0-6-6ZM9 21h6',settings:'M4 6h16M4 12h16M4 18h16M8 3v6M16 9v6M10 15v6',sharing:'M8 12l8-6M8 12l8 6M8 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM22 4a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM22 20a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z',users:'M9 10a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM2 22v-4a7 7 0 0 1 14 0v4M17 3a4 4 0 0 1 0 8M20 22v-4a7 7 0 0 0-2-5'};
 export async function mountChrome(identity,{development=false,signOut=()=>{}}={}){
  const preference=read('talia.appearance','system'),appearance=ref(['light','dark','system'].includes(preference)?preference:'system');
  const darkMedia=matchMedia('(prefers-color-scheme: dark)'),mobileMedia=matchMedia('(max-width:759px)');
  const systemDark=ref(darkMedia.matches),mobile=ref(mobileMedia.matches),collapsed=ref(read('talia.sidebarCollapsed','false')==='true');
  const active=ref('dashboard'),admin=ref(false),canAlert=ref(development),dialog=ref(false),status=ref('connecting');
  const theme=computed(()=>`blue-${appearance.value==='system'?(systemDark.value?'dark':'light'):appearance.value}`);
- const items=computed(()=>[{id:'dashboard',label:'Dashboard'},...(canAlert.value?[{id:'alerts',label:'Alerts'}]:[]),{id:'settings',label:'Settings'},...(admin.value?[{id:'reports',label:'Reports'},{id:'sharing',label:'Sharing'},{id:'users',label:'Users'}]:[])].map(i=>({...i,href:'#'+i.id})));
+ const items=computed(()=>[{id:'dashboard',label:'Dashboard'},...(admin.value?[{id:'chats',label:'Chats'}]:[]),...(canAlert.value?[{id:'alerts',label:'Alerts'}]:[]),{id:'settings',label:'Settings'},...(admin.value?[{id:'reports',label:'Reports'},{id:'sharing',label:'Sharing'},{id:'users',label:'Users'}]:[])].map(i=>({...i,href:'#'+i.id})));
  darkMedia.addEventListener('change',e=>systemDark.value=e.matches);mobileMedia.addEventListener('change',e=>mobile.value=e.matches);
  watch(appearance,v=>save('talia.appearance',v));watch(collapsed,v=>save('talia.sidebarCollapsed',String(v)));
  watch(theme,v=>{document.documentElement.style.colorScheme=v.endsWith('-dark')?'dark':'light';},{immediate:true});
@@ -44,5 +45,6 @@ export async function mountChrome(identity,{development=false,signOut=()=>{}}={}
  window.taliaShell={update({isAdmin=admin.value,alerts=canAlert.value,connected}={}){admin.value=isAdmin;canAlert.value=alerts;if(connected!==undefined)status.value=connected?'connected':'disconnected';route();},status(value){status.value=value==='connecting...'?'connecting':value==='disconnected'?'disconnected':'connected';}};
  addEventListener('talia-connection',e=>window.taliaShell.status(e.detail));
  window.taliaReportSchedules=account=>mountReportSchedules(account,identity.subject);
+ window.taliaChats=account=>mountChats(account,identity.subject);
  return window.taliaShell;
 }

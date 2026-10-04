@@ -134,6 +134,10 @@ native app, with the same read-only tools. Viewers receive `forbidden`; tools re
 global monitoring data, so chat is not scoped by dashboard grants. Chat sessions are
 independent of Telegram conversations and share only the engine code.
 
+In the web client, administrators open **Chats** from the navigation: a session list
+beside the conversation (one pane at a time on phones), live tool steps while an
+answer runs, drafts kept per session, and Stop, Rename and Delete with confirmation.
+
 - Operations: `list`, `create` (`requestId`, `text`, optional `title` and report run
   `report`), `get` (`session`, optional `after` request ID), `send` (`session`,
   `requestId`, `text`), `stop`, `rename`, `delete`. The browser sends them through
