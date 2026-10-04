@@ -15,8 +15,8 @@ android {
         applicationId 'com.lelloman.talia'
         minSdk 30
         targetSdk 36
-        versionCode 4
-        versionName '0.2.0'
+        versionCode 5
+        versionName '0.3.0'
         def storePins = System.getenv('LELLOSTORE_SIGNING_CERTIFICATES') ?: ''
         if (storePins && !(storePins ==~ /[0-9a-f]{64}(,[0-9a-f]{64})*/)) throw new GradleException('Invalid Store certificate pins')
         buildConfigField 'String', 'STORE_CERTIFICATES', '"' + storePins + '"'
@@ -55,11 +55,11 @@ paravoid {
     minifyPayload = true
     payloadProguardFiles.from(file('payload-rules.pro'))
     crashRecovery { enabled = true; updater = 'default' }
-    payloadVersion = providers.gradleProperty('paravoidPayloadVersion').map { it.toLong() }.getOrElse(15L)
-    // APK 4 adds the verified notification receiver; payload-only updates cannot add it.
+    payloadVersion = providers.gradleProperty('paravoidPayloadVersion').map { it.toLong() }.getOrElse(16L)
+    // APK 5 enables scheduled updates and LelloStore update triggers; payloads cannot change them.
     if (!providers.gradleProperty('paravoidNewShell').map { it.toBoolean() }.getOrElse(false)) {
         baselineDirectory = layout.projectDirectory.dir(
-            providers.gradleProperty('paravoidBaselineDirectory').getOrElse('../paravoid-baselines/apk-4'))
+            providers.gradleProperty('paravoidBaselineDirectory').getOrElse('../paravoid-baselines/apk-5'))
     }
     signing {
         keyId = System.getenv('PARAVOID_SIGNING_KEY_ID') ?: 'talia-release'
@@ -70,7 +70,14 @@ paravoid {
         baseUrl = System.getenv('PARAVOID_UPDATE_BASE_URL') ?: 'https://store.lelloman.com/api/paravoid/'
         authentication = 'apkKey'
         trustPolicyFile = file(System.getenv('PARAVOID_TRUST_POLICY') ?: new File(releaseDirectory, 'trust.json').path)
-        schedule { checks = false; downloads = false }
+        // Stage updates in the background; ask before restarting into them.
+        restartBehavior = 'prompt'
+        schedule { checks = true; downloads = true }
+        // The LelloStore app shares its server connection and wakes installed shells when
+        // releases change. Trust is pinned to Store's release signing certificate.
+        localTriggers {
+            trustedCallers = ['com.lelloman.store': ['5d35a11c5b882924343a01dfc1836e7a78573a93e50af161d5769128994f9350']]
+        }
     }
 }
 dependencies {

@@ -34,7 +34,7 @@ The normal package is `com.lelloman.talia.normal`; the production Paravoid packa
 is `com.lelloman.talia`, version 0.1.2 (3), payload version 5. They can be
 installed side by side. Paravoid uses complete packaging, embedded bootstrap,
 APK-grant Store delivery, explicit update controls and default crash recovery.
-No automatic check/download schedule is enabled. Payload-only R8 shrinking,
+Since APK 5, updates are checked and downloaded automatically and staged with a restart prompt; the LelloStore app can also wake Talìa through Paravoid's local update trigger (trusted caller `com.lelloman.store`, pinned to its release certificate). Payload-only R8 shrinking,
 optimization and obfuscation are enabled via `minifyPayload`. Standard AGP
 minification and resource shrinking remain disabled for Paravoid compatibility.
 The build collects external dependencies' consumer rules and applies
