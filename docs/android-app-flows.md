@@ -96,6 +96,14 @@ never cancels work. Failed sends retain text; retry must not duplicate messages.
 Back returns to the session list. Session deletion requires confirmation; stop
 work is a separate action with pending/confirmed state if the service supports it.
 
+Implemented (payload on the APK 4 contract) against `POST /native/chats`, admin-only:
+the Chats tab lists sessions; New chat opens an empty conversation whose first send
+creates the session. Running answers show live tool steps; Stop, Rename and Delete
+(with confirmation) live in the conversation header. Drafts and unconfirmed sends are
+stored per session in app-private preferences and cleared on sign-out; an unconfirmed
+send keeps its request ID, so retrying cannot duplicate it. Unread counts are not
+implemented yet.
+
 ## Recovery and empty states (27–34)
 
 27 labels cached content with last-sync time. Offline reading is allowed only

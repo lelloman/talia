@@ -121,6 +121,8 @@ class MainActivity : ComponentActivity() {
                 pageState.SaveableStateProvider(page) {
                     if (page == "reports") {
                         ReportsScreen(connection, Modifier.fillMaxSize().padding(insets).consumeWindowInsets(insets).imePadding()) { page = "settings" }
+                    } else if (page == "chats") {
+                        ChatsScreen(connection, Modifier.fillMaxSize().padding(insets).consumeWindowInsets(insets)) { page = "settings" }
                     } else if (page == "dashboards") {
                         DashboardsScreen(connection, Modifier.fillMaxSize().padding(insets).consumeWindowInsets(insets)) { page = "settings" }
                     } else LelloWorkspace(Modifier.fillMaxSize().padding(insets).consumeWindowInsets(insets)
@@ -170,8 +172,7 @@ class MainActivity : ComponentActivity() {
                             LelloState(
                                 title = "${destinations.first { it.id == page }.label} is coming next",
                                 description = when (page) {
-                                    "automation" -> "Schedules and alert rules will live here. They aren’t available in the app yet."
-                                    else -> "Your conversations with Talìa will live here. Chat isn’t available in the app yet."
+                                    else -> "Schedules and alert rules will live here. They aren’t available in the app yet."
                                 },
                                 modifier = Modifier.fillMaxWidth(),
                                 icon = { destinations.first { it.id == page }.icon() },

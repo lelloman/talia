@@ -107,6 +107,15 @@ internal class NativeConnection @JvmOverloads constructor(
         })
     }
     val dashboards by dashboardSession
+    private var chatModel: ChatModel? = null
+    /** Chat state for the signed-in account; discarded on sign-out. */
+    val chats: ChatModel get() = chatModel ?: ChatModel({ body ->
+        val token = saved.optString("token").ifEmpty { throw ApiFailure(401) }
+        try { call(server, "/native/chats", token, body) } catch (failure: ApiFailure) {
+            if (failure.status == 401) clear()
+            throw failure
+        }
+    }, getApplication<Application>().getSharedPreferences("chats", Context.MODE_PRIVATE), viewModelScope).also { chatModel = it }
     override fun onCleared() {
         if (dashboardSession.isInitialized()) dashboardSession.value.close()
         if (request == null) CoroutineScope(Dispatchers.IO).launch { gateway.close() }
@@ -377,5 +386,6 @@ internal class NativeConnection @JvmOverloads constructor(
         reportSelected = ""; reportRunSelected = ""; reportsNext = null; pendingReport = null; pendingSchedule = false; reportsMessage = null; reportsForbidden = false
         vault.clear(); saved = JSONObject(); signedIn = false; pending = false
         overview = null; name = "Not signed in"; forbidden = false
+        chatModel = null; getApplication<Application>().getSharedPreferences("chats", Context.MODE_PRIVATE).edit().clear().apply()
     }
 }
