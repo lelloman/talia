@@ -30,5 +30,17 @@
   const valid=reachable&&Number.isFinite(totalBytes)&&totalBytes>0&&availableBytes!==null&&availableBytes>=0&&availableBytes<=totalBytes;
   return {id:diskKey(s),mount:s.metric.mountpoint,device:s.metric.device,free:valid?100*availableBytes/totalBytes:null,availableBytes:valid?availableBytes:null,totalBytes:valid?totalBytes:null};
  }).sort((a,b)=>a.mount.localeCompare(b.mount));
- await ctx.publish('summary',{host:p.host,updated:ctx.now(),reachable,cpu:reachable?number(r[0].result[0]):null,memory:validMemory?100*used/total:null,memoryUsedBytes:used,memoryTotalBytes:validMemory?total:null,memoryAvailableBytes:validMemory?available:null,disks,cpuHistory:history(r[5],start,step),memoryHistory:history(r[6],start,step),cpuMinuteHistory:history(r[7],hourStart,60)});
+ let gitWorkspaces=null;
+ if(p.gitWorkspaces){
+  try {
+   const result=await ctx.source('prom',{kind:'query',query:'{'+labels+',host='+JSON.stringify(p.host)+',__name__=~"talia_git_.*"}'});
+   const metric=name=>number(result.result.find(s=>s.metric.__name__==='talia_git_'+name));
+   gitWorkspaces={checked:metric('checked_timestamp_seconds'),lastClean:metric('last_clean_timestamp_seconds'),success:metric('success'),repositories:metric('repositories'),
+    dirty:result.result.filter(s=>s.metric.__name__==='talia_git_worktree_dirty'&&number(s)===1).map(s=>s.metric.path),
+    errors:result.result.filter(s=>s.metric.__name__==='talia_git_worktree_error'&&number(s)===1).map(s=>s.metric.path),
+    worktrees:result.result.filter(s=>s.metric.__name__==='talia_git_worktree_dirty').length,
+    dataWarning:!!result.warnings?.length};
+  } catch (_) { gitWorkspaces={unavailable:true}; }
+ }
+ await ctx.publish('summary',{gitWorkspaces,host:p.host,updated:ctx.now(),reachable,cpu:reachable?number(r[0].result[0]):null,memory:validMemory?100*used/total:null,memoryUsedBytes:used,memoryTotalBytes:validMemory?total:null,memoryAvailableBytes:validMemory?available:null,disks,cpuHistory:history(r[5],start,step),memoryHistory:history(r[6],start,step),cpuMinuteHistory:history(r[7],hourStart,60)});
 }}

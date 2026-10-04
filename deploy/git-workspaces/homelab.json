@@ -1,0 +1,16 @@
+{
+  "host": "homelab",
+  "repositories": [
+    "/home/lelloman/crumbles",
+    "/home/lelloman/lello-auth",
+    "/home/lelloman/simple-ai",
+    "/home/lelloman/pezzottify",
+    "/home/lelloman/lellostore",
+    "/home/lelloman/.codex/.tmp/plugins",
+    "/home/lelloman/observo",
+    "/home/lelloman/homelab",
+    "/home/lelloman/lelloauth",
+    "/home/lelloman/rusty-sweeper",
+    "/home/lelloman/.claude/plugins/marketplaces/claude-plugins-official"
+  ]
+}

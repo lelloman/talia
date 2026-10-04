@@ -14,6 +14,9 @@ instance's parameters affects only that dashboard. Live state is not auto-reset.
 All three collection instances reference **host-collect**, with parameters `host`,
 `job`, and `instance`. Each has its own `host-HOST` Variable, output mapping,
 30-second schedule, 90-second stale threshold and one-hour retained snapshot history (separate from the 24-hour Prometheus chart window).
+Homelab also enables the [daily Git workspace check](git-workspaces/README.md),
+using an explicit repository list on the host and the existing textfile collector.
+Other hosts can opt in with `gitWorkspaces: true` after configuring their collector.
 CPU, memory and filesystem selectors match the exact job and instance, including
 range queries. The CPU card switches between a 24-hour view of five-minute CPU
 averages (289 slots) and a one-hour view of one-minute CPU averages (61 slots).

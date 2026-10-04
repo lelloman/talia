@@ -1,0 +1,21 @@
+services:
+  git-probe-trigger:
+    image: python:3.12-slim-bookworm
+    container_name: talia-git-probe-trigger
+    user: "1000:1000"
+    command: ["python3", "-B", "/app/trigger.py", "--requests", "/requests", "--result", "/results/git-workspaces.prom.json"]
+    volumes:
+      - ./trigger.py:/app/trigger.py:ro
+      - ./probe.py:/app/probe.py:ro
+      - /home/lelloman/homelab-data/report-probes:/results:ro
+      - /home/lelloman/homelab-data/report-probes/git-requests:/requests:rw
+    networks: [talia-git-probe]
+    restart: always
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 64m
+    pids_limit: 32
+networks:
+  talia-git-probe:
+    external: true

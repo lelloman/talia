@@ -1,0 +1,65 @@
+import {readFileSync} from 'node:fs';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+const present=vm.runInNewContext('('+readFileSync('dashboard/examples/host/present.js','utf8')+')');
+const collect=vm.runInNewContext('('+readFileSync('dashboard/examples/host/collect.js','utf8')+')');
+const now=1800000000000;
+const git={checked:now/1000,lastClean:now/1000,success:1,repositories:2,worktrees:3,dirty:[],errors:[]};
+const show=(changes={},quality='good')=>present({quality,value:{reachable:true,gitWorkspaces:{...git,...changes}}},'homelab','day',now).repositories;
+assert.equal(show().tone,'success');
+assert.match(show().title,/✅/);
+assert.match(show().lastClean,/Last successful clean check/);
+assert.equal(show({checked:now/1000-86701}).tone,'warning');
+assert.match(show({checked:now/1000-86701}).summary,/overdue/);
+assert.equal(show({checked:now/1000+60}).tone,'warning');
+assert.match(show({dirty:['/home/lelloman/project']}).summary,/1 dirty worktree: ~\/project/);
+assert.match(show({errors:['/missing'],success:0}).summary,/Could not check/);
+assert.equal(show({},'stale').tone,'warning');
+assert.equal(show({unavailable:true,checked:null,success:null}).tone,'warning');
+assert.equal(show({worktrees:0}).tone,'warning');
+assert.equal(show({dataWarning:true}).tone,'warning');
+assert.equal(present({quality:'good',value:{}},'vps-eu').repositories.visible,false);
+let snapshot;
+const ctx={params:{host:'homelab',job:'node-exporter',instance:'node-exporter:9100',gitWorkspaces:true},now:()=>now,publish:async(_,v)=>snapshot=v,source:async(_,q)=>{
+ if(q.query.includes('talia_git_'))throw new Error('source unavailable');
+ return {result:[]};
+}};
+await collect.run(ctx);
+assert.equal(snapshot.gitWorkspaces.unavailable,true);
+ctx.source=async(_,q)=>({result:q.query.includes('talia_git_')?[
+ ['checked_timestamp_seconds',now/1000],['last_clean_timestamp_seconds',now/1000],['success',1],['repositories',1],['worktree_dirty',1],['worktree_error',0]
+].map(([name,value])=>({metric:{__name__:'talia_git_'+name,path:'/repo'},samples:[[now/1000,value]]})):[]});
+await collect.run(ctx);
+assert.deepEqual(Array.from(snapshot.gitWorkspaces.dirty),['/repo']);
+assert.equal(snapshot.gitWorkspaces.checked,now/1000);
+console.log('PASS: daily Git dashboard clean/dirty/failed/overdue/stale states and collection failure isolation');
+// Real shared VM: action admission, double-click coalescing and subscribed completion.
+const messages=[];
+const context=vm.createContext({__send:r=>messages.push(JSON.parse(r))});
+vm.runInContext(readFileSync('dashboard/shared/vm.js','utf8'),context);
+vm.runInContext('defineFunction("host-present",('+readFileSync('dashboard/examples/host/present.js','utf8')+'));'+readFileSync('dashboard/examples/host/dashboard.vm.js','utf8'),context);
+const tick=()=>new Promise(r=>setImmediate(r));
+vm.runInContext("TaliaVM.start({host:'homelab',summary:'host-homelab',gitRecheck:'git-recheck-homelab'})",context);
+await tick();let request=messages.shift();assert.equal(request.op,'subscribe');
+context.TaliaVM.receive(JSON.stringify({id:request.id,value:'summary-sub'}));await tick();
+request=messages.shift();assert.equal(request.value,'monitor.git-recheck-homelab');
+context.TaliaVM.receive(JSON.stringify({id:request.id,value:'run-sub'}));await tick();
+// Events use the subscription key to route to the registered callback.
+context.TaliaVM.receive(JSON.stringify({event:'summary-sub',value:{quality:'good',value:{reachable:true,gitWorkspaces:git}}}));await tick();
+vm.runInContext("TaliaVM.dispatch('checkRepositories',{})",context);await tick();
+request=messages.shift();assert.equal(request.op,'run');assert.equal(request.value,'git-recheck-homelab');
+vm.runInContext("TaliaVM.dispatch('checkRepositories',{})",context);await tick();assert.equal(messages.length,0);
+assert.equal(context.TaliaVM.snapshot().state.probeBusy,true);
+context.TaliaVM.receive(JSON.stringify({id:request.id,value:{admission:'started'}}));await tick();
+context.TaliaVM.receive(JSON.stringify({event:'run-sub',value:{value:{run:{id:'run-1',status:'complete'}}}}));await tick();
+assert.equal(context.TaliaVM.snapshot().state.probeBusy,false);
+assert.match(context.TaliaVM.snapshot().state.probeMessage,/completed/);
+context.TaliaVM.receive(JSON.stringify({event:'run-sub',value:{value:{run:{id:'run-2',status:'failed'}}}}));await tick();
+assert.match(context.TaliaVM.snapshot().state.probeMessage,/did not complete/);
+const recheck=vm.runInNewContext('('+readFileSync('deploy/git-workspaces/recheck.js','utf8')+')');
+let polls=0;
+await recheck.run({sleep:async()=>{},source:async(_,q)=>q.method==='POST'?{requested:10}:{checked:++polls===1?9:11,success:true}});
+assert.equal(polls,2);
+await assert.rejects(recheck.run({sleep:async()=>{},source:async(_,q)=>q.method==='POST'?{requested:10}:{checked:11,success:false}}),/could not be checked/);
+await assert.rejects(recheck.run({sleep:async()=>{},source:async(_,q)=>q.method==='POST'?{requested:10}:{checked:9,success:true}}),/in time/);
+console.log('PASS: probe button admission, duplicate prevention, run completion/failure and host polling');

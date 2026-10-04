@@ -3,14 +3,14 @@ import '../shared/ui.js';import {changes,hosts} from '../../deploy/host-dashboar
 const source=id=>changes.find(c=>c.key.id===id).document.source;
 const present=vm.runInNewContext('('+source('host-present')+')');
 const collect=vm.runInNewContext('('+source('host-collect')+')');
-assert.equal(changes.find(c=>c.key.kind==='monitor_definition'&&c.key.id==='host-collect').document.version,5);
+assert.equal(changes.find(c=>c.key.kind==='monitor_definition'&&c.key.id==='host-collect').document.version,6);
 const disk={metric:{device:'/dev/sda1',mountpoint:'/'},samples:[[1,68700000000]]};
 for(const p of hosts){
  const queries=[];let published;
  const total=16*1073741824,available=12*1073741824;
  const ctx={params:p,now:()=>1790183815800,source:async(_,q)=>{queries.push(q);return {result:q.kind==='range'?[{samples:[[q.start+q.step,20],[q.end,22]]}]:q.query.startsWith('up')?[{samples:[[1,1]]}]:q.query.startsWith('node_filesystem_size_bytes')?[{...disk,samples:[[1,100000000000]]}]:q.query.includes('filesystem')?[disk,{...disk,metric:{device:'/dev/sda2',mountpoint:'/boot'}},{...disk,metric:{device:'/dev/sda3',mountpoint:'/boot/efi'}},{...disk,metric:{device:'/dev/sda4',mountpoint:'/efi'}}]:q.query.startsWith('node_memory_MemTotal_bytes')?[{samples:[[1,total]]}]:q.query.startsWith('node_memory_MemAvailable_bytes')?[{samples:[[1,available]]}]:[{samples:[[1,20],[2,22]]}]};},publish:async(key,v)=>{assert.equal(key,'summary');published=v;}};
  await collect.run(ctx);
- assert.equal(queries.length,9);for(const q of queries){assert.ok(q.query.includes('job='+JSON.stringify(p.job)));assert.ok(q.query.includes('instance='+JSON.stringify(p.instance)));}
+ assert.equal(queries.length,p.gitWorkspaces?10:9);for(const q of queries){assert.ok(q.query.includes('job='+JSON.stringify(p.job)));assert.ok(q.query.includes('instance='+JSON.stringify(p.instance)));}
  for(const q of queries.filter(q=>q.kind==='range')){assert.equal(q.end-q.start,q.query.includes('[1m]')?3600:86400);assert.equal(q.step,q.query.includes('[1m]')?60:300);}
  assert.equal(published.cpuHistory.length,289);assert.equal(published.cpuHistory[0],null);assert.equal(published.cpuHistory[1],20);assert.equal(published.cpuHistory[2],null);assert.equal(published.cpuHistory[288],22);
  assert.equal(published.memoryHistory.length,289);
@@ -21,7 +21,7 @@ for(const p of hosts){
  assert.equal(state.presentation.memory.detail,'Used 4.0 of 16.0 GiB · 12.0 GiB available');
  const hour=present({quality:'good',value:published},p.host,'hour');assert.equal(hour.cpu.history.length,61);assert.equal(hour.cpu.chartLabel,'Past hour · 1-minute CPU averages');assert.equal(hour.cpu.detail,'Current: 5-minute average across cores');assert.equal(hour.cpu.hourSelected,true);assert.equal(hour.cpu.daySelected,false);
  const doc=changes.find(c=>c.key.kind==='dashboard'&&c.key.id===p.host).document;
- assert.deepEqual(doc.grants.reads,['host-'+p.host]);
+ assert.deepEqual(doc.grants.reads,['host-'+p.host,...(p.gitWorkspaces?['monitor.git-recheck-'+p.host]:[])]);
  const ui=TaliaUI.compile(doc.ui),definitions={'host-layout':TaliaUI.compileDefinition(source('host-layout')),'host-metric-card':TaliaUI.compileDefinition(readFileSync('dashboard/examples/host/metric-card.ui','utf8'))};
  for(const width of [360,800,1600])TaliaUI.resolve(ui,JSON.parse(JSON.stringify(state)),{width,definitions});
  const stale=present({quality:'stale',value:published},p.host);assert.equal(stale.cpu.tone,'muted');assert.match(stale.status,/last known/);
