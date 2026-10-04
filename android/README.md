@@ -321,3 +321,19 @@ adds about 6.5 MB), SHA-256
 `ccd0db38b47fe4c5c1d38400f2576c7986317d294efbfece1dce90fafbbd2950`.
 Source commit: `d2fcce7`; artifacts, R8 mapping and provenance are archived in
 `.local/android-releases/payload-14`.
+
+## Chats and report investigation (payload 15)
+
+The Chats tab replaces its placeholder with server-owned chat sessions
+(`/native/chats`, administrators only): live tool steps, Stop, Rename and Delete,
+per-session drafts and retry-safe sends. Report run details offer **Investigate**,
+which opens a new chat with the run attached. The engine must include the chat
+backend (LLPR/TALIA-87); older servers show "This server needs the chat update."
+
+Validation: 24 emulator tests passed, including the chat and investigation flows
+against a fixture server. The signed minified payload is compatible with the APK 4
+contract. Payload 15 is published on LelloStore (publication revision 30), replacing
+payload 14. The VPK is 10,805,089 bytes, SHA-256
+`ad0f2409ee8912d3bdcf01eb53a56994fd9c0902c23002c8ca20be8a001555d3`. Source commit:
+`ba90b13`; artifacts, R8 mapping and provenance are archived in
+`.local/android-releases/payload-15`.
