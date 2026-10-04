@@ -32,15 +32,30 @@ html,body{margin:0;height:100%;font-family:var(--ld-font-family,Inter,system-ui,
 
 /* Declarative presentation roles use LelloDesign semantics, never author CSS. */
 .dashboard-canvas:has([data-surface=card]){background:transparent;border:0;padding:0}
-.dashboard-canvas [data-surface=card]{background:var(--ld-surface);border:1px solid var(--ld-border-subtle);border-radius:var(--ld-radius-panel)}
-.dashboard-canvas [data-variant=heading]{font-size:18px;line-height:28px;font-weight:650}
-.dashboard-canvas [data-variant=metric]{font-size:36px;line-height:44px;font-weight:650;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
-.dashboard-canvas [data-variant=caption]{font-size:12px;line-height:20px;overflow-wrap:anywhere}
+.dashboard-canvas [data-surface=card]{background:var(--ld-surface);border:1px solid var(--ld-border-subtle);border-radius:var(--ld-radius-panel);box-shadow:0 1px 2px rgb(0 0 0/.04),0 4px 16px -8px rgb(0 0 0/.08)}
+.dashboard-canvas [data-variant=heading]{font-size:20px;line-height:28px;font-weight:700;letter-spacing:-.01em;color:var(--ld-text)}
+.dashboard-canvas [data-variant=metric]{font-size:40px;line-height:48px;font-weight:700;letter-spacing:-.035em;font-variant-numeric:tabular-nums}
+.dashboard-canvas [data-variant=caption]{font-size:13px;line-height:20px;overflow-wrap:anywhere}
 .dashboard-canvas [data-tone=muted]{color:var(--ld-text-secondary)}
+.dashboard-canvas [data-variant=metric][data-tone=muted]{color:var(--ld-text-muted,var(--ld-text-secondary))}
 .dashboard-canvas [data-tone=success]{color:var(--ld-success)}
 .dashboard-canvas [data-tone=warning]{color:var(--ld-warning)}
 .dashboard-canvas [data-tone=error]{color:var(--ld-error)}
+.dashboard-canvas [data-surface=card]>[data-type=Text][data-variant=body]:first-child,.dashboard-canvas [data-surface=card]>[data-type=Row]:first-child>[data-type=Text]{font-size:14px;font-weight:600;color:var(--ld-text-secondary)}
+.dashboard-canvas [data-type=Status]:empty{display:none}
+/* Standalone status reads as a badge; inside cards it titles the card. */
+.dashboard-canvas [data-type=Status]:not([data-surface=card] *){display:inline-flex;align-items:center;gap:8px;align-self:flex-start;padding:4px 12px 4px 10px;border-radius:999px;font-size:13px;line-height:20px;font-weight:600;background:var(--ld-surface-sunken);border:1px solid var(--ld-border-subtle)}
+.dashboard-canvas [data-type=Status]:not([data-surface=card] *)::before{content:'';width:8px;height:8px;border-radius:50%;background:currentColor;flex-shrink:0}
+.dashboard-canvas [data-type=Status][data-tone=success]:not([data-surface=card] *){background:var(--ld-success-container);border-color:var(--ld-success-border);color:var(--ld-on-success-container)}
+.dashboard-canvas [data-type=Status][data-tone=success]:not([data-surface=card] *)::before{background:var(--ld-success);box-shadow:0 0 0 3px color-mix(in srgb,var(--ld-success) 25%,transparent)}
+.dashboard-canvas [data-type=Status][data-tone=warning]:not([data-surface=card] *){background:var(--ld-warning-container);border-color:var(--ld-warning-border);color:var(--ld-on-warning-container)}
+.dashboard-canvas [data-type=Status][data-tone=error]:not([data-surface=card] *){background:var(--ld-error-container);border-color:var(--ld-error-border);color:var(--ld-on-error-container)}
+.dashboard-canvas [data-surface=card] [data-type=Status]:not([data-tone=muted]){font-size:15px;line-height:24px;font-weight:650}
+.dashboard-canvas [data-surface=card] [data-type=Status][data-tone=muted]{font-size:13px;line-height:20px}
+.dashboard-canvas [data-type=Column]>[data-type=Button]{align-self:flex-start;margin-top:8px}
+.dashboard-canvas figure{margin-top:4px}
 .dashboard-canvas figure canvas{display:block;width:100%;height:0;flex:1 1 0;min-height:0}
+.dashboard-canvas figcaption{color:var(--ld-text-secondary);margin-top:4px}
 .dashboard-canvas [data-node-id$="/top"]:has(> [data-node-id$="/cpuRange"]){min-height:50px;align-items:center;justify-content:space-between}
 
 .talia-section-content{display:flex;flex-direction:column;align-items:flex-start;gap:16px}.talia-section-content>p{margin:0}.talia-section-content>div{width:100%}#dashboard-title{font-size:var(--ld-font-section);line-height:var(--ld-line-section)}
