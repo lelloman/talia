@@ -45,6 +45,25 @@ The app never persists Overview data. Expiry clears identity, credentials and
 in-memory data; a connection outage retains the last successful response with
 an explicit warning. Permission denial clears protected data.
 
+## Shared dashboards
+
+`POST /native/dashboards`, `/native/clients` and `/native/engine` let the app run
+the same dashboards as the web client, with the same per-user authority. The gate
+authenticates the native bearer, then hands requests to the browser handlers:
+
+- `/native/dashboards` accepts only `{"op":"catalog"}` and `{"op":"default","dashboard":…}`.
+  Sharing, user and role administration remain browser-only.
+- `/native/clients` carries the app's random installation credential in
+  `X-Talia-Client` (the bearer is the session). The gate scopes it to the user
+  exactly like a browser credential, so the handler never sees the session token.
+- `/native/engine` requests carry the delivered dashboard context
+  (`{id, revision, reads}`); viewers stay limited to read operations on that
+  package's read grants, and stale or revoked dashboards return
+  `dashboard_changed`/`forbidden`.
+
+The app runs dashboards with the shared Compose host in `dashboard/compose`: the
+bounded QuickJS runtime, the contract v1 validator/resolver and a LelloDesign renderer.
+
 ## Overview projection
 
 Overview checks the current Talìa administrator role on every request. Viewers

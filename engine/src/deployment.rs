@@ -344,8 +344,9 @@ impl Deployment {
             .with_state(self.clone())
     }
     pub async fn gate(State(d): State<Self>, mut r: Request, next: Next) -> Response {
-        let path = r.uri().path();
-        let native_request = matches!(path, "/native/overview" | "/native/session" | "/native/logout" | "/native/reports" | "/native/notifications");
+        let path = r.uri().path().to_owned();
+        let path = path.as_str();
+        let native_request = matches!(path, "/native/overview" | "/native/session" | "/native/logout" | "/native/reports" | "/native/notifications" | "/native/dashboards" | "/native/clients" | "/native/engine");
         let browser_alert = path == "/alerts" && !r.headers().contains_key(header::AUTHORIZATION);
         let protected = matches!(
             path,
@@ -366,8 +367,16 @@ impl Deployment {
             } else { d.identity(r.headers()).await };
             match identity {
                 Ok(identity) => {
-                    // A browser installation credential is scoped to its authenticated user.
-                    if path == "/clients" {
+                    // Native apps carry their installation credential beside the session bearer.
+                    if path == "/native/clients" {
+                        let installation = r.headers().get("x-talia-client").and_then(|v| v.to_str().ok()).unwrap_or("").to_owned();
+                        if installation.is_empty() || installation.len() > 256 {
+                            return StatusCode::BAD_REQUEST.into_response();
+                        }
+                        r.headers_mut().insert(header::AUTHORIZATION, format!("Bearer {installation}").parse().unwrap());
+                    }
+                    // An installation credential is scoped to its authenticated user.
+                    if path == "/clients" || path == "/native/clients" {
                         if let Some(value) = r
                             .headers()
                             .get(header::AUTHORIZATION)
@@ -757,6 +766,9 @@ mod tests {
         let (server,d)=fixture().await;
         let router=d.routes().route("/native/overview",get(||async{"private"}))
             .route("/native/reports",post(||async{"private"}))
+            .route("/native/dashboards",post(||async{"private"}))
+            .route("/native/engine",post(||async{"private"}))
+            .route("/native/clients",post(|h:HeaderMap|async move{h[header::AUTHORIZATION].to_str().unwrap().to_owned()}))
             .route("/engine",post(||async{"private"}))
             .layer(axum::middleware::from_fn_with_state(d.clone(),Deployment::gate));
         let verifier=random();
@@ -783,7 +795,18 @@ mod tests {
                 let v:serde_json::Value=serde_json::from_slice(&axum::body::to_bytes(response.into_body(),8192).await.unwrap()).unwrap();
                 let token=v["token"].as_str().unwrap();
                 assert!(token.starts_with("n."));
+                let clients=|installation:Option<&str>|{let mut request=Request::builder().method("POST").uri("/native/clients").header(header::AUTHORIZATION,format!("Bearer {token}"));
+                    if let Some(installation)=installation {request=request.header("x-talia-client",installation);} request.body(Body::empty()).unwrap()};
+                assert_eq!(router.clone().oneshot(clients(None)).await.unwrap().status(),StatusCode::BAD_REQUEST);
+                let response=router.clone().oneshot(clients(Some("install-1"))).await.unwrap();
+                assert_eq!(response.status(),StatusCode::OK);
+                let scoped=String::from_utf8(axum::body::to_bytes(response.into_body(),8192).await.unwrap().to_vec()).unwrap();
+                // The handler sees only the user-scoped installation credential, never the session bearer.
+                assert!(scoped.starts_with("Bearer ")&&!scoped.contains(token)&&!scoped.contains("install-1"));
                 for (path,method,origin,expected) in [
+                    ("/native/dashboards","POST",None,StatusCode::OK),
+                    ("/native/engine","POST",None,StatusCode::OK),
+                    ("/native/engine","POST",Some("https://attacker.test"),StatusCode::FORBIDDEN),
                     ("/native/session","GET",None,StatusCode::OK),
                     ("/native/overview","GET",None,StatusCode::OK),
                     ("/native/reports","POST",None,StatusCode::OK),
@@ -793,6 +816,8 @@ mod tests {
                     ("/native/logout","POST",None,StatusCode::NO_CONTENT),
                     ("/native/session","GET",None,StatusCode::UNAUTHORIZED),
                     ("/native/reports","POST",None,StatusCode::UNAUTHORIZED),
+                    ("/native/engine","POST",None,StatusCode::UNAUTHORIZED),
+                    ("/native/dashboards","POST",None,StatusCode::UNAUTHORIZED),
                 ] {
                     let mut request=Request::builder().method(method).uri(path).header(header::AUTHORIZATION,format!("Bearer {token}"));
                     if let Some(origin)=origin {request=request.header(header::ORIGIN,origin);}

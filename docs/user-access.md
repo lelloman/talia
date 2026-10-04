@@ -104,7 +104,8 @@ audits and can be recovered by repeating the identical request ID.
 
 The native app uses a server-brokered PKCE handoff to the existing LelloAuth
 browser flow; see `android-native-api.md`. Its opaque sessions authorize only
-native session, logout and Overview endpoints. Global native Overview is
+native session, logout, Overview, Reports, notification and dashboard endpoints;
+native dashboard delivery applies the same viewer rules as the browser. Global native Overview is
 admin-only; viewer dashboard delivery retains the rules above. The native API
 must be deployed alongside the app before production sign-in is available.
 

@@ -359,6 +359,15 @@ async fn native_reports(State(tx):State<mpsc::Sender<Request>>, identity:Option<
  let status=match value["error"].as_str(){Some("forbidden")=>axum::http::StatusCode::FORBIDDEN,Some(e) if e.starts_with("report version conflict")=>axum::http::StatusCode::CONFLICT,Some("limit_exceeded"|"internal_error")=>axum::http::StatusCode::SERVICE_UNAVAILABLE,Some(_)=>axum::http::StatusCode::BAD_REQUEST,None=>axum::http::StatusCode::OK};
  (status,Json(value)).into_response()
 }
+async fn native_dashboards(State(tx):State<mpsc::Sender<Request>>, identity:Option<axum::Extension<deployment::Identity>>, Json(body):Json<Value>)->axum::response::Response {
+ use axum::response::IntoResponse;
+ let Some(identity)=identity else {return axum::http::StatusCode::UNAUTHORIZED.into_response()};
+ // Native apps may list dashboards and choose their default; account administration stays browser-only.
+ if !matches!(body["op"].as_str(),Some("catalog"|"default"))||body.to_string().len()>1024 {return axum::http::StatusCode::BAD_REQUEST.into_response()}
+ let Json(value)=account_rpc(State(tx),Some(identity),Json(body)).await;
+ let status=match value["error"].as_str(){Some("forbidden")=>axum::http::StatusCode::FORBIDDEN,Some("unauthenticated")=>axum::http::StatusCode::UNAUTHORIZED,Some("limit_exceeded"|"internal_error")=>axum::http::StatusCode::SERVICE_UNAVAILABLE,Some(_)=>axum::http::StatusCode::BAD_REQUEST,None=>axum::http::StatusCode::OK};
+ (status,Json(value)).into_response()
+}
 async fn account_rpc(State(tx):State<mpsc::Sender<Request>>, browser:Option<axum::Extension<deployment::Identity>>, Json(mut body):Json<Value>)->Json<Value>{
  let Some(axum::Extension(identity))=browser else{return Json(json!({"error":"unauthenticated"}))};
  // Internal envelope keeps trusted identity separate from untrusted operation arguments.
@@ -456,6 +465,9 @@ async fn run(args:Vec<String>)->Result<()> {
         .route("/native/overview", axum::routing::get(native_overview))
         .route("/native/reports", axum::routing::post(native_reports))
         .route("/native/notifications", axum::routing::post(native_notifications))
+        .route("/native/dashboards", axum::routing::post(native_dashboards))
+        .route("/native/clients", post(client_rpc))
+        .route("/native/engine", post(rpc))
         .route("/agent", post(agent_rpc))
         .route("/alerts", post(alerts_rpc))
         .layer(DefaultBodyLimit::max(2_359_296))
