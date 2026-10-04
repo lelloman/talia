@@ -78,7 +78,7 @@ dependencies {
     implementation 'it.lelloman.homelab:access-gateway-client:1.0.0'
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'
     androidTestImplementation 'androidx.test:runner:1.6.2'
-    implementation project(':paravoid-runtime')
+    implementation "com.github.lelloman.paravoid-android:paravoid-runtime:${paravoidVersion}"
     implementation 'com.lelloman:lellodesign-compose:0.3.0-local'
     implementation 'androidx.activity:activity-compose:1.11.0'
     implementation 'androidx.lifecycle:lifecycle-runtime-compose:2.9.4'

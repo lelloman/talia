@@ -8,5 +8,7 @@
 
 # Paravoid's payload R8 selects R8-targeted coroutines rules but does not rewrite
 # META-INF/services, so ServiceLoader still needs these implementations by name.
+-keepnames class kotlinx.coroutines.internal.MainDispatcherFactory
+-keepnames class kotlinx.coroutines.CoroutineExceptionHandler
 -keep class kotlinx.coroutines.android.AndroidDispatcherFactory { <init>(); }
 -keep class kotlinx.coroutines.android.AndroidExceptionPreHandler { <init>(); }

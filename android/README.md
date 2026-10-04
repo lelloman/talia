@@ -14,10 +14,13 @@ The gateway integration and new shell onboarding are documented in
 
 ## Build
 
-Requirements: JDK 17, Android SDK 36 with build-tools 36.1.0, Android API 30+ device, sibling
-`../../paravoid-android` and `../../lellodesign/packages/compose` checkouts.
-Override them with `PARAVOID_SOURCE_DIRECTORY` and
-`LELLODESIGN_COMPOSE_DIRECTORY` (absolute paths recommended). The app consumes
+Requirements: JDK 17, Android SDK 36 with build-tools 36.1.0, Android API 30+ device and a
+sibling `../../lellodesign/packages/compose` checkout (override with
+`LELLODESIGN_COMPOSE_DIRECTORY`, absolute path recommended). Paravoid is not a
+local checkout: `paravoidVersion` in `gradle.properties` pins a
+`github.com/lelloman/paravoid-android` commit, resolved from JitPack as
+`com.github.lelloman.paravoid-android:*`. To move to a newer Paravoid, change that
+commit, read its `CHANGELOG.md` entries and rebuild against the shell baseline. The app consumes
 LelloDesign through Gradle composite substitution, not copied Compose components.
 
 ```sh
