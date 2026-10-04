@@ -297,3 +297,27 @@ The publisher dry-run reported `valid`. APK 4 is published on LelloStore
 commit `342405e`. Artifacts, R8 mapping and provenance are archived in
 `.local/android-releases/apk-4`. An authenticated Store upgrade from APK 3 and
 notification enrollment remain phone acceptance checks.
+
+## Shared dashboards (payload 14)
+
+Dashboards joins Overview, Reports and Chats in the drawer and bottom navigation.
+It runs the same saved dashboards as the web client through the shared
+[`dashboard/compose`](../dashboard/compose/README.md) host: the bounded QuickJS
+runtime (all four shell ABIs), web-equivalent delivery, grants and engine bridge,
+and a LelloDesign renderer. Requests use the existing native session and remote
+access route through `/native/dashboards`, `/native/clients` and `/native/engine`;
+the engine must include commit `7a4512e`, otherwise the screen reports that the
+server needs the dashboards update.
+
+Validation: 21 emulator tests passed, including the fixture-driven homelab
+dashboard in light and dark, the CPU range control round trip, storage meters,
+the Git recheck run and grant checks. The signed minified payload is compatible
+with the APK 4 contract and launches cleanly. End-to-end use against the deployed
+engine remains a phone acceptance check.
+
+Payload 14 is published on LelloStore (publication revision 28) on the APK 4
+stream, replacing payload 13. The VPK is 10,678,213 bytes (the QuickJS runtime
+adds about 6.5 MB), SHA-256
+`ccd0db38b47fe4c5c1d38400f2576c7986317d294efbfece1dce90fafbbd2950`.
+Source commit: `d2fcce7`; artifacts, R8 mapping and provenance are archived in
+`.local/android-releases/payload-14`.
