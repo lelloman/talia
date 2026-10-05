@@ -13,6 +13,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
@@ -162,8 +163,19 @@ internal fun ChatsScreen(connection: NativeConnection, modifier: Modifier, openR
         return
     }
     val chats = connection.chats
+    ChatPolling(chats)
+    if (chats.forbidden) {
+        LelloWorkspace(modifier) {
+            LelloState(title = "Chat unavailable", description = "Chat requires administrator access.",
+                modifier = Modifier.fillMaxWidth(), icon = { Icon(Icons.Default.Email, null) })
+        }
+    } else ChatList(chats, modifier)
+}
+
+/** Polls quickly only while an answer is being worked on, and only while visible. */
+@Composable
+private fun ChatPolling(chats: ChatModel) {
     val lifecycle = LocalLifecycleOwner.current.lifecycle
-    // Poll quickly only while an answer is being worked on, and only while visible.
     LaunchedEffect(chats, lifecycle) {
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             chats.refreshList(); chats.refreshSession()
@@ -174,23 +186,60 @@ internal fun ChatsScreen(connection: NativeConnection, modifier: Modifier, openR
             }
         }
     }
-    BackHandler(enabled = chats.open != null) { chats.close() }
-    when {
-        chats.forbidden -> LelloWorkspace(modifier) {
-            LelloState(title = "Chat unavailable", description = "Chat requires administrator access.",
-                modifier = Modifier.fillMaxWidth(), icon = { Icon(Icons.Default.Email, null) })
-        }
-        chats.open == null -> ChatList(chats, modifier)
-        else -> Conversation(chats, modifier, openReports)
+}
+
+/** An open conversation is its own full-screen destination, outside the navigation scaffold. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun ChatConversationScreen(connection: NativeConnection, openReports: () -> Unit) {
+    val chats = connection.chats
+    val palette = LocalLelloPalette.current
+    var menu by remember { mutableStateOf(false) }
+    var renaming by remember { mutableStateOf<String?>(null) }
+    var deleting by remember { mutableStateOf(false) }
+    ChatPolling(chats)
+    BackHandler { chats.close() }
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(chats.title ?: "New chat", Modifier.semantics { heading() }, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                navigationIcon = { IconButton({ chats.close() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back to chats") } },
+                actions = {
+                    if (chats.running) LelloTextButton({ chats.stop() }, enabled = !chats.busy) { Text("Stop") }
+                    if (!chats.open.isNullOrEmpty()) Box {
+                        IconButton({ menu = true }) { Icon(Icons.Default.MoreVert, "Chat actions") }
+                        DropdownMenu(menu, { menu = false }) {
+                            DropdownMenuItem({ Text("Rename") }, { menu = false; renaming = chats.title.orEmpty() })
+                            DropdownMenuItem({ Text("Delete") }, { menu = false; deleting = true })
+                        }
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = palette["surface"]),
+            )
+        },
+        containerColor = palette["background"],
+        contentWindowInsets = WindowInsets.safeDrawing,
+    ) { inner ->
+        Conversation(chats, Modifier.fillMaxSize().padding(inner).consumeWindowInsets(inner), openReports)
     }
+    renaming?.let { name ->
+        AlertDialog({ renaming = null }, title = { Text("Rename chat") },
+            text = { LelloTextField(name, { renaming = it.take(120) }, label = { Text("Chat title") }) },
+            confirmButton = { LelloTextButton({ if (name.isNotBlank()) { chats.rename(name.trim()); renaming = null } }) { Text("Save") } },
+            dismissButton = { LelloTextButton({ renaming = null }) { Text("Cancel") } })
+    }
+    if (deleting) AlertDialog({ deleting = false }, title = { Text("Delete this chat?") },
+        text = { Text("The conversation will be removed from your chats. Running work stops.") },
+        confirmButton = { LelloTextButton({ deleting = false; chats.delete() }) { Text("Delete chat", color = palette["error"]) } },
+        dismissButton = { LelloTextButton({ deleting = false }) { Text("Cancel") } })
 }
 
 @Composable
 private fun ChatList(chats: ChatModel, modifier: Modifier) {
     val palette = LocalLelloPalette.current
-    LazyColumn(modifier, contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        item { LelloButton({ chats.openSession("") }, Modifier.fillMaxWidth()) { Text("New chat") } }
-        chats.message?.let { item { LelloAlert(it, Modifier.fillMaxWidth().padding(top = 8.dp), tone = LelloTone.Error) } }
+    Box(modifier) {
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 96.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        chats.message?.let { item { LelloAlert(it, Modifier.fillMaxWidth().padding(bottom = 8.dp), tone = LelloTone.Error) } }
         if (chats.loaded && chats.sessions.isEmpty()) item {
             LelloState(title = "Ask Talìa about your homelab", description = "Talìa reads current monitoring values, history, alerts and reports, and queries approved diagnostic sources. It never changes anything.",
                 modifier = Modifier.fillMaxWidth().padding(top = 24.dp), icon = { Icon(Icons.Default.Email, null) })
@@ -207,33 +256,19 @@ private fun ChatList(chats: ChatModel, modifier: Modifier) {
             }
         }
     }
+    ExtendedFloatingActionButton(onClick = { chats.openSession("") }, modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp).semantics { contentDescription = "New chat" },
+        icon = { Icon(Icons.Default.Add, null) }, text = { Text("New chat") })
+    }
 }
 
 @Composable
 private fun Conversation(chats: ChatModel, modifier: Modifier, openReports: () -> Unit) {
     val palette = LocalLelloPalette.current
-    var menu by remember { mutableStateOf(false) }
-    var renaming by remember { mutableStateOf<String?>(null) }
-    var deleting by remember { mutableStateOf(false) }
     val list = rememberLazyListState()
     LaunchedEffect(chats.requests.size, chats.requests.lastOrNull()?.optString("status")) {
         if (chats.requests.isNotEmpty()) list.animateScrollToItem(chats.requests.size - 1)
     }
     Column(modifier.imePadding()) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton({ chats.close() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back to chats") }
-            Text(chats.title ?: "New chat", Modifier.weight(1f).semantics { heading() }, style = MaterialTheme.typography.titleMedium,
-                maxLines = 1, overflow = TextOverflow.Ellipsis)
-            if (chats.running) LelloTextButton({ chats.stop() }, enabled = !chats.busy) { Text("Stop") }
-            if (!chats.open.isNullOrEmpty()) Box {
-                IconButton({ menu = true }) { Icon(Icons.Default.MoreVert, "Chat actions") }
-                DropdownMenu(menu, { menu = false }) {
-                    DropdownMenuItem({ Text("Rename") }, { menu = false; renaming = chats.title.orEmpty() })
-                    DropdownMenuItem({ Text("Delete") }, { menu = false; deleting = true })
-                }
-            }
-        }
-        HorizontalDivider(color = palette["border-subtle"])
         LazyColumn(Modifier.weight(1f).fillMaxWidth(), state = list, contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             if (chats.requests.isEmpty()) item {
                 LelloState(title = "Ask Talìa about your homelab", description = "Questions can cover current values, history, alerts and report runs. Talìa only reads.",
@@ -260,16 +295,6 @@ private fun Conversation(chats: ChatModel, modifier: Modifier, openReports: () -
             }
         }
     }
-    renaming?.let { name ->
-        AlertDialog({ renaming = null }, title = { Text("Rename chat") },
-            text = { LelloTextField(name, { renaming = it.take(120) }, label = { Text("Chat title") }) },
-            confirmButton = { LelloTextButton({ if (name.isNotBlank()) { chats.rename(name.trim()); renaming = null } }) { Text("Save") } },
-            dismissButton = { LelloTextButton({ renaming = null }) { Text("Cancel") } })
-    }
-    if (deleting) AlertDialog({ deleting = false }, title = { Text("Delete this chat?") },
-        text = { Text("The conversation will be removed from your chats. Running work stops.") },
-        confirmButton = { LelloTextButton({ deleting = false; chats.delete() }) { Text("Delete chat", color = palette["error"]) } },
-        dismissButton = { LelloTextButton({ deleting = false }) { Text("Cancel") } })
 }
 
 @Composable
@@ -282,7 +307,8 @@ private fun Turn(r: JSONObject, again: () -> Unit) {
         }
         when (status) {
             "done" -> SelectionContainer { Text(r.optString("answer"), style = MaterialTheme.typography.bodyLarge) }
-            "queued", "running" -> Surface(shape = RoundedCornerShape(4.dp, 16.dp, 16.dp, 16.dp), color = palette["surface-sunken"],
+            "queued", "running" -> Surface(shape = RoundedCornerShape(4.dp, 16.dp, 16.dp, 16.dp), color = palette["surface"],
+                border = androidx.compose.foundation.BorderStroke(1.dp, palette["border-subtle"]),
                 modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {

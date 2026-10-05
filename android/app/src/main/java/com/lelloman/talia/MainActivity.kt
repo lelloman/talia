@@ -106,6 +106,11 @@ class MainActivity : ComponentActivity() {
             LelloDestination("settings", "Settings") { Icon(Icons.Default.Settings, null) },
         )
         LelloTheme(product = "blue", dark = dark) {
+            // An open chat is a full-screen destination outside the navigation scaffold.
+            if (page == "chats" && connection.signedIn && connection.chats.open != null) {
+                ChatConversationScreen(connection) { page = "reports" }
+                return@LelloTheme
+            }
             LelloScaffold(
                 productName = "Talìa", title = when {
                     page == "reports" && connection.reportSelected.isNotEmpty() -> connection.reportSelected

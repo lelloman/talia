@@ -171,11 +171,8 @@ class ChatsTest {
                 scenario.onActivity { activity ->
                     activity.setContent {
                         androidx.compose.runtime.key(dark) {
-                            LelloTheme(product = "blue", dark = dark) {
-                                LelloScaffold(productName = "Talìa", title = chats.title ?: "Chats", destinations = emptyList(), selectedId = "chats", onNavigate = {}) { insets ->
-                                    ChatsScreen(model, Modifier.fillMaxSize().padding(insets).consumeWindowInsets(insets)) {}
-                                }
-                            }
+                            // The open conversation is a full-screen destination of its own.
+                            LelloTheme(product = "blue", dark = dark) { ChatConversationScreen(model) {} }
                         }
                     }
                 }
@@ -192,6 +189,20 @@ class ChatsTest {
             assertTrue("Stop could not be activated", clicked)
             awaitText("Stopped before an answer was ready.")
             shot("chat-stopped")
+            // Back from the conversation returns to the list inside the scaffold, with its FAB.
+            scenario.onActivity { activity ->
+                chats.close()
+                activity.setContent {
+                    LelloTheme(product = "blue", dark = false) {
+                        LelloScaffold(productName = "Talìa", title = "Chats", destinations = emptyList(), selectedId = "chats", onNavigate = {}) { insets ->
+                            ChatsScreen(model, Modifier.fillMaxSize().padding(insets).consumeWindowInsets(insets)) {}
+                        }
+                    }
+                }
+            }
+            awaitText("New chat")
+            awaitText("How is the disk on homelab?")
+            shot("chat-list")
         }
     }
 
@@ -207,7 +218,8 @@ class ChatsTest {
     private fun awaitText(text: String) {
         val deadline = System.currentTimeMillis() + 10000
         while (texts(instrumentation.uiAutomation.rootInActiveWindow).none { it.contains(text) } && System.currentTimeMillis() < deadline) Thread.sleep(100)
-        assertTrue("missing '$text'", texts(instrumentation.uiAutomation.rootInActiveWindow).any { it.contains(text) })
+        val seen = texts(instrumentation.uiAutomation.rootInActiveWindow)
+        assertTrue("missing '$text' in $seen", seen.any { it.contains(text) })
     }
     private fun shot(name: String) {
         val directory = File(instrumentation.targetContext.externalCacheDir, "ui-review").apply { mkdirs() }
