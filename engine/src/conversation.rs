@@ -33,6 +33,7 @@ Distinguish observations, historical evidence and hypotheses. A failed request d
 When resumed_question is present, the current question is its clarification response; answer the resolved request.
 If context_unavailable or context_omitted is true, do not invent missing antecedents: ask a short clarification when needed.
 Lead with the useful answer, normally in 2-5 short sentences. Return plain text, at most 12000 characters.
+Reply with the final answer only: never include your reasoning, plans or tool-call markup in it. To use a tool, call it.
 Do not expose internal reasoning or dump healthy metrics. Absence of alerts is not proof of health."#;
 
 fn err(e: impl std::fmt::Display) -> String {
@@ -637,6 +638,9 @@ pub(crate) fn failure_reason(error: &str) -> Option<String> {
         ),
         "AI account changed or disconnected" => Some(
             "Talìa's AI account changed while this was running; send it again.".into(),
+        ),
+        "simple-ai returned a malformed tool call" => Some(
+            "the AI model produced a tool request Talìa could not understand.".into(),
         ),
         "simple-ai output truncated at token limit" => {
             Some("the AI model ran out of output space before finishing its answer.".into())

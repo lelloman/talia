@@ -11,6 +11,7 @@ pub mod account;
 #[cfg(test)]
 mod account_tests;
 mod crypto;
+mod text_calls;
 #[cfg(test)]
 pub(crate) mod tests;
 mod tools;
@@ -385,7 +386,7 @@ async fn run(engine: &Engine, r: &mut Run, options: ExecutionOptions) -> Result<
             .filter(|v| v.len() == 1)
             .ok_or("expected one simple-ai choice")?;
         let choice = &choices[0];
-        let message = &choice["message"];
+        let mut message = choice["message"].clone();
         if message["role"] != "assistant" {
             return Err("invalid simple-ai response role".into());
         }
@@ -398,11 +399,28 @@ async fn run(engine: &Engine, r: &mut Run, options: ExecutionOptions) -> Result<
         if let Some(usage) = value.get("usage").filter(|u| u.is_object()) {
             r.usage.push(json!({"prompt_tokens":usage["prompt_tokens"].as_u64(),"completion_tokens":usage["completion_tokens"].as_u64(),"total_tokens":usage["total_tokens"].as_u64()}));
         }
+        // Some runtimes leave tool calls in the text. Convert them before the normal
+        // validation; markup that is not understood never becomes an answer.
+        let mut finish = choice["finish_reason"].clone();
+        if message["tool_calls"].as_array().is_none_or(|c| c.is_empty()) {
+            if let Some(extracted) = message["content"].as_str().and_then(|t| text_calls::extract(t, r.turns)) {
+                if finish == "length" {
+                    return Err("simple-ai output truncated at token limit".into());
+                }
+                if !r.tools {
+                    return Err("simple-ai returned a malformed tool call".into());
+                }
+                let (prose, calls) = extracted.map_err(|_| "simple-ai returned a malformed tool call")?;
+                message["content"] = if prose.is_empty() { Value::Null } else { json!(prose) };
+                message["tool_calls"] = json!(calls);
+                finish = json!("tool_calls");
+            }
+        }
         if let Some(calls) = message["tool_calls"].as_array().filter(|v| !v.is_empty()) {
-            if choice["finish_reason"] == "length" {
+            if finish == "length" {
                 return Err("simple-ai output truncated at token limit".into());
             }
-            if !r.tools || choice["finish_reason"] != "tool_calls" || calls.len() > 4 {
+            if !r.tools || finish != "tool_calls" || calls.len() > 4 {
                 return Err("unexpected or excessive AI tool calls".into());
             }
             let mut ids = std::collections::BTreeSet::new();
@@ -451,8 +469,8 @@ async fn run(engine: &Engine, r: &mut Run, options: ExecutionOptions) -> Result<
             }
             engine.store.borrow().ai_put(r)?;
         } else {
-            if choice["finish_reason"] != "stop" {
-                return Err(if choice["finish_reason"] == "length" {
+            if finish != "stop" {
+                return Err(if finish == "length" {
                     "simple-ai output truncated at token limit"
                 } else {
                     "simple-ai did not finish its answer"

@@ -655,3 +655,46 @@ async fn tool_calls_cut_off_at_the_token_limit_are_reported_as_truncation() {
     assert!(error.contains("simple-ai output truncated at token limit"), "{error}");
     assert!(crate::conversation::failure_reason(&error).unwrap().contains("ran out of output space"));
 }
+
+#[tokio::test]
+async fn text_form_tool_calls_continue_the_investigation_and_never_become_answers() {
+    let http = MockServer::start().await;
+    let _dir = config(&http.uri());
+    let requests = Arc::new(Mutex::new(vec![]));
+    let copy = requests.clone();
+    Mock::given(path("/v1/chat/completions"))
+        .respond_with(move |r: &wiremock::Request| {
+            let mut q = copy.lock().unwrap();
+            q.push(serde_json::from_slice::<Value>(&r.body).unwrap());
+            ResponseTemplate::new(200).set_body_json(match q.len() {
+                1 => answer("Let me look at the history first.\n\n<tool_call>\n<function=monitoring_read>\n<parameter=kind>\nhistory\n</parameter>\n<parameter=id>\nhost-homelab\n</parameter>\n</function>\n</tool_call>"),
+                _ => answer("CPU peaked at 30.2% on homelab."),
+            })
+        })
+        .mount(&http)
+        .await;
+    let s = Store::open(":memory:").unwrap();
+    let scope = telegram(&s);
+    instance(&s, "host-homelab", host_value(20.0));
+    let e = Engine::with_clock(s, Rc::new(|| 1000));
+    let v = execute(&e, "text-calls-1", scope.clone(), 900000, "Investigate", json!({"question":"peak cpu?"}), true).await.unwrap();
+    assert_eq!(v["summary"], "CPU peaked at 30.2% on homelab.");
+    let q = requests.lock().unwrap();
+    let history = q[1]["messages"].as_array().unwrap();
+    let call = history.iter().find(|m| m["role"] == "assistant").unwrap();
+    assert_eq!(call["tool_calls"][0]["function"]["name"], "monitoring_read");
+    assert_eq!(call["content"], "Let me look at the history first.");
+    assert!(history.iter().any(|m| m["role"] == "tool" && m["tool_call_id"].as_str().is_some_and(|id| id.starts_with("text-") && id == call["tool_calls"][0]["id"])));
+    drop(q);
+
+    // Markup that cannot be understood fails instead of reaching the user.
+    let broken = MockServer::start().await;
+    let _dir = config(&broken.uri());
+    Mock::given(path("/v1/chat/completions"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(answer("thinking…\n<tool_call>\n<function=monitoring_read>\n<parameter=id>host")))
+        .mount(&broken)
+        .await;
+    let error = execute(&e, "text-calls-2", scope, 900000, "Investigate", json!({"question":"q"}), true).await.unwrap_err();
+    assert!(error.contains("simple-ai returned a malformed tool call"), "{error}");
+    assert!(crate::conversation::failure_reason(&error).unwrap().contains("could not understand"));
+}
