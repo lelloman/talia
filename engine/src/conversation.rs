@@ -632,6 +632,12 @@ pub(crate) fn failure_reason(error: &str) -> Option<String> {
         "AI turn limit exceeded" => {
             Some("the investigation used too many steps without reaching an answer.".into())
         }
+        "AI account requires connection or confirmation in Settings" => Some(
+            "Talìa's AI account needs to be connected or confirmed in Settings → simple-ai.".into(),
+        ),
+        "AI account changed or disconnected" => Some(
+            "Talìa's AI account changed while this was running; send it again.".into(),
+        ),
         "simple-ai output truncated at token limit" => {
             Some("the AI model ran out of output space before finishing its answer.".into())
         }

@@ -148,3 +148,16 @@ html,body{margin:0;height:100%;font-family:var(--ld-font-family,Inter,system-ui,
  .talia-chat-question{max-width:92%}
 }
 @media(prefers-reduced-motion:reduce){.talia-chat-spinner{animation:none}}
+
+/* simple-ai account: status first, then the current connection step. */
+.ai-account-status{margin:0!important;padding:10px 14px;border-radius:var(--ld-radius-small);background:var(--ld-surface-sunken);color:var(--ld-text)!important}
+.ai-account-status:empty{display:none}
+.ai-account-status[data-tone=success]{background:var(--ld-success-container);color:var(--ld-on-success-container)!important}
+.ai-account-status[data-tone=warning]{background:var(--ld-warning-container);color:var(--ld-on-warning-container)!important}
+.ai-account-status[data-tone=error]{background:var(--ld-error-container);color:var(--ld-on-error-container)!important}
+.ai-account-step{padding:16px;border:1px solid var(--ld-border-subtle);border-radius:var(--ld-radius-panel);background:var(--ld-surface)}
+.ai-account-step p{margin:0 0 8px!important}
+.ai-account-step-title{font-weight:650;color:var(--ld-text)!important}
+.ai-account-confirm{border:2px solid var(--ld-primary)}
+.ai-account-confirm #ai-account-identity{font-weight:600;color:var(--ld-text)!important}
+.ai-account-actions{flex-wrap:wrap;gap:8px}

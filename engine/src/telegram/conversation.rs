@@ -358,5 +358,7 @@ mod failure_reason_tests {
         assert!(r.contains("HTTP 500") && !r.contains("telegram-1"));
         assert!(failure_reason("AI run x: AI turn limit exceeded").is_some());
         assert!(failure_reason("something internal").is_none());
+        assert!(failure_reason("AI run chat-5-answer: AI account requires connection or confirmation in Settings").unwrap().contains("Settings → simple-ai"));
+        assert!(failure_reason("AI run chat-4-answer: AI account changed or disconnected").unwrap().contains("send it again"));
     }
 }
