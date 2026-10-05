@@ -183,10 +183,13 @@ class ChatsTest {
                 shot(if (dark) "chat-dark" else "chat-light")
             }
             // Stop through accessibility, as TalkBack would.
-            val stop = find(instrumentation.uiAutomation.rootInActiveWindow) { it.text?.toString() == "Stop" }
-            var target = stop
-            while (target != null && !target.isClickable) target = target.parent
-            assertNotNull(target); assertTrue(target!!.performAction(AccessibilityNodeInfo.ACTION_CLICK))
+            // Polling recomposes the screen; a node found just before a refresh can go stale, so retry.
+            val clicked = (1..10).any {
+                var target = find(instrumentation.uiAutomation.rootInActiveWindow) { it.text?.toString() == "Stop" }
+                while (target != null && !target.isClickable) target = target.parent
+                (target?.performAction(AccessibilityNodeInfo.ACTION_CLICK) == true).also { ok -> if (!ok) Thread.sleep(200) }
+            }
+            assertTrue("Stop could not be activated", clicked)
             awaitText("Stopped before an answer was ready.")
             shot("chat-stopped")
         }

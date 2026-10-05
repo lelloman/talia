@@ -15,8 +15,8 @@ android {
         applicationId 'com.lelloman.talia'
         minSdk 30
         targetSdk 36
-        versionCode 5
-        versionName '0.3.0'
+        versionCode 6
+        versionName '0.3.1'
         def storePins = System.getenv('LELLOSTORE_SIGNING_CERTIFICATES') ?: ''
         if (storePins && !(storePins ==~ /[0-9a-f]{64}(,[0-9a-f]{64})*/)) throw new GradleException('Invalid Store certificate pins')
         buildConfigField 'String', 'STORE_CERTIFICATES', '"' + storePins + '"'
@@ -55,11 +55,11 @@ paravoid {
     minifyPayload = true
     payloadProguardFiles.from(file('payload-rules.pro'))
     crashRecovery { enabled = true; updater = 'default' }
-    payloadVersion = providers.gradleProperty('paravoidPayloadVersion').map { it.toLong() }.getOrElse(16L)
-    // APK 5 enables scheduled updates and LelloStore update triggers; payloads cannot change them.
+    payloadVersion = providers.gradleProperty('paravoidPayloadVersion').map { it.toLong() }.getOrElse(17L)
+    // APK 6 carries Paravoid 32461c8336's update engine; installed runtime changes need a new shell.
     if (!providers.gradleProperty('paravoidNewShell').map { it.toBoolean() }.getOrElse(false)) {
         baselineDirectory = layout.projectDirectory.dir(
-            providers.gradleProperty('paravoidBaselineDirectory').getOrElse('../paravoid-baselines/apk-5'))
+            providers.gradleProperty('paravoidBaselineDirectory').getOrElse('../paravoid-baselines/apk-6'))
     }
     signing {
         keyId = System.getenv('PARAVOID_SIGNING_KEY_ID') ?: 'talia-release'
