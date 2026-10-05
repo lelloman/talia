@@ -355,3 +355,15 @@ bytes, SHA-256 `1740bf2d2f3ab52e4f4a1be90cf56af53219b73644d6c331825936eacd2af93f
 source commit `b1979c7`. Artifacts and provenance are archived in
 `.local/android-releases/apk-5`. A Store-triggered update on a phone remains an
 acceptance check.
+
+## Paravoid 32461c8336 (APK 6)
+
+APK 0.3.1 (6) carries Paravoid `32461c8336`, which recovers exhausted update
+contention on fresh local hints. The change is in the installed update engine, so
+it is a new shell generation (baseline `paravoid-baselines/apk-6`, contract
+`bcbab3f2…4301`, payload 17); update behavior is otherwise unchanged from APK 5.
+All 24 emulator tests passed and the signed minified shell launched cleanly in a
+fresh profile with its update and trigger services. Published on LelloStore
+(publication revision 34), replacing APK 5. Shell SHA-256
+`fa419aeb0a461f94ff2657b3cac4235bd9da05916cedfc0a850da49a4823d454`; source commit
+`8254925`; artifacts archived in `.local/android-releases/apk-6`.
