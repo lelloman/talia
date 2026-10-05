@@ -164,7 +164,7 @@ class ChatsTest {
         val chats = model.chats
         main { chats.openSession(""); chats.edit("How is the disk on homelab?"); chats.send() }
         until("sent") { !chats.busy && chats.requests.isNotEmpty() }
-        main { server.finish("The root filesystem is 41% free; /mnt/data is at 6% and needs attention."); chats.edit("And /mnt/data?"); chats.send() }
+        main { server.finish("## Disk\n\nThe root filesystem is **41% free**; `/mnt/data` needs attention.\n\n| Mount | Free |\n|---|---|\n| / | 41.3% |\n| /mnt/data | 6.2% |\n\n- Check `du -sh /mnt/data/*`\n- Review backups"); chats.edit("And /mnt/data?"); chats.send() }
         until("second") { !chats.busy && chats.requests.size == 2 }
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             for (dark in listOf(false, true)) {
@@ -177,6 +177,10 @@ class ChatsTest {
                     }
                 }
                 awaitText("Read host-homelab history")
+                // Markdown renders: the heading and emphasis appear without their markers.
+                awaitText("Disk")
+                awaitText("41% free")
+                assertTrue(texts(instrumentation.uiAutomation.rootInActiveWindow).none { it.contains("**") || it.startsWith("## ") })
                 shot(if (dark) "chat-dark" else "chat-light")
             }
             // Stop through accessibility, as TalkBack would.
@@ -216,7 +220,8 @@ class ChatsTest {
         return (0 until node.childCount).firstNotNullOfOrNull { find(node.getChild(it), predicate) }
     }
     private fun awaitText(text: String) {
-        val deadline = System.currentTimeMillis() + 10000
+        // Markdown parses asynchronously; the first parse after a cold boot can be slow.
+        val deadline = System.currentTimeMillis() + 20000
         while (texts(instrumentation.uiAutomation.rootInActiveWindow).none { it.contains(text) } && System.currentTimeMillis() < deadline) Thread.sleep(100)
         val seen = texts(instrumentation.uiAutomation.rootInActiveWindow)
         assertTrue("missing '$text' in $seen", seen.any { it.contains(text) })

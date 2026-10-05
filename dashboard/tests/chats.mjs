@@ -71,8 +71,16 @@ try{
  const sends=await page.evaluate(()=>window.calls.filter(c=>c.op==='chatSend'));
  assert.equal(sends.length,2);assert.equal(sends[0].requestId,sends[1].requestId);
  assert.equal(await page.locator('.talia-chat-turn').count(),2);
- await page.evaluate(()=>window.finish('Free space on /mnt/data is 6.2% (248 GB of 4 TB).'));
- await page.getByText('Free space on /mnt/data is 6.2%',{exact:false}).waitFor({timeout:5000});
+ await page.evaluate(()=>window.finish('## /mnt/data\n\nFree space on /mnt/data is **6.2%** (248 GB of 4 TB).\n\n| Mount | Free |\n|---|---|\n| / | 41.3% |\n| /mnt/data | 6.2% |\n\n- Run `du -sh /mnt/data/*`\n- See [Prometheus](https://prometheus.lelloman.com)\n\n<script>window.pwned=1</script><img src=x onerror="window.pwned=2"> [bad](javascript:window.pwned=3) ![img](https://example.com/x.png)'));
+ await page.getByText('Free space on /mnt/data is',{exact:false}).waitFor({timeout:5000});
+ // Markdown renders; HTML, script/image and javascript: links stay inert text.
+ const md=await page.evaluate(()=>{const a=[...document.querySelectorAll('.talia-chat-markdown')].at(-1);
+  return {h2:a.querySelector('h2')?.textContent,strong:a.querySelector('strong')?.textContent,rows:a.querySelectorAll('tbody tr').length,code:a.querySelector('li code')?.textContent,
+   link:a.querySelector('a')?.getAttribute('href'),target:a.querySelector('a')?.getAttribute('target'),hrefs:[...a.querySelectorAll('a')].map(x=>x.getAttribute('href')),
+   scripts:a.querySelectorAll('script,img').length,text:a.textContent,pwned:window.pwned};});
+ assert.equal(md.h2,'/mnt/data');assert.equal(md.strong,'6.2%');assert.equal(md.rows,2);assert.equal(md.code,'du -sh /mnt/data/*');
+ assert.equal(md.link,'https://prometheus.lelloman.com');assert.equal(md.target,'_blank');assert.ok(md.hrefs.every(h=>/^https:/.test(h)),String(md.hrefs));
+ assert.equal(md.scripts,0);assert.ok(md.text.includes('<script>'));assert.equal(md.pwned,undefined);
  await page.screenshot({path:'.local/chats/conversation-1280.png'});
  // A second session runs independently; stopping it leaves the first untouched.
  await page.getByRole('button',{name:'New chat'}).click();
@@ -89,7 +97,7 @@ try{
  await page.getByRole('button',{name:'Delete chat'}).click();
  await page.waitForFunction(()=>document.querySelectorAll('.talia-chat-item').length===1);
  await page.locator('.talia-chat-item').first().click();
- await page.getByText('Free space on /mnt/data is 6.2%',{exact:false}).waitFor();
+ await page.getByText('Free space on /mnt/data is',{exact:false}).waitFor();
  await page.getByRole('button',{name:/Change theme/}).click();await page.getByRole('button',{name:'Dark',exact:true}).click();
  await page.waitForTimeout(300);await page.screenshot({path:'.local/chats/conversation-dark-1280.png'});
  await page.setViewportSize({width:390,height:800});
@@ -126,5 +134,5 @@ try{
  await page.evaluate(()=>location.hash='#chats');
  await page.getByText('Chat requires administrator access.').waitFor();
  assert.deepEqual(errors,[]);
- console.log('PASS: chat send/steps/answer, report investigation (single create, attachment only on the new session, cancel), lost-response retry without duplicates, parallel sessions, stop, rename, delete, forbidden, light/dark/390');
+ console.log('PASS: chat send/steps/answer, safe markdown answers, report investigation (single create, attachment only on the new session, cancel), lost-response retry without duplicates, parallel sessions, stop, rename, delete, forbidden, light/dark/390');
 }finally{await browser.close();server.close();}

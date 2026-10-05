@@ -21,6 +21,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.UriHandler
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.style.TextOverflow
@@ -306,7 +308,7 @@ private fun Turn(r: JSONObject, again: () -> Unit) {
             Text(r.optString("text"), Modifier.padding(horizontal = 14.dp, vertical = 10.dp), color = palette["on-primary-container"])
         }
         when (status) {
-            "done" -> SelectionContainer { Text(r.optString("answer"), style = MaterialTheme.typography.bodyLarge) }
+            "done" -> SelectionContainer { ChatMarkdown(r.optString("answer")) }
             "queued", "running" -> Surface(shape = RoundedCornerShape(4.dp, 16.dp, 16.dp, 16.dp), color = palette["surface"],
                 border = androidx.compose.foundation.BorderStroke(1.dp, palette["border-subtle"]),
                 modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) {
@@ -333,5 +335,32 @@ private fun Turn(r: JSONObject, again: () -> Unit) {
                 LelloTextButton(again) { Text("Try again") }
             }
         }
+    }
+}
+
+/**
+ * Answers are Markdown from a model reading monitoring data. Styling follows the LelloDesign
+ * Material theme; no images are loaded, and links open only for http(s) and mailto, so a
+ * link can never launch an arbitrary intent.
+ */
+@Composable
+private fun ChatMarkdown(text: String) {
+    val system = LocalUriHandler.current
+    val safe = remember(system) {
+        object : UriHandler {
+            override fun openUri(uri: String) {
+                if (Regex("^(https?:|mailto:)", RegexOption.IGNORE_CASE).containsMatchIn(uri.trim())) system.openUri(uri)
+            }
+        }
+    }
+    CompositionLocalProvider(LocalUriHandler provides safe) {
+        val type = MaterialTheme.typography
+        // Chat answers are conversational: headings use LelloDesign headline/title sizes,
+        // not Material's display sizes.
+        com.mikepenz.markdown.m3.Markdown(content = text, modifier = Modifier.fillMaxWidth(),
+            typography = com.mikepenz.markdown.m3.markdownTypography(
+                h1 = type.headlineSmall, h2 = type.titleLarge, h3 = type.titleMedium,
+                h4 = type.titleSmall, h5 = type.titleSmall, h6 = type.titleSmall,
+                text = type.bodyLarge, paragraph = type.bodyLarge))
     }
 }

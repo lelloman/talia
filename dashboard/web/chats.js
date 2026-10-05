@@ -1,6 +1,16 @@
 // Administrator chat with Talìa's read-only investigation tools (server-owned sessions).
 import {createApp,h,ref,computed,nextTick,watch} from 'vue';
 import {LelloButton,LelloTextarea,LelloInput,LelloAlert,LelloBadge,LelloConfirmDialog} from '@lelloman/lellodesign-vue';
+import MarkdownIt from 'markdown-it';
+
+// Answers come from a model reading monitoring data: render Markdown, never HTML.
+// Raw HTML is escaped, images are disabled (no remote loads) and links are limited
+// to http(s)/mailto and open separately.
+const markdown=new MarkdownIt({html:false,linkify:true,typographer:false}).disable('image');
+markdown.validateLink=url=>/^(https?:|mailto:)/i.test(url.trim());
+const defaultLink=markdown.renderer.rules.link_open||((tokens,i,options,env,self)=>self.renderToken(tokens,i,options));
+markdown.renderer.rules.link_open=(tokens,i,options,env,self)=>{tokens[i].attrSet('target','_blank');tokens[i].attrSet('rel','noopener noreferrer');return defaultLink(tokens,i,options,env,self);};
+export const renderAnswer=text=>markdown.render(text||'');
 
 const active=r=>r.status==='queued'||r.status==='running';
 const store={
@@ -78,7 +88,7 @@ export function mountChats(account,subject){
 
  const message=r=>h('li',{class:'talia-chat-turn',key:r.id},[
   h('div',{class:'talia-chat-question'},[h('p',r.text),r.report?h('p',{class:'talia-chat-meta'},'Report run '+r.report):null]),
-  r.status==='done'?h('div',{class:'talia-chat-answer'},h('p',r.answer)):
+  r.status==='done'?h('div',{class:'talia-chat-answer talia-chat-markdown',innerHTML:renderAnswer(r.answer)}):
   active(r)?h('div',{class:'talia-chat-answer talia-chat-working',role:'status','aria-live':'polite'},[
    h('p',{class:'talia-chat-working-title'},[h('span',{class:'talia-chat-spinner','aria-hidden':'true'}),r.status==='queued'?'Waiting to start…':'Investigating…']),
    r.steps?.length?h('ul',{class:'talia-chat-steps'},r.steps.map((s,i)=>h('li',{key:i,class:s.done?'done':'current'},s.label))):null]):

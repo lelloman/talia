@@ -4,6 +4,7 @@
   "type": "module",
   "dependencies": {
     "@lelloman/lellodesign-vue": "file:../vendor/lellodesign-vue-e0016d2.tgz",
+    "markdown-it": "14.3.2",
     "vue": "3.5.13"
   },
   "devDependencies": {

@@ -110,4 +110,6 @@ dependencies {
     implementation 'androidx.lifecycle:lifecycle-runtime-compose:2.9.4'
     implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.9.4'
     implementation 'androidx.compose.material:material-icons-core'
+    // Compose Markdown rendering for chat answers (no Android resources; built for this Kotlin/Compose generation).
+    implementation 'com.mikepenz:multiplatform-markdown-renderer-m3:0.38.1'
 }
