@@ -189,7 +189,7 @@ pub(crate) struct ExecutionOptions {
 impl Default for ExecutionOptions {
     fn default() -> Self {
         Self {
-            max_tokens: 2048,
+            max_tokens: 4096,
             max_turns: 6,
             max_request_chars: None,
         }
@@ -399,6 +399,9 @@ async fn run(engine: &Engine, r: &mut Run, options: ExecutionOptions) -> Result<
             r.usage.push(json!({"prompt_tokens":usage["prompt_tokens"].as_u64(),"completion_tokens":usage["completion_tokens"].as_u64(),"total_tokens":usage["total_tokens"].as_u64()}));
         }
         if let Some(calls) = message["tool_calls"].as_array().filter(|v| !v.is_empty()) {
+            if choice["finish_reason"] == "length" {
+                return Err("simple-ai output truncated at token limit".into());
+            }
             if !r.tools || choice["finish_reason"] != "tool_calls" || calls.len() > 4 {
                 return Err("unexpected or excessive AI tool calls".into());
             }

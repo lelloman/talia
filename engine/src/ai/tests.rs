@@ -588,3 +588,70 @@ async fn conditional_report_analysis_skips_inference_and_rejects_invalid_conditi
     }
     std::fs::remove_dir_all(dir).unwrap();
 }
+
+fn host_value(seed: f64) -> Value {
+    let series: Vec<Value> = (0..289).map(|i| if i < 8 { Value::Null } else { json!(seed + (i % 50) as f64) }).collect();
+    crate::value::from_json(&json!({"reachable":true,"cpu":seed,"memory":61.2,"cpuHistory":series,"memoryHistory":series,
+        "cpuMinuteHistory":series[..61].to_vec(),"note":"x".repeat(500),
+        "disks":[{"id":"root","mount":"/","free":41.3,"availableBytes":193e9,"totalBytes":467e9}]}))
+}
+fn instance(s: &Store, id: &str, value: Value) {
+    let i = crate::store::Instance { id: id.into(), definition: "host-snapshot".into(), params: json!({}), state: json!({}),
+        value, has_value: true, timestamp: 1000, quality: "good".into(), revision: 1, generation: 1, history_count: 120, history_age_ms: 3_600_000 };
+    s.conn.execute("INSERT OR IGNORE INTO definitions VALUES('host-snapshot','{}')", []).unwrap();
+    s.conn.execute("INSERT INTO instances VALUES(?,?,?)", rusqlite::params![i.id, i.definition, serde_json::to_string(&i).unwrap()]).unwrap();
+}
+
+#[test]
+fn value_preview_summarizes_series_and_clips_text() {
+    let p = crate::value::preview(&host_value(10.0));
+    assert_eq!(p["cpu"], 10.0);
+    assert_eq!(p["cpuHistory"]["series"], 289);
+    assert_eq!(p["cpuHistory"]["samples"], 281);
+    assert_eq!(p["cpuHistory"]["max"], 59.0);
+    assert_eq!(p["cpuHistory"]["min"], 10.0);
+    assert!(p["cpuHistory"]["last"].is_number() && p["cpuHistory"]["mean"].is_number());
+    assert_eq!(p["disks"][0]["mount"], "/");
+    assert!(p["note"].as_str().unwrap().chars().count() <= 301);
+}
+
+#[tokio::test]
+async fn snapshot_is_a_compact_catalogue_that_always_fits_the_tool_limit() {
+    let s = Store::open(":memory:").unwrap();
+    telegram(&s);
+    for host in ["host-homelab", "host-vps-eu", "host-vps-us"] {
+        instance(&s, host, host_value(20.0));
+    }
+    let e = Engine::with_clock(s, Rc::new(|| 1000));
+    let v = tools::execute(&e, "monitoring_snapshot", json!({})).await.unwrap();
+    let homelab = v["values"].as_array().unwrap().iter().find(|x| x["id"] == "host-homelab").unwrap();
+    assert_eq!(homelab["value"]["cpuHistory"]["max"], 69.0);
+    assert!(homelab.get("state").is_none());
+    // Many large values still fit; the largest previews are replaced, not the catalogue.
+    for i in 0..60 {
+        instance(&e.store.borrow(), &format!("bulk-{i:02}"), host_value(i as f64));
+    }
+    let v = tools::execute(&e, "monitoring_snapshot", json!({})).await.unwrap();
+    assert!(serde_json::to_vec(&v).unwrap().len() <= 30 * 1024);
+    let values = v["values"].as_array().unwrap();
+    assert_eq!(values.len(), 63);
+    assert!(values.iter().any(|x| x["value"] == "omitted for size; use monitoring_read"));
+}
+
+#[tokio::test]
+async fn tool_calls_cut_off_at_the_token_limit_are_reported_as_truncation() {
+    let http = MockServer::start().await;
+    let _dir = config(&http.uri());
+    let mut cut = call("monitoring_snapshot", json!({}));
+    cut["choices"][0]["finish_reason"] = json!("length");
+    Mock::given(path("/v1/chat/completions"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(cut))
+        .mount(&http)
+        .await;
+    let s = Store::open(":memory:").unwrap();
+    let scope = telegram(&s);
+    let e = Engine::with_clock(s, Rc::new(|| 1000));
+    let error = execute(&e, "cut-1", scope, 900000, "Check", json!({"question":"q"}), true).await.unwrap_err();
+    assert!(error.contains("simple-ai output truncated at token limit"), "{error}");
+    assert!(crate::conversation::failure_reason(&error).unwrap().contains("ran out of output space"));
+}

@@ -773,7 +773,7 @@ async fn failed_questions_reach_followups_and_compaction_but_not_new_conversatio
         assert_eq!(fresh["summary"], "");
         let tools = requests[1]["tools"].to_string();
         assert!(tools.contains("retention limits"));
-        assert!(tools.contains("undefined state with a populated value is valid"));
+        assert!(tools.contains("undefined state does not invalidate a populated value"));
         assert!(requests[1]["messages"][0]["content"]
             .as_str()
             .unwrap()

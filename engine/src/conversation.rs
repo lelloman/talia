@@ -632,6 +632,9 @@ pub(crate) fn failure_reason(error: &str) -> Option<String> {
         "AI turn limit exceeded" => {
             Some("the investigation used too many steps without reaching an answer.".into())
         }
+        "simple-ai output truncated at token limit" => {
+            Some("the AI model ran out of output space before finishing its answer.".into())
+        }
         "simple-ai did not finish its answer" => {
             Some("the AI model stopped before finishing its answer.".into())
         }

@@ -131,3 +131,69 @@ mod tests {
         ctx.with(|c|{c.eval::<(),_>(include_str!("../shared/value.js")).unwrap();let s:String=c.eval("TaliaValue.stringify({a:undefined,b:NaN,c:Infinity,d:-Infinity,e:null,f:-0,user:{version:1,value:['undefined']}})").unwrap();let v:Value=serde_json::from_str(&s).unwrap();validate(&v).unwrap();let ok:bool=c.eval(format!("(()=>{{let v=TaliaValue.parse({});return 'a' in v&&v.a===undefined&&Number.isNaN(v.b)&&v.c===Infinity&&Object.is(v.f,-0)&&v.user.version===1}})()",serde_json::to_string(&s).unwrap())).unwrap();assert!(ok);});
     }
 }
+
+/// Bounded, readable JSON preview of a wire value for AI tools. Long numeric series
+/// become statistics (`series`, `samples`, `min`, `max`, `mean`, `last`), other long
+/// lists keep their first items, and long strings are clipped. Not a lossless decode:
+/// callers read the full value separately when exact data matters.
+pub fn preview(wire: &Value) -> Value {
+    const SERIES: usize = 16;
+    fn number(v: &Value) -> Option<f64> {
+        let a = v.as_array()?;
+        (a.first()?.as_str()? == "number").then(|| a.get(1)?.as_f64()).flatten()
+    }
+    fn round(n: f64) -> Value {
+        json!((n * 1000.0).round() / 1000.0)
+    }
+    fn walk(n: &Value, depth: usize) -> Value {
+        let Some(a) = n.as_array() else { return Value::Null };
+        let tag = a.first().and_then(Value::as_str).unwrap_or("");
+        let v = a.get(1).unwrap_or(&Value::Null);
+        if depth > 8 {
+            return json!("…");
+        }
+        match tag {
+            "undefined" | "null" => Value::Null,
+            "boolean" => v.clone(),
+            "number" => v.clone(),
+            "string" => {
+                let s = v.as_str().unwrap_or("");
+                if s.chars().count() > 300 {
+                    json!(format!("{}…", s.chars().take(300).collect::<String>()))
+                } else {
+                    json!(s)
+                }
+            }
+            "array" => {
+                let items = v.as_array().map(Vec::as_slice).unwrap_or(&[]);
+                let numeric = items.iter().all(|x| number(x).is_some() || x.get(0).and_then(Value::as_str).is_some_and(|t| t == "null" || t == "undefined"));
+                if items.len() > SERIES && numeric {
+                    let values: Vec<f64> = items.iter().filter_map(number).filter(|n| n.is_finite()).collect();
+                    let mut out = json!({"series": items.len(), "samples": values.len()});
+                    if !values.is_empty() {
+                        out["min"] = round(values.iter().cloned().fold(f64::INFINITY, f64::min));
+                        out["max"] = round(values.iter().cloned().fold(f64::NEG_INFINITY, f64::max));
+                        out["mean"] = round(values.iter().sum::<f64>() / values.len() as f64);
+                        out["last"] = round(*values.last().unwrap());
+                    }
+                    out
+                } else if items.len() > SERIES {
+                    json!({"items": items.len(), "first": items.iter().take(8).map(|x| walk(x, depth + 1)).collect::<Vec<_>>()})
+                } else {
+                    Value::Array(items.iter().map(|x| walk(x, depth + 1)).collect())
+                }
+            }
+            "object" => {
+                let mut out = serde_json::Map::new();
+                for p in v.as_array().map(Vec::as_slice).unwrap_or(&[]) {
+                    if let (Some(k), Some(x)) = (p.get(0).and_then(Value::as_str), p.get(1)) {
+                        out.insert(k.to_string(), walk(x, depth + 1));
+                    }
+                }
+                Value::Object(out)
+            }
+            _ => Value::Null,
+        }
+    }
+    walk(&wire["value"], 0)
+}
