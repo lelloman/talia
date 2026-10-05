@@ -7,6 +7,24 @@ def signingValues = new Properties()
 def signingFile = rootProject.file('signing.properties')
 if (signingFile.exists()) signingFile.withInputStream { signingValues.load(it) }
 def releaseDirectory = new File(System.getProperty('user.home'), '.config/talia/paravoid-release')
+// Versions are major.minor.<commit count>: major and minor are set by hand in gradle.properties,
+// the commit count of HEAD makes every build's version and versionCode increase monotonically.
+def git = { String... args -> providers.exec { commandLine(['git'] + args.toList()) }.standardOutput.asText.get().trim() }
+if (git('rev-parse', '--is-shallow-repository') == 'true') throw new GradleException('Versioning needs full git history; fetch with --unshallow')
+def commitCount = git('rev-list', '--count', 'HEAD').toInteger()
+def appVersion = "${providers.gradleProperty('taliaVersionMajor').get()}.${providers.gradleProperty('taliaVersionMinor').get()}.${commitCount}"
+def newShell = providers.gradleProperty('paravoidNewShell').map { it.toBoolean() }.getOrElse(false)
+def baselinePath = providers.gradleProperty('paravoidBaselineDirectory').getOrElse('../paravoid-baselines/apk-6')
+// The shell contract pins the manifest versionName, so payload builds keep the accepted shell's
+// value; a new shell generation takes the current app version.
+def acceptedVersionName = {
+    def contract = new groovy.json.JsonSlurper().parse(file("$baselinePath/paravoidAndroidRelease/shell-contract.json"))
+    def key = '/@{http://schemas.android.com/apk/res/android}versionName'
+    def find
+    find = { node -> node instanceof Map ? (node.containsKey(key) ? node[key] : node.values().findResult { find(it) }) : node instanceof List ? node.findResult { find(it) } : null }
+    find(contract) ?: { throw new GradleException("No accepted versionName in $baselinePath") }()
+}
+def shellVersionName = newShell ? appVersion : acceptedVersionName()
 android {
     namespace 'com.lelloman.talia'
     compileSdk 36
@@ -15,8 +33,9 @@ android {
         applicationId 'com.lelloman.talia'
         minSdk 30
         targetSdk 36
-        versionCode 6
-        versionName '0.3.1'
+        versionCode commitCount
+        versionName appVersion
+        buildConfigField 'String', 'APP_VERSION', '"' + appVersion + '"'
         def storePins = System.getenv('LELLOSTORE_SIGNING_CERTIFICATES') ?: ''
         if (storePins && !(storePins ==~ /[0-9a-f]{64}(,[0-9a-f]{64})*/)) throw new GradleException('Invalid Store certificate pins')
         buildConfigField 'String', 'STORE_CERTIFICATES', '"' + storePins + '"'
@@ -25,7 +44,7 @@ android {
     }
     productFlavors {
         normal { applicationIdSuffix '.normal' }
-        paravoidAndroid { applicationIdSuffix '' }
+        paravoidAndroid { applicationIdSuffix ''; versionName shellVersionName }
     }
     signingConfigs {
         release {
@@ -55,11 +74,10 @@ paravoid {
     minifyPayload = true
     payloadProguardFiles.from(file('payload-rules.pro'))
     crashRecovery { enabled = true; updater = 'default' }
-    payloadVersion = providers.gradleProperty('paravoidPayloadVersion').map { it.toLong() }.getOrElse(17L)
+    payloadVersion = providers.gradleProperty('paravoidPayloadVersion').map { it.toLong() }.getOrElse(commitCount.toLong())
     // APK 6 carries Paravoid 32461c8336's update engine; installed runtime changes need a new shell.
-    if (!providers.gradleProperty('paravoidNewShell').map { it.toBoolean() }.getOrElse(false)) {
-        baselineDirectory = layout.projectDirectory.dir(
-            providers.gradleProperty('paravoidBaselineDirectory').getOrElse('../paravoid-baselines/apk-6'))
+    if (!newShell) {
+        baselineDirectory = layout.projectDirectory.dir(baselinePath)
     }
     signing {
         keyId = System.getenv('PARAVOID_SIGNING_KEY_ID') ?: 'talia-release'

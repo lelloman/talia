@@ -68,11 +68,25 @@ For a new shell generation, export and review a complete shell baseline:
 ./gradlew :app:exportParavoidAndroidReleaseParavoidCompleteBaseline
 ```
 
-Retain the accepted contract outside build outputs, pass
-`-PparavoidBaselineDirectory=/path/to/baseline` and increase
-`-PparavoidPayloadVersion=N`. New manifest capabilities, trust or shell runtime
-changes require a new shell generation. Increase Android versionCode/versionName
-before uploading a new APK. These values are never incremented by the publisher.
+Retain the accepted contract under `paravoid-baselines/apk-N` and point the default
+`baselineDirectory` (or `-PparavoidBaselineDirectory`) at it. New manifest
+capabilities, trust or shell runtime changes require a new shell generation.
+
+### Versioning
+
+The app version is `major.minor.<commit count>`. Major and minor are set by hand
+(`taliaVersionMajor`, `taliaVersionMinor` in `gradle.properties`); the commit count
+of `HEAD` (`git rev-list --count`, full history required) supplies the rest, so
+nothing needs bumping before a release:
+
+- Settings shows the app version (`BuildConfig.APP_VERSION`); the normal flavor
+  uses it as `versionName`.
+- `versionCode` and the default `payloadVersion` are the commit count, so both
+  increase with every release (`-PparavoidPayloadVersion` still overrides).
+- The Paravoid shell contract pins the manifest `versionName`. Payload builds keep
+  the accepted baseline's value; building a new shell (`-PparavoidNewShell=true`)
+  takes the current app version. The Store therefore lists the shell version,
+  while the app reports the version of its installed payload.
 
 See `../docs/android-publishing.md` for prebuilt shell and payload uploads and
 `../docs/android-app-flows.md` for the implementation plan.

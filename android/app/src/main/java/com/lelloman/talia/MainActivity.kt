@@ -158,7 +158,7 @@ class MainActivity : ComponentActivity() {
                             }
                             LelloSettingsSection("App updates") {
                                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Text("Talìa ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.titleMedium)
+                                    Text("Talìa ${BuildConfig.APP_VERSION}", style = MaterialTheme.typography.titleMedium)
                                     Muted("Keep Talìa up to date with the latest improvements.")
                                 }
                                 if (BuildConfig.FLAVOR == "paravoidAndroid") {
