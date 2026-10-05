@@ -381,3 +381,13 @@ fresh profile with its update and trigger services. Published on LelloStore
 (publication revision 34), replacing APK 5. Shell SHA-256
 `fa419aeb0a461f94ff2657b3cac4235bd9da05916cedfc0a850da49a4823d454`; source commit
 `8254925`; artifacts archived in `.local/android-releases/apk-6`.
+
+## Chat screens and versioning (payload 155)
+
+Payload 155 (app version 0.3.155) is the first release with commit-count versioning.
+Chats uses a New chat floating action button, and an open conversation is a
+full-screen destination outside the navigation scaffold. All 24 emulator tests
+passed; the payload is compatible with the APK 6 contract. Published on LelloStore
+(publication revision 36), replacing payload 17. The VPK is 10,827,521 bytes, SHA-256
+`18bc9155bcaaec1e167d3c5ce2d125442b0996a4dae6257f7d8a29f45f5198f4`; source commit
+`21ece6e`; artifacts archived in `.local/android-releases/payload-155`.
