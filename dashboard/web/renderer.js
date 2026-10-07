@@ -1,6 +1,7 @@
 // Trusted DOM renderer. Only validated resolved nodes enter this module.
 import {renderSegmentedControl} from './dist/chrome.js';
 function paintChart(canvas,p){
+ const secondary=p.secondaryValues??p.peakValues;
  const rect=canvas.getBoundingClientRect();if(rect.width<1||rect.height<1)return;
  const dpr=window.devicePixelRatio||1,width=rect.width,height=rect.height;
  const backingWidth=Math.max(1,Math.round(width*dpr)),backingHeight=Math.max(1,Math.round(height*dpr));
@@ -9,8 +10,8 @@ function paintChart(canvas,p){
  const css=getComputedStyle(canvas),color=(name,fallback)=>css.getPropertyValue(name).trim()||fallback;
  // Normalizes a theme color through the canvas so translucent fills can reuse it.
  const alpha=(value,a)=>{ctx.fillStyle='#000';ctx.fillStyle=value;const hex=/^#([0-9a-f]{6})$/i.exec(ctx.fillStyle);return hex?`rgba(${parseInt(hex[1].slice(0,2),16)},${parseInt(hex[1].slice(2,4),16)},${parseInt(hex[1].slice(4),16)},${a})`:null;};
- const finite=p.values.filter(Number.isFinite),fixed=p.min!==undefined,min=fixed?p.min:Math.min(0,...finite),max=fixed?p.max:Math.max(1,...finite),span=max-min;
- ctx.font='11px '+(css.fontFamily||'system-ui, sans-serif');const x0=fixed?Math.max(37,ctx.measureText(String(max)+(p.unit||'')).width+8):4,x1=width-7,y0=9,y1=height-(fixed?25:5);
+ const finite=[...p.values,...(secondary||[])].filter(Number.isFinite),fixed=p.min!==undefined,min=fixed?p.min:Math.min(0,...finite),max=fixed?p.max:Math.max(1,...finite),span=max-min;
+ ctx.font='11px '+(css.fontFamily||'system-ui, sans-serif');const x0=fixed?Math.max(37,...Array.from({length:5},(_,i)=>{const value=min+span*i/4;return ctx.measureText((Number.isInteger(value)?String(value):value.toFixed(1))+(p.unit||'')).width+8;})):4,x1=width-7,y0=9,y1=height-(fixed?25:5);
  if(x1<=x0||y1<=y0)return;
  const y=value=>y1-(Math.min(max,Math.max(min,value))-min)/span*(y1-y0),x=i=>x0+i*(x1-x0)/Math.max(1,p.values.length-1);
  const primary=color('--ld-primary','#2563eb'),warning=color('--ld-warning','#b45309'),muted=color('--ld-text-secondary','#6b7280');
@@ -30,11 +31,13 @@ function paintChart(canvas,p){
  const thresholdShown=Number.isFinite(p.threshold)&&p.threshold>=min&&p.threshold<=max;
  if(thresholdShown){
   const at=y(p.threshold);
-  ctx.save();ctx.beginPath();ctx.rect(0,0,width,at);ctx.clip();ctx.strokeStyle=warning;trace();ctx.stroke();ctx.restore();
+  if(!secondary){ctx.save();ctx.beginPath();ctx.rect(0,0,width,at);ctx.clip();ctx.strokeStyle=warning;trace();ctx.stroke();ctx.restore();}
   ctx.strokeStyle=warning;ctx.fillStyle=warning;ctx.lineWidth=1.25;ctx.setLineDash([5,4]);ctx.beginPath();ctx.moveTo(x0,at);ctx.lineTo(x1,at);ctx.stroke();ctx.setLineDash([]);ctx.textAlign='right';ctx.textBaseline='alphabetic';ctx.fillText(p.threshold+(p.unit||'')+' high',x1-4,Math.max(12,at-4));
  }
+ // Peak samples share the average time axis and retain their own missing-data gaps.
+ if(secondary){ctx.strokeStyle=warning;ctx.lineWidth=1.75;ctx.beginPath();let connected=false;secondary.forEach((value,i)=>{if(!Number.isFinite(value)){connected=false;return;}if(connected)ctx.lineTo(x(i),y(value));else ctx.moveTo(x(i),y(value));connected=true;});ctx.stroke();secondary.forEach((value,i)=>{if(Number.isFinite(value)){ctx.beginPath();ctx.arc(x(i),y(value),1.5,0,Math.PI*2);ctx.fillStyle=warning;ctx.fill();}});}
  const last=runs.at(-1)?.at(-1);
- if(last&&last[0]>=x1-1){const value=finite.at(-1);ctx.beginPath();ctx.arc(last[0],last[1],3.5,0,Math.PI*2);ctx.fillStyle=thresholdShown&&value>p.threshold?warning:primary;ctx.fill();ctx.lineWidth=2;ctx.strokeStyle=color('--ld-surface','#fff');ctx.stroke();}
+ if(last&&last[0]>=x1-1){const value=p.values.filter(Number.isFinite).at(-1);ctx.beginPath();ctx.arc(last[0],last[1],3.5,0,Math.PI*2);ctx.fillStyle=!secondary&&thresholdShown&&value>p.threshold?warning:primary;ctx.fill();ctx.lineWidth=2;ctx.strokeStyle=color('--ld-surface','#fff');ctx.stroke();}
 }
 export class Renderer {
  constructor(root,dispatch){this.root=root;this.dispatch=dispatch;this.cache=new Map();this.nodes=new Map();this.pending=new Map();this.eventSequence=0;this.chartResize=new ResizeObserver(entries=>{for(const entry of entries){const canvas=entry.target;if(canvas.isConnected&&canvas.chartProps)paintChart(canvas,canvas.chartProps);}});const theme=root.closest('[data-lello-theme]');if(theme){this.chartTheme=new MutationObserver(()=>{for(const el of this.cache.values()){const canvas=el.querySelector('canvas');if(canvas?.isConnected&&canvas.chartProps)paintChart(canvas,canvas.chartProps);}});this.chartTheme.observe(theme,{attributes:true,attributeFilter:['data-lello-theme']});}}
@@ -78,10 +81,13 @@ export class Renderer {
     el.setAttribute('aria-label',p.label);el.setAttribute('aria-valuemin',p.min);el.setAttribute('aria-valuemax',p.max);
     if(p.unavailable!==undefined){el.removeAttribute('aria-valuenow');el.setAttribute('aria-valuetext','Unavailable');}else{el.setAttribute('aria-valuenow',p.value);el.removeAttribute('aria-valuetext');}
    }else if(n.type==='Chart'){
-    const signature=JSON.stringify([p.values,p.label,p.sampleLabels,p.min,p.max,p.unit,p.threshold,p.startLabel,p.endLabel]);
+    const secondary=p.secondaryValues??p.peakValues,primaryLabel=p.primaryLabel||'Average',secondaryLabel=p.secondaryLabel||'Max';
+    const signature=JSON.stringify([p.values,p.peakValues,p.secondaryValues,p.primaryLabel,p.secondaryLabel,p.label,p.sampleLabels,p.min,p.max,p.unit,p.threshold,p.startLabel,p.endLabel]);
     if(el.dataset.chart!==signature){
      el.dataset.chart=signature;let canvas=el.querySelector('canvas');if(!canvas){canvas=document.createElement('canvas');canvas.setAttribute('aria-hidden','true');el.append(canvas,document.createElement('figcaption'));this.chartResize.observe(canvas);}
-     canvas.chartProps=p;redraw.push(canvas);el.lastElementChild.textContent=p.label+(p.values.some(Number.isFinite)?'':' · No samples');el.setAttribute('role','img');el.setAttribute('aria-label',p.label+(p.min!==undefined?`; range ${p.min} to ${p.max}${p.unit||''}`:'')+(Number.isFinite(p.threshold)?`; high reference ${p.threshold}${p.unit||''}`:'')+(p.startLabel&&p.endLabel?`; from ${p.startLabel} to ${p.endLabel}`:'')+': '+(p.values.some(Number.isFinite)?(p.sampleLabels||p.values).join(', '):'No samples'));
+     canvas.chartProps=p;redraw.push(canvas);const caption=el.lastElementChild;caption.textContent=p.label+(p.values.some(Number.isFinite)?'':' · No samples');
+     if(secondary){const legend=document.createElement('span');legend.className='chart-legend';for(const [name,color]of [[primaryLabel,'primary'],[secondaryLabel,'warning']]){const item=document.createElement('span'),swatch=document.createElement('span');swatch.className='chart-legend-line';swatch.style.backgroundColor='var(--ld-'+color+')';swatch.setAttribute('aria-hidden','true');item.append(swatch,document.createTextNode(name));legend.append(item);}caption.append(legend);}
+     el.setAttribute('role','img');el.setAttribute('aria-label',p.label+(p.min!==undefined?`; range ${p.min} to ${p.max}${p.unit||''}`:'')+(Number.isFinite(p.threshold)?`; high reference ${p.threshold}${p.unit||''}`:'')+(p.startLabel&&p.endLabel?`; from ${p.startLabel} to ${p.endLabel}`:'')+': '+(p.values.some(Number.isFinite)?(secondary?primaryLabel+': ':'')+(p.sampleLabels||p.values).join(', '):'No samples')+(secondary?'; '+secondaryLabel+': '+secondary.map(v=>Number.isFinite(v)?v:'missing').join(', '):''));
     }
    }
    return el;

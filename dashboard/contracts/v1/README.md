@@ -49,7 +49,7 @@ Source diagnostics identify line and column. Source is parsed, never evaluated.
 | Grid | surface, columns, gap, padding, width, height, visibility | Equal-width columns |
 | Scroll | width, height, visibility | One child, vertical scrolling |
 | Text, Status | text, label, variant, tone, visibility | Wrapping text; Status is a live status |
-| Chart | values, label, height, visibility, min, max, unit, threshold, startLabel, endLabel | Finite numeric array, optional fixed scale and high reference, accessible summary |
+| Chart | values, peakValues, secondaryValues, primaryLabel, secondaryLabel, label, height, visibility, min, max, unit, threshold, startLabel, endLabel | Finite numeric array, optional fixed scale and high reference, accessible summary |
 | Meter | value, label, min, max, tone, visibility | Horizontal level bar; range defaults to 0–100, values are clamped, non-finite values show as unavailable |
 | Button | text, enabled, onClick, visibility | Named action |
 | Slider | value, min, max, step, label, enabled, onChange, visibility | Numeric event value, accessible label required |
@@ -171,3 +171,13 @@ late effects and commits from the interrupted invocation. Android can opt into
 host failure records through the `failure_signals` client setting; the debug
 launcher exposes it as an intent extra. These host records/events are alert
 integration points, not a notification-delivery implementation.
+
+`Chart.peakValues` optionally overlays a second (maximum) series on the same time
+axis. Its length must match `values`; null samples retain independent gaps. Both
+web and Compose render it in the warning color and name both series in the
+accessible description.
+
+`Chart.secondaryValues` generalizes the second series for metrics such as
+upload/download. It cannot be combined with `peakValues`; its length must match
+`values`. `primaryLabel` and `secondaryLabel` customize the accessible names and
+line-swatch legend (defaults: Average and Max). Both series share one scale.

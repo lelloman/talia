@@ -6,6 +6,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
@@ -28,7 +29,11 @@ internal fun DashboardChart(p: JSONObject, modifier: Modifier) {
     val measurer = rememberTextMeasurer()
     val array = p.optJSONArray("values")
     val values = remember(array.toString()) { (0 until (array?.length() ?: 0)).map { i -> array!!.opt(i).let { (it as? Number)?.toDouble()?.takeIf(Double::isFinite) } } }
-    val finite = values.filterNotNull()
+    val peakArray = p.optJSONArray("secondaryValues") ?: p.optJSONArray("peakValues")
+    val primaryLabel = p.optString("primaryLabel").ifEmpty { "Average" }
+    val secondaryLabel = p.optString("secondaryLabel").ifEmpty { "Max" }
+    val peaks = remember(peakArray.toString()) { (0 until (peakArray?.length() ?: 0)).map { i -> (peakArray!!.opt(i) as? Number)?.toDouble()?.takeIf(Double::isFinite) } }
+    val finite = (values + peaks).filterNotNull()
     val fixed = p.has("min") && p.has("max")
     val min = if (fixed) p.getDouble("min") else minOf(0.0, finite.minOrNull() ?: 0.0)
     val max = if (fixed) p.getDouble("max") else maxOf(1.0, finite.maxOrNull() ?: 1.0)
@@ -42,12 +47,14 @@ internal fun DashboardChart(p: JSONObject, modifier: Modifier) {
         if (fixed) append("; range ${fmt(min)} to ${fmt(max)}$unit")
         threshold?.let { append("; high reference ${fmt(it)}$unit") }
         if (p.has("startLabel") && p.has("endLabel")) append("; from ${p.optString("startLabel")} to ${p.optString("endLabel")}")
-        append(": "); append(if (finite.isEmpty()) "No samples" else finite.joinToString { fmt(it) })
+        append(": "); if (peakArray != null) append("$primaryLabel: ")
+        append(values.joinToString { it?.let(::fmt) ?: "missing" })
+        if (peakArray != null) { append("; $secondaryLabel: "); append(peaks.joinToString { it?.let(::fmt) ?: "missing" }) }
     }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Canvas(Modifier.fillMaxWidth().height(p.optString("height").removeSuffix("dp").toFloatOrNull()?.dp ?: 120.dp).semantics { contentDescription = description }) {
             val axis = { v: Double -> (if (v == Math.rint(v)) v.toLong().toString() else "%.1f".format(v)) + unit }
-            val x0 = if (fixed) maxOf(37.dp.toPx(), measurer.measure(axis(max), labelStyle).size.width + 8.dp.toPx()) else 4.dp.toPx()
+            val x0 = if (fixed) maxOf(37.dp.toPx(), (0..4).maxOf { measurer.measure(axis(min + (max - min) * it / 4), labelStyle).size.width } + 8.dp.toPx()) else 4.dp.toPx()
             val x1 = size.width - 7.dp.toPx(); val y0 = 9.dp.toPx(); val y1 = size.height - (if (fixed) 25.dp else 5.dp).toPx()
             if (x1 <= x0 || y1 <= y0) return@Canvas
             val span = max - min
@@ -75,17 +82,42 @@ internal fun DashboardChart(p: JSONObject, modifier: Modifier) {
             drawPath(line, primary, style = stroke)
             threshold?.let { t ->
                 val at = y(t)
-                clipRect(0f, 0f, size.width, at) { drawPath(line, warning, style = stroke) }
+                if (peakArray == null) clipRect(0f, 0f, size.width, at) { drawPath(line, warning, style = stroke) }
                 drawLine(warning, Offset(x0, at), Offset(x1, at), 1.25.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(5.dp.toPx(), 4.dp.toPx())))
                 val text = measurer.measure("${fmt(t)}$unit high", labelStyle.copy(color = warning))
                 drawText(text, topLeft = Offset(x1 - 4.dp.toPx() - text.size.width, maxOf(0f, at - 4.dp.toPx() - text.size.height)))
             }
+            if (peaks.isNotEmpty()) {
+                val peakLine = Path().apply {
+                    var connected = false
+                    peaks.forEachIndexed { i, v ->
+                        if (v == null) connected = false else {
+                            if (connected) lineTo(x(i), y(v)) else moveTo(x(i), y(v))
+                            connected = true
+                        }
+                    }
+                }
+                drawPath(peakLine, warning, style = stroke)
+                peaks.forEachIndexed { i, v -> if (v != null) drawCircle(warning, 1.5.dp.toPx(), Offset(x(i), y(v))) }
+            }
             runs.lastOrNull()?.lastOrNull()?.takeIf { it.x >= x1 - 1f }?.let { end ->
-                val color = if (threshold != null && (finite.lastOrNull() ?: 0.0) > threshold) warning else primary
+                val color = if (peakArray == null && threshold != null && (values.lastOrNull() ?: 0.0) > threshold) warning else primary
                 drawCircle(surface, 5.5.dp.toPx(), end); drawCircle(color, 3.5.dp.toPx(), end)
             }
         }
         Text(label + if (finite.isEmpty()) " · No samples" else "", style = MaterialTheme.typography.bodySmall, color = palette["text-secondary"])
+        if (peakArray != null) {
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                for ((name, color) in listOf(primaryLabel to primary, secondaryLabel to warning)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Canvas(Modifier.width(24.dp).height(2.dp)) {
+                            drawLine(color, Offset(0f, size.height / 2), Offset(size.width, size.height / 2), size.height, cap = StrokeCap.Round)
+                        }
+                        Text(name, style = MaterialTheme.typography.bodySmall, color = palette["text-secondary"])
+                    }
+                }
+            }
+        }
     }
 }
 

@@ -2,6 +2,7 @@
   <Row id="top" gap="8dp"><Text id="label" text={params.label} tone="muted"/><If id="cpuRange" when={params.hasRange}><SegmentedControl id="rangeButtons" label="CPU history range"><Button id="day" text="24h" label="Show past 24 hours of CPU" selected={params.daySelected} onClick={actions.cpuDay}/><Button id="hour" text="1h" label="Show past hour of CPU" selected={params.hourSelected} onClick={actions.cpuHour}/></SegmentedControl></If></Row>
   <Text id="value" text={params.value} variant="metric" tone={params.tone}/>
   <Text id="detail" text={params.detail} variant="caption" tone="muted"/>
-  <Chart id="trend" values={params.history} label={params.chartLabel} min={0} max={100} unit="%" threshold={90} startLabel={params.startLabel} endLabel="Now" height="160dp"/>
+  <If id="cpuTrend" when={params.hasRange}><Chart id="cpuChart" peakValues={params.peakHistory} values={params.history} label={params.chartLabel} min={0} max={100} unit="%" threshold={90} startLabel={params.startLabel} endLabel="Now" height="160dp"/></If>
+  <If id="otherTrend" when={!params.hasRange}><Chart id="trend" values={params.history} label={params.chartLabel} min={0} max={100} unit="%" threshold={90} startLabel={params.startLabel} endLabel="Now" height="160dp"/></If>
   <Text id="note" text={params.note} variant="caption" tone="muted"/>
 </Column>

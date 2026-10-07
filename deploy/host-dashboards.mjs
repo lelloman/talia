@@ -2,13 +2,13 @@
 import {readFileSync} from 'node:fs';import {fileURLToPath} from 'node:url';
 import '../engine/shared/value.js';
 const load=p=>readFileSync(new URL('../dashboard/examples/'+p,import.meta.url),'utf8');
-export const hosts=[{host:'homelab',gitWorkspaces:true,job:'node-exporter',instance:'node-exporter:9100'},{host:'vps-eu',job:'node-exporter-vps',instance:'vps-eu'},{host:'vps-us',job:'node-exporter-vps',instance:'vps-us'}];
+export const hosts=[{host:'homelab',networkDevice:'enp3s0',networkHostProbe:true,gitWorkspaces:true,job:'node-exporter',instance:'node-exporter:9100'},{host:'vps-eu',networkDevice:'ens6',job:'node-exporter-vps',instance:'vps-eu'},{host:'vps-us',networkDevice:'ens6',job:'node-exporter-vps',instance:'vps-us'}];
 const put=(kind,id,document)=>({op:'put',key:{kind,id},document});
 export const changes=[
  put('ui','host-metric-card',{source:load('host/metric-card.ui')}),
  put('ui','host-layout',{source:load('host/layout.ui'),references:[{kind:'ui',id:'host-metric-card'}]}),
  put('function','host-present',{source:load('host/present.js')}),
- put('monitor_definition','host-collect',{id:'host-collect',version:7,kind:'pipeline',source:load('host/collect.js')}),
+ put('monitor_definition','host-collect',{id:'host-collect',version:10,kind:'pipeline',source:load('host/collect.js')}),
  put('variable_definition','host-snapshot',{id:'host-snapshot',version:1,kind:'stored',source:'',value_schema:'any',state_schema:'any',dependencies:[]}),
  put('data_source','homelab-git-trigger',{id:'homelab-git-trigger',kind:'http',url:'http://talia-git-probe-trigger:8080',timeout_ms:5000,max_bytes:4096}),
  put('monitor_definition','git-recheck',{id:'git-recheck',version:1,kind:'pipeline',source:readFileSync(new URL('./git-workspaces/recheck.js',import.meta.url),'utf8')}),

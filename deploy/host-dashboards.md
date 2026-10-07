@@ -20,6 +20,16 @@ Other hosts can opt in with `gitWorkspaces: true` after configuring their collec
 CPU, memory and filesystem selectors match the exact job and instance, including
 range queries. The CPU card switches between a 24-hour view of five-minute CPU
 averages (289 slots) and a one-hour view of one-minute CPU averages (61 slots).
+Both CPU views also show an orange maximum line: the highest whole-host `irate`
+reading within each five-minute/day or one-minute/hour chart interval, evaluated
+at 30-second spacing. Rates are calculated per core before averaging across cores;
+this is a peak over time, not the busiest core. The 30-second exporter scrape
+interval limits burst resolution. The existing current CPU number remains a
+five-minute average. Old snapshots show gaps until peak collection succeeds.
+A Network card adds current upload/download speeds, a 60-minute graph and
+1/7/30-day transfer estimates, with partial-history labels. Interface selection
+and the Homelab host-side counter probe are documented in
+[host network](host-network/README.md).
 Memory remains a 24-hour view with readings every five minutes. Missing samples
 remain gaps at their true position. A down exporter clears current values; retained trends can still
 show the earlier history. Newly added exporters need two scrapes for CPU rates
@@ -58,6 +68,11 @@ homelab repository under `monitoring/vps-metrics/`.
    These initial dashboards are private to the same owner as `monitor`.
 6. Verify each `host-HOST` sample has good quality, its matching host and fresh
    CPU/memory/filesystem values. Refresh the web page to discover the dashboards.
+
+The average/max revision requires the updated shared Chart validator and both
+renderers before publishing `peakValues` UI. Build/deploy the service image first,
+then save only the shared collector, presentation function, and metric-card UI;
+preserve live versions, parameters and grants.
 
 For later metric-card revisions, save only the changed `host-metric-card` UI,
 `host-present` function, and `host-collect` monitor definition with its incremented

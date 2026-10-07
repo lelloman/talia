@@ -180,3 +180,7 @@ html,body{margin:0;height:100%;font-family:var(--ld-font-family,Inter,system-ui,
 .talia-chat-markdown th{background:var(--ld-surface-sunken);font-weight:600}
 .talia-chat-markdown a{color:var(--ld-link)}
 .talia-chat-markdown hr{border:0;border-top:1px solid var(--ld-border-subtle);margin:12px 0}
+
+.chart-legend{display:flex;gap:16px;margin-top:4px;flex-wrap:wrap}
+.chart-legend>span{display:inline-flex;align-items:center;gap:6px}
+.chart-legend-line{display:inline-block;width:24px;height:2px;border-radius:1px;flex:none}

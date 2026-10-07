@@ -54,3 +54,9 @@ test('chart reference ranges are explicit and bounded',()=>{
  assert.equal(node.props.max,100);assert.equal(node.props.threshold,90);assert.deepEqual(node.props.values,[0,25,null,95]);
  for(const invalid of [chart.replace(' max={100}',''),chart.replace('max={100}','max={0}'),chart.replace('threshold={90}','threshold={110}')])assert.throws(()=>compile(wrap(invalid)),/chart range|chart threshold/);
 });
+
+// Independent second series keeps gaps and rejects a different time-axis length.
+const dual=TaliaUI.compile('<Dashboard id="dual"><Surface id="main"><Chart id="c" values={state.avg} peakValues={state.peak} label="CPU"/></Surface></Dashboard>');
+const dualResolved=TaliaUI.resolve(dual,{avg:[20,null,30],peak:[100,null,80]});
+assert.deepEqual(dualResolved.children[0].props.peakValues,[100,null,80]);
+assert.throws(()=>TaliaUI.resolve(dual,{avg:[20],peak:[100,80]}),/series length mismatch/);

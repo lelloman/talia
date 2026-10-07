@@ -10,7 +10,7 @@
     Column:layout, Row:layout, Grid:{...layout,columns:'positive'},
     Scroll:{...base,width:'size',height:'size'},
     Text:{...base,text:'text!',label:'string',variant:'variant',tone:'tone'}, Status:{...base,text:'text!',label:'string',variant:'variant',tone:'tone'},
-    Chart:{...base,values:'numbers!',label:'string!',height:'length',min:'number',max:'number',unit:'string',threshold:'number',startLabel:'string',endLabel:'string'},
+    Chart:{...base,values:'numbers!',peakValues:'numbers',secondaryValues:'numbers',primaryLabel:'string',secondaryLabel:'string',label:'string!',height:'length',min:'number',max:'number',unit:'string',threshold:'number',startLabel:'string',endLabel:'string'},
     Meter:{...base,value:'number!',label:'string!',min:'number',max:'number',tone:'tone'},
     Button:{...base,text:'string!',label:'string',enabled:'boolean',selected:'boolean',onClick:'action!'},
     SegmentedControl:{...base,label:'string!'},
@@ -155,13 +155,14 @@
         const label=x=>x===Infinity?'∞':x===-Infinity?'−∞':String(x);
         if(['Text','Status'].includes(n.type)&&key==='text'&&exceptional(p[key]))p[key]=label(p[key]);
         if(['Slider','Switch','Meter'].includes(n.type)&&key==='value'&&exceptional(p[key])){p.unavailable=label(p[key]);continue;}
-        if(n.type==='Chart'&&key==='values'&&Array.isArray(p[key])){p.sampleLabels=p[key].map(label);p[key]=p[key].map(x=>exceptional(x)?null:x);}
+        if(n.type==='Chart'&&['values','peakValues','secondaryValues'].includes(key)&&Array.isArray(p[key])){if(key==='values')p.sampleLabels=p[key].map(label);p[key]=p[key].map(x=>exceptional(x)?null:x);}
         checkValue(schema[n.type][key],p[key],n);
       }
       if(n.type==='Switch'&&p.unavailable!==undefined){p.value=false;p.enabled=false;p.label+=': '+p.unavailable+' (unavailable)';}
       if(n.type==='Slider'&&p.unavailable!==undefined){p.value=p.min;p.enabled=false;p.label+=': '+p.unavailable+' (unavailable)';}
       if(n.type==='Meter'){if(p.min===undefined){p.min=0;p.max=100;}if(p.max<=p.min)fail(n,'invalid meter range');if(p.unavailable!==undefined){p.value=p.min;p.label+=' (unavailable)';}else p.value=Math.min(p.max,Math.max(p.min,p.value));}
       if(n.type==='Slider'&&(p.max<=p.min||p.value<p.min||p.value>p.max))fail(n,'invalid slider range/value');
+      if(n.type==='Chart'){if(p.peakValues&&p.secondaryValues)fail(n,'multiple secondary chart series');const secondary=p.secondaryValues||p.peakValues;if(secondary&&secondary.length!==p.values.length)fail(n,'chart series length mismatch');}
       if(n.type==='Chart'&&((p.min===undefined)!==(p.max===undefined)||p.min!==undefined&&p.max<=p.min||p.threshold!==undefined&&p.min!==undefined&&(p.threshold<p.min||p.threshold>p.max)))fail(n,'invalid chart range');
       if(['Grid','For'].includes(n.type)&&p.columns!==undefined&&!Number.isInteger(p.columns))fail(n,'columns must be integral');
       if(n.type==='ScreenRef'){
