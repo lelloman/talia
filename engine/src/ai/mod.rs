@@ -1,4 +1,4 @@
-//! Bounded Talìa-owned inference. No external runner, shell, or editing tools.
+//! Bounded Talìa-owned inference. Host diagnostics use a restricted runner; no general shell or editing tools.
 use crate::{
     runtime::Engine,
     store::{Result, Store},
@@ -15,6 +15,7 @@ mod text_calls;
 #[cfg(test)]
 pub(crate) mod tests;
 mod tools;
+mod host_shell;
 fn err(e: impl std::fmt::Display) -> String {
     e.to_string()
 }

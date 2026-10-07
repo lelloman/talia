@@ -105,7 +105,7 @@ disabled so it can be previewed. `send:false` still performs inference.
 An administrator enables investigations and approves both a numeric account and
 its chat in Settings → Telegram. This grants broad monitoring read access;
 it is independent of dashboard viewer grants. Telegram never exposes authoring,
-engine writes, getters, setters, arbitrary scripts, pipelines or alert controls.
+engine writes, getters, setters, arbitrary scripts, Talìa pipelines or alert controls.
 The tools are internal Rust dispatch, not another MCP connection:
 
 - `monitoring_snapshot`: cached variables, alerts, source IDs/kinds and recent
@@ -116,6 +116,33 @@ The tools are internal Rust dispatch, not another MCP connection:
   Prometheus query/range and HTTP GET/HEAD only, using the existing confined source
   adapter, credentials, size and timeout limits. Approve endpoints known to be
   safe to read; HTTP method alone cannot establish absence of external effects.
+
+- `host_exec`: a familiar command or pipeline in an approved host's restricted
+  diagnostic shell. `help` lists available commands and paths. The tool sends
+  command text only as JSON stdin to a fixed SSH forced command; it never invokes
+  a local shell or passes model text as an SSH command. Host enforcement permits
+  only scoped reads, bounded diagnostic processes and text filters.
+
+Host access is configured separately from DataSource IDs, by the deployment
+administrator in `/run/talia/host-shell.json` (override with
+`TALIA_HOST_SHELL_CONFIG`). It is available to existing authorized app-chat admins
+and approved Telegram investigators. The JSON shape is
+`{"hosts":{"homelab":{"address":"192.168.1.101","user":"talia-diagnostics","port":22,"key_file":"/run/talia/host-shell/homelab","known_hosts":"/run/talia/host-shell/homelab.known_hosts"}}}`.
+Keep configuration and separate per-host keys on a read-only secrets mount. Host
+keys must be pinned; authentication agents, forwarding and user SSH config are
+disabled. Missing configuration fails closed. The inventory is checked before
+and after I/O so an in-flight result cannot survive a configuration change.
+The remote account must force the root-owned restricted runner, disable forwarding
+and PTYs, and have no sudo or Docker access. The homelab repository maintains that
+runner, installation, source allowlists, escape tests and revocation instructions
+in `talia/host-shell/`. Do not point this tool at a normal SSH account.
+
+Results include host, request ID, exit code, truncation and collection time. The
+transport has a 20-second timeout and bounded response reads; host execution has
+its own stricter time/resource limits. Logs remain untrusted and may contain
+sensitive data: only deliberately approved sources should be readable. This tool
+supports a subset of shell syntax, not Bash compatibility. It is part of the
+existing chat tool loop; scheduled report analysis does not gain host execution.
 
 Unknown/mutating tool names fail the run. The complete call batch is validated
 before dispatch. Expected probe/read failures become bounded tool error results
