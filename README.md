@@ -2,6 +2,11 @@
 
 # Talìa
 
+Homelab monitoring alerts migrated to Talìa on 2026-10-07. See
+[native monitoring configuration](deploy/homelab-monitoring/README.md) for the
+40 conditions, deployment evidence and rollback. Older stage descriptions below
+are historical where they describe this migration as future work.
+
 Talìa provides agent-authored dashboards, scheduled checks and tasks,
 and configurable anomaly alerts. It will also take over homelab health monitoring.
 

@@ -1,0 +1,562 @@
+[
+  {
+    "name": "ServiceDown",
+    "query": "up == 0",
+    "forMs": 60000,
+    "intervalMs": 30000,
+    "labels": {
+      "category": "availability",
+      "severity": "critical"
+    },
+    "annotations": {
+      "description": "Prometheus cannot scrape {{ $labels.job }} metrics (instance: {{ $labels.instance }}).",
+      "summary": "{{ $labels.job }} is down"
+    }
+  },
+  {
+    "name": "LoginBruteForceAttempt",
+    "query": "rate(pezzottify_rate_limit_hits_total{endpoint=\"/v1/auth/login\"}[1m]) > 2",
+    "forMs": 120000,
+    "intervalMs": 30000,
+    "labels": {
+      "category": "security",
+      "severity": "critical"
+    },
+    "annotations": {
+      "description": "Login rate limiting triggered {{ $value }} times/sec.",
+      "summary": "Possible brute force login attack"
+    }
+  },
+  {
+    "name": "HighRateLimitViolations",
+    "query": "rate(pezzottify_rate_limit_hits_total[5m]) > 10",
+    "forMs": 300000,
+    "intervalMs": 30000,
+    "labels": {
+      "category": "security",
+      "severity": "warning"
+    },
+    "annotations": {
+      "description": "{{ $labels.endpoint }} experiencing {{ $value }} violations/sec.",
+      "summary": "High rate of rate limit violations"
+    }
+  },
+  {
+    "name": "HighLoginFailureRate",
+    "query": "rate(pezzottify_auth_login_attempts_total{status=\"failure\"}[5m]) > 0.5",
+    "forMs": 300000,
+    "intervalMs": 30000,
+    "labels": {
+      "category": "security",
+      "severity": "warning"
+    },
+    "annotations": {
+      "description": "{{ $value }} failed logins per second over 5 minutes.",
+      "summary": "High login failure rate"
+    }
+  },
+  {
+    "name": "HighErrorRate",
+    "query": "rate(pezzottify_http_requests_total{status=~\"5..\"}[5m]) > 0.1",
+    "forMs": 300000,
+    "intervalMs": 30000,
+    "labels": {
+      "category": "availability",
+      "severity": "critical"
+    },
+    "annotations": {
+      "description": "{{ $value }} server errors per second.",
+      "summary": "High HTTP 5xx error rate"
+    }
+  },
+  {
+    "name": "DatabaseErrors",
+    "query": "rate(pezzottify_db_connection_errors_total[5m]) > 0",
+    "forMs": 120000,
+    "intervalMs": 30000,
+    "labels": {
+      "category": "availability",
+      "severity": "critical"
+    },
+    "annotations": {
+      "description": "{{ $value }} database errors/sec. Check SQLite.",
+      "summary": "Database connection errors detected"
+    }
+  },
+  {
+    "name": "SlowLoginPerformance",
+    "query": "histogram_quantile(0.95, rate(pezzottify_auth_login_duration_seconds_bucket[5m])) > 2",
+    "forMs": 300000,
+    "intervalMs": 30000,
+    "labels": {
+      "category": "performance",
+      "severity": "warning"
+    },
+    "annotations": {
+      "description": "95th percentile login duration is {{ $value }}s (threshold: 2s).",
+      "summary": "Slow login performance"
+    }
+  },
+  {
+    "name": "SlowDatabaseQueries",
+    "query": "histogram_quantile(0.95, rate(pezzottify_db_query_duration_seconds_bucket[5m])) > 1",
+    "forMs": 300000,
+    "intervalMs": 30000,
+    "labels": {
+      "category": "performance",
+      "severity": "warning"
+    },
+    "annotations": {
+      "description": "95th percentile DB query duration is {{ $value }}s.",
+      "summary": "Slow database queries"
+    }
+  },
+  {
+    "name": "HighMemoryUsage",
+    "query": "pezzottify_process_memory_bytes > 1.073741824e+09",
+    "forMs": 600000,
+    "intervalMs": 30000,
+    "labels": {
+      "category": "resources",
+      "severity": "warning"
+    },
+    "annotations": {
+      "description": "Server using {{ $value | humanize }}B of memory.",
+      "summary": "High memory usage"
+    }
+  },
+  {
+    "name": "UnexpectedSSHLogin",
+    "query": "({__name__=~\"(vps|homelab)_security_unexpected_ssh_login_timestamp_seconds\"} > 0) and (time() - {__name__=~\"(vps|homelab)_security_unexpected_ssh_login_timestamp_seconds\"} < 86400)",
+    "forMs": 0,
+    "intervalMs": 15000,
+    "labels": {
+      "category": "security",
+      "severity": "critical"
+    },
+    "annotations": {
+      "description": "A successful login came from outside the allowed source networks or used a method other than public-key authentication. Check journalctl -u vps-security-monitor (VPS) or journalctl -t homelab-security-monitor (homelab) on the host. Detection is retained for 24 hours; this is an investigation signal, not proof of intrusion.",
+      "summary": "Unexpected successful SSH login on {{ $labels.instance }}"
+    }
+  },
+  {
+    "name": "SSHSecurityFileChanged",
+    "query": "({__name__=~\"(vps|homelab)_security_watched_file_change_timestamp_seconds\"} > 0) and (time() - {__name__=~\"(vps|homelab)_security_watched_file_change_timestamp_seconds\"} < 86400)",
+    "forMs": 0,
+    "intervalMs": 15000,
+    "labels": {
+      "category": "security",
+      "severity": "critical"
+    },
+    "annotations": {
+      "description": "A watched SSH configuration or authorized-keys file changed. Check journalctl -u vps-security-monitor (VPS) or journalctl -t homelab-security-monitor (homelab) and compare against authorized maintenance. Detection is retained for 24 hours.",
+      "summary": "SSH security configuration changed on {{ $labels.instance }}"
+    }
+  },
+  {
+    "name": "SSHAuthenticationFailureBurst",
+    "query": "{__name__=~\"(vps|homelab)_security_ssh_failed_auth_5m\"} >= 100",
+    "forMs": 0,
+    "intervalMs": 15000,
+    "labels": {
+      "category": "security",
+      "severity": "warning"
+    },
+    "annotations": {
+      "description": "{{ $value }} failed SSH authentications in five minutes. Internet scanning can trigger this; investigate alongside successful-login alerts.",
+      "summary": "SSH authentication failure burst on {{ $labels.instance }}"
+    }
+  },
+  {
+    "name": "SecurityJournalGap",
+    "query": "({__name__=~\"(vps|homelab)_security_journal_gap_timestamp_seconds\"} > 0) and (time() - {__name__=~\"(vps|homelab)_security_journal_gap_timestamp_seconds\"} < 86400)",
+    "forMs": 0,
+    "intervalMs": 15000,
+    "labels": {
+      "category": "security",
+      "severity": "warning"
+    },
+    "annotations": {
+      "description": "The SSH monitor could not resume its saved journal position. Some events may be missing. Check journalctl -u vps-security-monitor (VPS) or journalctl -t homelab-security-monitor (homelab).",
+      "summary": "Security journal continuity lost on {{ $labels.instance }}"
+    }
+  },
+  {
+    "name": "VPSSecurityMonitorStale",
+    "query": "(time() - vps_security_last_success_timestamp_seconds > 180) or (up{instance=\"vps-eu\",job=\"node-exporter-vps\"} unless on (instance) vps_security_last_success_timestamp_seconds)",
+    "forMs": 120000,
+    "intervalMs": 15000,
+    "labels": {
+      "category": "security",
+      "severity": "warning"
+    },
+    "annotations": {
+      "description": "The host security monitor has not reported successfully for over three minutes, or its metric is missing. Detection is degraded.",
+      "summary": "Security monitor unavailable on {{ $labels.instance }}"
+    }
+  },
+  {
+    "name": "APICredentialNewOrigin",
+    "query": "simple_ai_auth_origin_alert == 1",
+    "forMs": 0,
+    "intervalMs": 15000,
+    "labels": {
+      "category": "security",
+      "severity": "critical"
+    },
+    "annotations": {
+      "description": "Credential {{ $labels.key_name }} ({{ $labels.identity }}) was used from new client IP {{ $labels.client_ip }}. Compare with expected client or network changes; this is not proof of credential theft. Detection is retained for 24 hours.",
+      "summary": "SimpleAI credential used from a new client IP"
+    }
+  },
+  {
+    "name": "APIOriginMonitorStale",
+    "query": "(time() - simple_ai_auth_origin_last_success_timestamp_seconds > 180) or (up{job=\"node-exporter\"} unless on (instance) simple_ai_auth_origin_last_success_timestamp_seconds)",
+    "forMs": 120000,
+    "intervalMs": 15000,
+    "labels": {
+      "category": "security",
+      "severity": "warning"
+    },
+    "annotations": {
+      "description": "The API origin detector has not reported successfully for over three minutes, or its metric is missing.",
+      "summary": "SimpleAI client-origin monitor unavailable"
+    }
+  },
+  {
+    "name": "APIOriginBaselineNotReady",
+    "query": "simple_ai_auth_origin_baseline_ready != 1",
+    "forMs": 120000,
+    "intervalMs": 15000,
+    "labels": {
+      "category": "security",
+      "severity": "warning"
+    },
+    "annotations": {
+      "description": "The origin monitor cannot yet compare requests with established origins. Check its state and service logs.",
+      "summary": "SimpleAI client-origin baseline is not ready"
+    }
+  },
+  {
+    "name": "HomelabSecurityMonitorStale",
+    "query": "(time() - homelab_security_last_success_timestamp_seconds > 180) or (up{job=\"node-exporter\"} unless on (instance) homelab_security_last_success_timestamp_seconds)",
+    "forMs": 120000,
+    "intervalMs": 15000,
+    "labels": {
+      "category": "security",
+      "severity": "warning"
+    },
+    "annotations": {
+      "description": "The user-scope host monitor has stopped reporting or is missing. Inspect its user service logs.",
+      "summary": "Homelab SSH security monitor unavailable"
+    }
+  },
+  {
+    "name": "APIOriginMonitorCollectionError",
+    "query": "simple_ai_auth_origin_collection_error > 0",
+    "forMs": 120000,
+    "intervalMs": 15000,
+    "labels": {
+      "category": "security",
+      "severity": "warning"
+    },
+    "annotations": {
+      "description": "Collection failed. Check the detector service logs; successful heartbeat alone does not imply complete coverage.",
+      "summary": "SimpleAI origin detector cannot read recent activity"
+    }
+  },
+  {
+    "name": "APIOriginMonitorAlertOverflow",
+    "query": "simple_ai_auth_origin_alert_overflow > 0",
+    "forMs": 0,
+    "intervalMs": 15000,
+    "labels": {
+      "category": "security",
+      "severity": "critical"
+    },
+    "annotations": {
+      "description": "More than 100 active origin changes were detected. Some per-origin alerts are suppressed; investigate the detector state and audit records.",
+      "summary": "SimpleAI new-origin alert limit exceeded"
+    }
+  },
+  {
+    "name": "APIClientAttributionMissing",
+    "query": "simple_ai_auth_origin_unresolved == 1",
+    "forMs": 0,
+    "intervalMs": 15000,
+    "labels": {
+      "category": "security",
+      "severity": "warning"
+    },
+    "annotations": {
+      "description": "A recent authenticated request had missing or invalid client attribution, or resolved only to a proxy address. Investigate forwarding configuration; detection is retained for 24 hours.",
+      "summary": "SimpleAI request client attribution is incomplete"
+    }
+  },
+  {
+    "name": "SecurityFileMonitoringPartial",
+    "query": "homelab_security_unreadable_watched_files > 1",
+    "forMs": 120000,
+    "intervalMs": 15000,
+    "labels": {
+      "category": "security",
+      "severity": "warning"
+    },
+    "annotations": {
+      "description": "{{ $value }} watched SSH configuration files cannot be read (known baseline: one root-only file) by the unprivileged detector. File metadata, accessible files, and SSH login events are monitored; protected file contents are not.",
+      "summary": "Homelab SSH file monitoring coverage worsened"
+    }
+  },
+  {
+    "name": "DiskSpaceLow",
+    "query": "(node_filesystem_avail_bytes{fstype!~\"tmpfs|overlay\"} / node_filesystem_size_bytes{fstype!~\"tmpfs|overlay\"}) * 100 < 20",
+    "forMs": 300000,
+    "intervalMs": 60000,
+    "labels": {
+      "category": "storage",
+      "severity": "warning"
+    },
+    "annotations": {
+      "description": "Filesystem {{ $labels.mountpoint }} has only {{ printf \"%.1f\" $value }}% free space remaining.",
+      "summary": "Low disk space on {{ $labels.mountpoint }}"
+    }
+  },
+  {
+    "name": "DiskSpaceCritical",
+    "query": "(node_filesystem_avail_bytes{fstype!~\"tmpfs|overlay\"} / node_filesystem_size_bytes{fstype!~\"tmpfs|overlay\"}) * 100 < 10",
+    "forMs": 120000,
+    "intervalMs": 60000,
+    "labels": {
+      "category": "storage",
+      "severity": "critical"
+    },
+    "annotations": {
+      "description": "Filesystem {{ $labels.mountpoint }} has only {{ printf \"%.1f\" $value }}% free space. Immediate action required!",
+      "summary": "Critical disk space on {{ $labels.mountpoint }}"
+    }
+  },
+  {
+    "name": "DiskSpaceExhausted",
+    "query": "(node_filesystem_avail_bytes{fstype!~\"tmpfs|overlay\"} / node_filesystem_size_bytes{fstype!~\"tmpfs|overlay\"}) * 100 < 5",
+    "forMs": 60000,
+    "intervalMs": 60000,
+    "labels": {
+      "category": "storage",
+      "severity": "critical"
+    },
+    "annotations": {
+      "description": "Filesystem {{ $labels.mountpoint }} is almost full with only {{ printf \"%.1f\" $value }}% free. Services may fail!",
+      "summary": "Disk space nearly exhausted on {{ $labels.mountpoint }}"
+    }
+  },
+  {
+    "name": "NodeExporterDown",
+    "query": "up{job=\"node-exporter\"} == 0",
+    "forMs": 120000,
+    "intervalMs": 60000,
+    "labels": {
+      "category": "availability",
+      "severity": "warning"
+    },
+    "annotations": {
+      "description": "Cannot collect host metrics. Storage monitoring unavailable.",
+      "summary": "Node Exporter is down"
+    }
+  },
+  {
+    "name": "SimpleAgentsRunnerDisconnected",
+    "query": "simple_agents_expected_runners_disconnected{job=\"simple-agents\"} > 0",
+    "forMs": 300000,
+    "intervalMs": 30000,
+    "labels": {
+      "category": "availability",
+      "severity": "warning"
+    },
+    "annotations": {
+      "description": "An enabled, enrolled Runner has an expired lease for 5 minutes. Check SA fleet and Runner connectivity; disable intentionally offline capacity. Do not re-enroll or release reservations to silence this alert.",
+      "summary": "Simple Agents Runner disconnected"
+    }
+  },
+  {
+    "name": "SimpleAgentsCapacityExhausted",
+    "query": "(simple_agents_available_runner_slots{job=\"simple-agents\"} == 0) and on (job, instance) (simple_agents_sessions{job=\"simple-agents\",state=\"queued\"} > 0)",
+    "forMs": 600000,
+    "intervalMs": 30000,
+    "labels": {
+      "category": "capacity",
+      "severity": "warning"
+    },
+    "annotations": {
+      "description": "No enabled connected Runner has a free concurrency slot and work has been queued for 10 minutes. Inspect reservations and compatible capacity; never clear reservations without confirmed worker cleanup.",
+      "summary": "Simple Agents has queued work but no Runner slots"
+    }
+  },
+  {
+    "name": "SimpleAgentsSessionNoProgress",
+    "query": "(simple_agents_session_idle_seconds{job=\"simple-agents\",state=\"running\"} > 1800) or (simple_agents_session_idle_seconds{job=\"simple-agents\",state=\"queued\"} > 600) or (simple_agents_session_idle_seconds{job=\"simple-agents\",state=~\"pausing|cancelling\"} > 300)",
+    "forMs": 300000,
+    "intervalMs": 30000,
+    "labels": {
+      "category": "execution",
+      "severity": "warning"
+    },
+    "annotations": {
+      "description": "At least one {{ $labels.state }} session has exceeded its no-progress threshold for 5 minutes. Inspect SA session history and worker health; quiet engine work may be legitimate. Human-waiting and paused sessions are excluded. No automatic retry or cancellation is performed.",
+      "summary": "Simple Agents session may be stuck"
+    }
+  },
+  {
+    "name": "HealthCollectionStale",
+    "query": "(time() - talia_health_checked_timestamp_seconds > 3900) or absent(talia_health_checked_timestamp_seconds)",
+    "forMs": 0,
+    "intervalMs": 60000,
+    "labels": {
+      "severity": "warning",
+      "category": "health"
+    },
+    "annotations": {
+      "summary": "Hourly host health collection is overdue",
+      "description": "Measured value: {{ $value }}. Hourly host probe; inspect Tal\u00eca and the host health-check log."
+    }
+  },
+  {
+    "name": "HealthCollectionFailed",
+    "query": "talia_health_collection_success == 0",
+    "forMs": 0,
+    "intervalMs": 60000,
+    "labels": {
+      "severity": "warning",
+      "category": "health"
+    },
+    "annotations": {
+      "summary": "Health collection failed: {{ $labels.check }}",
+      "description": "Measured value: {{ $value }}. Hourly host probe; inspect Tal\u00eca and the host health-check log."
+    }
+  },
+  {
+    "name": "ContainerStopped",
+    "query": "talia_health_container_running{expected=\"true\"} == 0",
+    "forMs": 0,
+    "intervalMs": 60000,
+    "labels": {
+      "severity": "critical",
+      "category": "health"
+    },
+    "annotations": {
+      "summary": "Container stopped or missing: {{ $labels.container }}",
+      "description": "Measured value: {{ $value }}. Hourly host probe; inspect Tal\u00eca and the host health-check log."
+    }
+  },
+  {
+    "name": "ContainerUnhealthy",
+    "query": "talia_health_container_healthy{expected=\"true\"} == 0",
+    "forMs": 0,
+    "intervalMs": 60000,
+    "labels": {
+      "severity": "warning",
+      "category": "health"
+    },
+    "annotations": {
+      "summary": "Container unhealthy: {{ $labels.container }}",
+      "description": "Measured value: {{ $value }}. Hourly host probe; inspect Tal\u00eca and the host health-check log."
+    }
+  },
+  {
+    "name": "ServiceHealthFailed",
+    "query": "talia_health_service_healthy == 0",
+    "forMs": 0,
+    "intervalMs": 60000,
+    "labels": {
+      "severity": "warning",
+      "category": "health"
+    },
+    "annotations": {
+      "summary": "Service health endpoint failed: {{ $labels.service }}",
+      "description": "Measured value: {{ $value }}. Hourly host probe; inspect Tal\u00eca and the host health-check log."
+    }
+  },
+  {
+    "name": "DatabaseUnreadable",
+    "query": "talia_health_database_readable == 0",
+    "forMs": 0,
+    "intervalMs": 60000,
+    "labels": {
+      "severity": "warning",
+      "category": "health"
+    },
+    "annotations": {
+      "summary": "Database unreadable: {{ $labels.database }}",
+      "description": "Measured value: {{ $value }}. Hourly host probe; inspect Tal\u00eca and the host health-check log."
+    }
+  },
+  {
+    "name": "DatabaseCheckFailed",
+    "query": "talia_health_database_check_success == 0",
+    "forMs": 0,
+    "intervalMs": 60000,
+    "labels": {
+      "severity": "warning",
+      "category": "health"
+    },
+    "annotations": {
+      "summary": "SQLite quick_check failed: {{ $labels.database }}",
+      "description": "Measured value: {{ $value }}. Hourly host probe; inspect Tal\u00eca and the host health-check log."
+    }
+  },
+  {
+    "name": "TLSCertificateUnobserved",
+    "query": "talia_health_certificate_observed == 0",
+    "forMs": 0,
+    "intervalMs": 60000,
+    "labels": {
+      "severity": "warning",
+      "category": "health"
+    },
+    "annotations": {
+      "summary": "Certificate could not be checked: {{ $labels.domain }}",
+      "description": "Measured value: {{ $value }}. Hourly host probe; inspect Tal\u00eca and the host health-check log."
+    }
+  },
+  {
+    "name": "TLSCertificateExpiring",
+    "query": "talia_health_certificate_days_left < 30",
+    "forMs": 0,
+    "intervalMs": 60000,
+    "labels": {
+      "severity": "warning",
+      "category": "health"
+    },
+    "annotations": {
+      "summary": "Certificate expires soon: {{ $labels.domain }}",
+      "description": "Measured value: {{ $value }}. Hourly host probe; inspect Tal\u00eca and the host health-check log."
+    }
+  },
+  {
+    "name": "TLSCertificateCritical",
+    "query": "talia_health_certificate_days_left < 7",
+    "forMs": 0,
+    "intervalMs": 60000,
+    "labels": {
+      "severity": "critical",
+      "category": "health"
+    },
+    "annotations": {
+      "summary": "Certificate expires within seven days: {{ $labels.domain }}",
+      "description": "Measured value: {{ $value }}. Hourly host probe; inspect Tal\u00eca and the host health-check log."
+    }
+  },
+  {
+    "name": "LogErrorBurst",
+    "query": "talia_health_log_errors_1h > 10",
+    "forMs": 0,
+    "intervalMs": 60000,
+    "labels": {
+      "severity": "warning",
+      "category": "health"
+    },
+    "annotations": {
+      "summary": "More than ten error/panic/fatal log messages in the last hour",
+      "description": "Measured value: {{ $value }}. Hourly host probe; inspect Tal\u00eca and the host health-check log."
+    }
+  }
+]

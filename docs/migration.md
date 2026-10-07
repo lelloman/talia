@@ -1,6 +1,8 @@
 # Existing systems and migration considerations
 
-Status: historical source inventory and refinement input, not an approved rollout plan.
+Status: the historical inventory below is retained as refinement evidence.
+The monitoring cutover was completed on 2026-10-07; see the
+[current native configuration and deployment record](../deploy/homelab-monitoring/README.md).
 Current migration planning, decisions and cutover acceptance belong in
 [LLPR/TALIA-9](https://crumbles.lelloman.com/w/LLPR/TALIA/9).
 The [product specification](specification.md) records the current scope.
