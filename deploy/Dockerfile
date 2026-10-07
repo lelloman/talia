@@ -24,6 +24,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry --mount=type=cache,targe
 
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl sqlite3 libssl3 openssh-client && rm -rf /var/lib/apt/lists/*
+RUN groupadd --gid 65532 talia && useradd --uid 65532 --gid 65532 --no-create-home --home-dir /nonexistent --shell /usr/sbin/nologin talia
 COPY --from=build /out/ /usr/local/bin/
 COPY --from=web /web /opt/talia/web
 USER 65532:65532
