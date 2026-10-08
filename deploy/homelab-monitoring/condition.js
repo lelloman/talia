@@ -12,7 +12,9 @@
  ctx.state.pending=pending;ctx.state.checked=s.value.checked;
  firing.sort((a,b)=>a.key.localeCompare(b.key));
  const members=firing.map(s=>s.key).join('\n');
- if(members&&members!==ctx.state.members)ctx.state.stage=ctx.state.stage==='firing-a'?'firing-b':'firing-a';
+ // A recovering member must not reset acknowledgement or trigger a new warning.
+ const previousMembers=new Set((ctx.state.members||'').split('\n'));
+ if(firing.some(item=>!previousMembers.has(item.key)))ctx.state.stage=ctx.state.stage==='firing-a'?'firing-b':'firing-a';
  ctx.state.members=members;
  const format=(text,item)=>text.replace(/{{\s*\$labels\.(\w+)\s*}}/g,(_,key)=>item.labels[key]||'')
   .replace(/{{\s*printf\s+"%\.1f"\s+\$value\s*}}/g,item.value.toFixed(1))
