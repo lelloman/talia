@@ -118,6 +118,13 @@ The tools are internal Rust dispatch, not another MCP connection:
   adapter, credentials, size and timeout limits. Approve endpoints known to be
   safe to read; HTTP method alone cannot establish absence of external effects.
 
+- `alerts_inspect`: bounded, paginated evidence for one alert: current delivery
+  rules and input variable IDs, previous occurrences, notification deliveries,
+  and acknowledgement/state audit. It omits destination addresses, credentials,
+  policy source, binding parameters and arbitrary policy state. Timestamps are
+  Unix milliseconds; follow `next_offset`. Records are retained evidence, and
+  current policy may differ from settings recorded on an older delivery.
+
 - `alerts_acknowledge`: acknowledges one active alert at its exact occurrence and
   revision when the user requests it. The server rechecks the active conversation
   and permissions, derives the audit actor from the app user or Telegram chat/user,
@@ -129,7 +136,14 @@ The tools are internal Rust dispatch, not another MCP connection:
   diagnostic shell. `help` lists available commands and paths. The tool sends
   command text only as JSON stdin to a fixed SSH forced command; it never invokes
   a local shell or passes model text as an SSH command. Host enforcement permits
-  only scoped reads, bounded diagnostic processes and text filters.
+  only scoped reads, bounded diagnostic processes and text filters. Upgraded hosts
+  additionally provide named `containers`, `container-logs`, `deployments`, `dns`,
+  `tcp-check`, and `listeners` operations. `help` exposes approved aliases. The
+  account has no Docker socket access: a separate root-owned Unix broker checks
+  the peer UID and independently validates each container operation. Observed
+  deployment history begins with the first successful sample and can miss changes
+  between samples. Container logs are tail-limited; network checks have explicit
+  timeouts and TCP success does not establish application or TLS health.
 
 Host access is configured separately from DataSource IDs, by the deployment
 administrator in `/run/talia/host-shell.json` (override with

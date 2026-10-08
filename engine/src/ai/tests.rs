@@ -237,7 +237,7 @@ async fn tool_loop_reads_and_probes_without_editing_authority() {
     .unwrap();
     assert_eq!(v["summary"], "The probe is healthy");
     let q = requests.lock().unwrap();
-    assert_eq!(q[0]["tools"].as_array().unwrap().len(), 5);
+    assert_eq!(q[0]["tools"].as_array().unwrap().len(), 6);
     assert_eq!(q[1]["messages"][3]["tool_call_id"], "call-1");
     assert!(q[2]["messages"].to_string().contains("healthy"));
     assert!(tools::execute(

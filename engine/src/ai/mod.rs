@@ -15,6 +15,7 @@ mod text_calls;
 #[cfg(test)]
 pub(crate) mod tests;
 mod tools;
+mod alert_diagnostics;
 mod host_shell;
 fn err(e: impl std::fmt::Display) -> String {
     e.to_string()
