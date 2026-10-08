@@ -1,5 +1,5 @@
 //! Server-owned app chat (web and native). Administrators hold explicit sessions with
-//! Talìa's read-only investigation tools; each request is answered through the shared
+//! Talìa's investigation and alert acknowledgement tools; each request is answered through the shared
 //! conversation core, so long sessions are selectively summarized like Telegram ones.
 //!
 //! Sessions replace Telegram's session classifier: a request always continues its

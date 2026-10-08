@@ -456,7 +456,7 @@ async fn run(engine: &Engine, r: &mut Run, options: ExecutionOptions) -> Result<
             for (id, name, args) in parsed {
                 account::check(engine, revision)?;
                 permit(engine, &r.scope)?;
-                let result = tools::execute(engine, name, args).await;
+                let result = tools::execute_scoped(engine, &r.scope, name, args).await;
                 account::check(engine, revision)?;
                 permit(engine, &r.scope)?;
                 let value = match result {

@@ -100,22 +100,30 @@ probes and JavaScript transformations remain explicit report steps.
 See [morning homelab](../reports/examples/morning-homelab.json). Scheduling starts
 disabled so it can be previewed. `send:false` still performs inference.
 
-## Read-only Telegram tools
+## Investigation tools
 
 An administrator enables investigations and approves both a numeric account and
-its chat in Settings → Telegram. This grants broad monitoring read access;
-it is independent of dashboard viewer grants. Telegram never exposes authoring,
-engine writes, getters, setters, arbitrary scripts, Talìa pipelines or alert controls.
+its chat in Settings → Telegram. This grants broad monitoring read access and
+user-requested alert acknowledgement; it is independent of dashboard viewer grants. Telegram never exposes authoring,
+engine writes, getters, setters, arbitrary scripts, Talìa pipelines, alert
+configuration or silences.
 The tools are internal Rust dispatch, not another MCP connection:
 
 - `monitoring_snapshot`: cached variables, alerts, source IDs/kinds and recent
   report metadata. Full reports are not added automatically.
-- `monitoring_read`: a cached variable, retained history, or a specified report's
-  composed content. It does not invoke computed getters.
+- `monitoring_read`: a current alert by key, cached variable, retained history,
+  or a specified report's composed content. It does not invoke computed getters.
 - `monitoring_probe`: queries against explicitly approved diagnostic DataSource IDs.
   Prometheus query/range and HTTP GET/HEAD only, using the existing confined source
   adapter, credentials, size and timeout limits. Approve endpoints known to be
   safe to read; HTTP method alone cannot establish absence of external effects.
+
+- `alerts_acknowledge`: acknowledges one active alert at its exact occurrence and
+  revision when the user requests it. The server rechecks the active conversation
+  and permissions, derives the audit actor from the app user or Telegram chat/user,
+  and rejects stale revisions. Read the alert again after a conflict or uncertain
+  result; do not blindly retry against a new occurrence. This stops applicable
+  reminders without resolving the condition. Reports cannot use this tool.
 
 - `host_exec`: a familiar command or pipeline in an approved host's restricted
   diagnostic shell. `help` lists available commands and paths. The tool sends
@@ -157,8 +165,8 @@ after each probe. They are still edited in Settings → Telegram.
 ## App chat
 
 Administrators can hold server-owned chat sessions from the web client and the
-native app, with the same read-only tools. Viewers receive `forbidden`; tools read
-global monitoring data, so chat is not scoped by dashboard grants. Chat sessions are
+native app, with the same investigation and acknowledgement tools. Viewers receive
+`forbidden`; tools read global monitoring data, so chat is not scoped by dashboard grants. Chat sessions are
 independent of Telegram conversations and share only the engine code.
 
 In the web client, administrators open **Chats** from the navigation: a session list

@@ -237,7 +237,7 @@ async fn tool_loop_reads_and_probes_without_editing_authority() {
     .unwrap();
     assert_eq!(v["summary"], "The probe is healthy");
     let q = requests.lock().unwrap();
-    assert_eq!(q[0]["tools"].as_array().unwrap().len(), 4);
+    assert_eq!(q[0]["tools"].as_array().unwrap().len(), 5);
     assert_eq!(q[1]["messages"][3]["tool_call_id"], "call-1");
     assert!(q[2]["messages"].to_string().contains("healthy"));
     assert!(tools::execute(
@@ -697,4 +697,183 @@ async fn text_form_tool_calls_continue_the_investigation_and_never_become_answer
     let error = execute(&e, "text-calls-2", scope, 900000, "Investigate", json!({"question":"q"}), true).await.unwrap_err();
     assert!(error.contains("simple-ai returned a malformed tool call"), "{error}");
     assert!(crate::conversation::failure_reason(&error).unwrap().contains("could not understand"));
+}
+
+fn acknowledgement_alert(s: &mut Store) {
+    s.alert_observe(
+        &crate::alerts::Observation {
+            key: "ssh".into(),
+            active: true,
+            stage: "review".into(),
+            severity: "critical".into(),
+            message: "SSH configuration changed".into(),
+            labels: Default::default(),
+            reset_ack: false,
+        },
+        0,
+        "monitor",
+        100,
+    )
+    .unwrap();
+}
+
+#[tokio::test]
+async fn acknowledgement_checks_scope_revision_and_audits_requesting_user() {
+    let mut s = Store::open(":memory:").unwrap();
+    let scope = telegram(&s);
+    acknowledgement_alert(&mut s);
+    let e = Engine::with_clock(s, Rc::new(|| 1000));
+    let args = json!({"key":"ssh","occurrence":1,"expected":1});
+    let read = tools::execute(&e, "monitoring_read", json!({"kind":"alert","id":"ssh"}))
+        .await
+        .unwrap();
+    assert_eq!(read["revision"], 1);
+    assert!(tools::execute(&e, "alerts_acknowledge", args.clone())
+        .await
+        .is_err());
+    assert!(tools::execute_scoped(
+        &e,
+        &Scope::Report {
+            run: "report".into()
+        },
+        "alerts_acknowledge",
+        args.clone()
+    )
+    .await
+    .is_err());
+    for bad in [
+        json!({"key":"ssh","occurrence":2,"expected":1}),
+        json!({"key":"ssh","occurrence":1,"expected":0}),
+        json!({"key":"ssh","occurrence":1,"expected":1,"actor":"operator"}),
+    ] {
+        assert!(tools::execute_scoped(&e, &scope, "alerts_acknowledge", bad)
+            .await
+            .is_err());
+    }
+    assert!(e
+        .store
+        .borrow()
+        .alert("ssh")
+        .unwrap()
+        .acknowledgement
+        .is_none());
+    let receipt = tools::execute_scoped(&e, &scope, "alerts_acknowledge", args.clone())
+        .await
+        .unwrap();
+    assert_eq!(receipt["acknowledgement"]["actor"], "telegram:1:1");
+    assert_eq!(receipt["active"], true);
+    assert_eq!(receipt["revision"], 2);
+    assert!(
+        json!(e.store.borrow().alert_audit_history(Some("ssh")).unwrap())
+            .to_string()
+            .contains("telegram:1:1")
+    );
+    // An uncertain result cannot blindly mutate a newer revision.
+    assert!(
+        tools::execute_scoped(&e, &scope, "alerts_acknowledge", args)
+            .await
+            .is_err()
+    );
+    e.store
+        .borrow()
+        .conn
+        .execute("DELETE FROM telegram_users", [])
+        .unwrap();
+    assert!(tools::execute_scoped(
+        &e,
+        &scope,
+        "alerts_acknowledge",
+        json!({"key":"ssh","occurrence":1,"expected":2})
+    )
+    .await
+    .is_err());
+}
+
+#[tokio::test]
+async fn acknowledgement_chat_authority_is_live_and_server_derived() {
+    let mut s = Store::open(":memory:").unwrap();
+    s.user_bootstrap("admin").unwrap();
+    acknowledgement_alert(&mut s);
+    let c = crate::chat::request(
+        &mut s,
+        "admin",
+        "create",
+        json!({"requestId":"ack-chat","text":"Acknowledge the SSH alert"}),
+        1000,
+    )
+    .unwrap();
+    let scope = Scope::Chat {
+        request: c["request"].as_i64().unwrap(),
+        session: c["session"].as_str().unwrap().into(),
+        subject: "admin".into(),
+    };
+    let e = Engine::with_clock(s, Rc::new(|| 1000));
+    let args = json!({"key":"ssh","occurrence":1,"expected":1});
+    let receipt = tools::execute_scoped(&e, &scope, "alerts_acknowledge", args)
+        .await
+        .unwrap();
+    assert_eq!(receipt["acknowledgement"]["actor"], "chat:admin");
+    e.store
+        .borrow()
+        .conn
+        .execute("UPDATE chat_requests SET status='cancelled'", [])
+        .unwrap();
+    assert!(tools::execute_scoped(
+        &e,
+        &scope,
+        "alerts_acknowledge",
+        json!({"key":"ssh","occurrence":1,"expected":2})
+    )
+    .await
+    .is_err());
+}
+
+#[tokio::test]
+async fn agent_tool_loop_can_acknowledge_exact_alert() {
+    let http = MockServer::start().await;
+    let dir = config(&http.uri());
+    let count = Arc::new(Mutex::new(0));
+    Mock::given(path("/v1/chat/completions"))
+        .respond_with(move |_: &wiremock::Request| {
+            let mut n = count.lock().unwrap();
+            *n += 1;
+            ResponseTemplate::new(200).set_body_json(if *n == 1 {
+                call(
+                    "alerts_acknowledge",
+                    json!({"key":"ssh","occurrence":1,"expected":1}),
+                )
+            } else {
+                answer("Acknowledged the SSH alert")
+            })
+        })
+        .expect(2)
+        .mount(&http)
+        .await;
+    let mut s = Store::open(":memory:").unwrap();
+    let scope = telegram(&s);
+    acknowledgement_alert(&mut s);
+    let e = Engine::with_clock(s, Rc::new(|| 1000));
+    let result = execute(
+        &e,
+        "ack-run",
+        scope,
+        900000,
+        crate::conversation::ANSWER,
+        json!({"question":"Acknowledge the SSH alert"}),
+        true,
+    )
+    .await
+    .unwrap();
+    assert_eq!(result["summary"], "Acknowledged the SSH alert");
+    assert_eq!(
+        e.store
+            .borrow()
+            .alert("ssh")
+            .unwrap()
+            .acknowledgement
+            .unwrap()
+            .actor,
+        "telegram:1:1"
+    );
+    std::fs::remove_dir_all(dir).unwrap();
 }
