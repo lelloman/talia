@@ -15,6 +15,12 @@ fn ingest(w: &Worker, id: i64, text: &str) {
         )
         .unwrap();
 }
+fn acknowledgements(w: &Worker) -> Vec<String> {
+    let s = w.engine.store.borrow();
+    let mut query = s.conn.prepare("SELECT id FROM telegram_outbox WHERE id GLOB 'ack-*' ORDER BY id").unwrap();
+    query.query_map([], |r| r.get(0)).unwrap().collect::<std::result::Result<Vec<_>, _>>().unwrap()
+}
+
 fn job(w: &Worker, id: i64) -> Job {
     let text: String = w
         .engine
@@ -171,6 +177,7 @@ async fn incident_new_topic_bypasses_old_compaction_and_retry_preserves_failed_o
         .mount(&ai)
         .await;
     ingest(&w, 60, "Investigate Pezzottify");
+    assert!(acknowledgements(&w).is_empty());
     w.conversation().await.unwrap();
     assert_eq!(status(&w, 60), "failed");
     assert_eq!(
@@ -183,6 +190,7 @@ async fn incident_new_topic_bypasses_old_compaction_and_retry_preserves_failed_o
     w.conversation().await.unwrap();
     assert_eq!(status(&w, 61), "done");
     assert_eq!(seen.lock().unwrap().len(), 4);
+    assert_eq!(acknowledgements(&w), vec!["ack-60-000"]);
     let before: i64 = w
         .engine
         .store
@@ -319,6 +327,7 @@ async fn ambiguous_session_is_clarified_before_tools_and_resumed_question_surviv
     w.conversation().await.unwrap();
     assert!(answers.lock().unwrap().is_empty());
     assert_eq!(job(&w, 60).phase, "clarification");
+    assert!(acknowledgements(&w).is_empty());
     assert!(state(&w.engine.store.borrow(), &job(&w, 60))
         .unwrap()
         .pending
@@ -330,6 +339,7 @@ async fn ambiguous_session_is_clarified_before_tools_and_resumed_question_surviv
     w.conversation().await.unwrap();
     assert_eq!(answers.lock().unwrap().len(), 2);
     assert_eq!(status(&w, 62), "done");
+    assert_eq!(acknowledgements(&w), vec!["ack-61-000"]);
     drop(w);
     std::fs::remove_dir_all(dir).unwrap();
     std::fs::remove_dir_all(ai_dir).unwrap();
@@ -420,6 +430,7 @@ async fn classifier_failure_excludes_old_context_and_duplicate_update_is_idempot
     w.conversation().await.unwrap();
     w.conversation().await.unwrap();
     assert!(job(&w, 60).context_fallback);
+    assert!(acknowledgements(&w).is_empty());
     assert_eq!(
         state(&w.engine.store.borrow(), &job(&w, 60))
             .unwrap()
@@ -572,6 +583,8 @@ async fn completed_classifier_is_reused_after_restart_without_resubmission() {
     w.conversation().await.unwrap();
     assert_eq!(status(&w, 60), "done");
     assert_eq!(job(&w, 60).session_cutoff, Some(60));
+    w.conversation().await.unwrap();
+    assert_eq!(acknowledgements(&w), vec!["ack-60-000"]);
     ai.verify().await;
     drop(w);
     std::fs::remove_dir_all(dir).unwrap();
@@ -599,6 +612,7 @@ async fn reset_during_classification_discards_late_result() {
         }
     );
     assert_eq!(status(&w, 60), "cancelled");
+    assert!(acknowledgements(&w).is_empty());
     assert_eq!(
         w.engine
             .store
@@ -874,6 +888,7 @@ async fn interrupted_maintenance_is_not_resubmitted_and_answer_still_runs() {
         .unwrap()
         .contains("interrupted"));
     assert!(job(&w, 60).context_fallback);
+    assert!(acknowledgements(&w).is_empty());
     ai.verify().await;
     drop(w);
     std::fs::remove_dir_all(dir).unwrap();

@@ -75,8 +75,11 @@ impl Store {
             let report=reference.filter(|(kind,_)|kind=="report").and_then(|(_,id)|id);
             let job=Job{id:uid,chat,user,epoch,text:text.into(),report,created:now,deadline:now.saturating_add(MESSAGE_TIMEOUT_MS),revision:c.version,phase:if command=="/compact"{"maintain"}else{"classify"}.into(),through:0,ai_run:None,error:None,context_version:2,context_revision:0,session_cutoff:None,maintenance_error:None,context_fallback:false,context_unavailable:false,maintenance_deadline:None,batches:0,offered:vec![],resumed:None};
             s.conn.execute("INSERT INTO telegram_jobs VALUES(?,?,?,'queued',?)",params![uid,chat,user,serde_json::to_string(&job).map_err(err)?]).map_err(err)?;
-            let acknowledgement=if command=="/compact"{"Got it — I’ll compact this conversation and let you know when it’s ready."}else if count>0{"Got it — your request is queued. I’ll reply here when it’s ready."}else{"Got it — I’ll look into it and reply here."};
-            s.telegram_enqueue(&format!("ack-{uid}"),chat,"chat",Some(&user.to_string()),acknowledgement)?;Ok(())
+            // Ordinary questions are acknowledged only after a confirmed session reset.
+            if command=="/compact" {
+                s.telegram_enqueue(&format!("ack-{uid}"),chat,"chat",Some(&user.to_string()),"Got it — I’ll compact this conversation and let you know when it’s ready.")?;
+            }
+            Ok(())
         })
     }
     fn telegram_job_put(&self, j: &Job, status: &str) -> Result<()> {

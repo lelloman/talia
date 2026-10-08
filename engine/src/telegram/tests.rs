@@ -478,11 +478,20 @@ async fn requests_acknowledge_once_and_refresh_typing_until_complete() {
     w.admin("admin", json!({"op":"telegramSettings","expected":1,"enabled":true,"investigations":true,"sources":[]})).await.unwrap();
     Mock::given(path("/v1/chat/completions"))
         .respond_with(
-            ResponseTemplate::new(200)
-                .set_delay(Duration::from_millis(4500))
-                .set_body_json(crate::ai::tests::answer("All checked")),
+            |r: &wiremock::Request| {
+                let request: Value = serde_json::from_slice(&r.body).unwrap();
+                if request["messages"][0]["content"].as_str().unwrap().contains("Classify the incoming question") {
+                    ResponseTemplate::new(200).set_body_json(crate::ai::tests::answer(
+                        r#"{"decision":"new_session","resume_pending":false,"clarification":null}"#,
+                    ))
+                } else {
+                    ResponseTemplate::new(200)
+                        .set_delay(Duration::from_millis(4500))
+                        .set_body_json(crate::ai::tests::answer("All checked"))
+                }
+            },
         )
-        .expect(1)
+        .expect(2)
         .mount(&ai)
         .await;
     // Even failed typing requests must be refreshed and must not fail the job.
@@ -507,8 +516,8 @@ async fn requests_acknowledge_once_and_refresh_typing_until_complete() {
         let mut s = w.engine.store.borrow_mut();
         s.telegram_enqueue("older-report", 55, "report", None, "Report backlog")
             .unwrap();
-        s.telegram_ingest_legacy(&update, 1000).unwrap();
-        s.telegram_ingest_legacy(&update, 1000).unwrap();
+        s.telegram_ingest(&update, 1000).unwrap();
+        s.telegram_ingest(&update, 1000).unwrap();
         assert_eq!(
             s.conn
                 .query_row(
@@ -517,7 +526,7 @@ async fn requests_acknowledge_once_and_refresh_typing_until_complete() {
                     |r| r.get::<_, i64>(0)
                 )
                 .unwrap(),
-            1
+            0
         );
     }
     let finished = Cell::new(false);
@@ -528,7 +537,15 @@ async fn requests_acknowledge_once_and_refresh_typing_until_complete() {
             result
         },
         async {
-            tokio::time::sleep(Duration::from_millis(50)).await;
+            tokio::time::timeout(Duration::from_secs(2), async {
+                loop {
+                    let count: i64 = w.engine.store.borrow().conn.query_row(
+                        "SELECT count(*) FROM telegram_outbox WHERE id='ack-60-000'", [], |r| r.get(0),
+                    ).unwrap();
+                    if count == 1 { break; }
+                    tokio::time::sleep(Duration::from_millis(10)).await;
+                }
+            }).await.unwrap();
             let (c, transport) = Bot::load(&w.engine).await.unwrap();
             w.dispatch(&transport, c.version).await.unwrap();
             assert!(!finished.get());

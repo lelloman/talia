@@ -139,6 +139,8 @@ The tools are internal Rust dispatch, not another MCP connection:
   only scoped reads, bounded diagnostic processes and text filters. Upgraded hosts
   additionally provide named `containers`, `container-logs`, `deployments`, `dns`,
   `tcp-check`, `listeners`, `connections`, and read-only `ip` operations.
+  Git reads use familiar `git -C DIRECTORY` syntax without a repository allowlist;
+  filesystem permissions apply. Refusals list supported commands and options.
   Use `ip -br addr` for host addresses, `ip route get IP` for the local route
   and source address, and `ip link`, `ip neigh`, or `ip rule` for network state. `help` exposes approved aliases. The
   account has no Docker socket access: a separate root-owned Unix broker checks

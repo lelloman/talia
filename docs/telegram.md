@@ -49,13 +49,18 @@ recorded bot message. Replying to a report part selects only that report as cont
 Forwarded/quoted text is not trusted as a stored report reference. Full report
 content can be read through an explicit internal tool call.
 
-Accepted questions and `/compact` requests receive a short acknowledgement on
-the next bot poll (normally within two seconds), prioritized ahead of queued
-reports. Queued requests are identified as such. During active processing Talìa
-refreshes Telegram’s typing indicator every four seconds; it stops on completion,
-failure, cancellation or revoked access. Typing is best-effort: Telegram failures
-do not interrupt an investigation. Acknowledgements use the durable outgoing queue
-and its existing uncertain-delivery policy, and are never added to AI history.
+Ordinary questions receive an acknowledgement only after the session classifier
+confirms a new conversation and commits its context cutoff. Follow-ups, ambiguous
+requests and classifier failures do not produce an acknowledgement. The new-session
+acknowledgement is committed atomically with the boundary decision, deduplicated
+by request ID, and prioritized ahead of queued reports. It is not added to AI
+history. `/compact` retains its explicit command acknowledgement.
+
+During active processing (including classification) Talìa refreshes Telegram’s
+typing indicator every four seconds; it stops on completion, failure, cancellation
+or revoked access. Typing is best-effort: Telegram failures do not interrupt an
+investigation. Acknowledgements use the durable outgoing queue and its existing
+uncertain-delivery policy.
 
 Each request has a fifteen-minute total deadline from acceptance, including queue
 time, compaction and investigation. Expired queued requests never start inference.
@@ -224,3 +229,15 @@ Live checks through Talìa's pinned SSH credentials verified `ip -br addr`,
 `ip route get 82.152.141.21` and `connections` on each host; all three rejected
 `ip link set lo down` with exit code 126. Root-owned runner backups remain
 beside `/opt/talia-diagnostics/runner.py` with `before-network` suffixes.
+
+
+## Session acknowledgement rollout — 2026-10-08
+
+The `session-ack-20261008` build moves ordinary-question acknowledgements from
+message admission to the atomic new-session context commit. Follow-ups remain
+silent apart from typing and the eventual answer; clarification and classification
+fallback do not imply a new session. Explicit `/compact` acknowledgement remains.
+No schema change is required. The pre-upgrade SQLite backup passed integrity_check
+and is in `/data/backups/session-ack-20261008/`; the prior image is retained as
+`talia:before-session-ack-20261008`. Qualification: all 33 Telegram tests and all
+202 engine tests passed, with one provisioned-host integration test skipped.

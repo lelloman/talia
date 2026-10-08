@@ -74,7 +74,7 @@ pub(super) fn record_turn(s: &Store, j: &Job, answer: &str, now: i64) -> Result<
     )
 }
 impl Worker {
-    fn context_commit(&self, j: &mut Job, st: &State, status: &str) -> Result<()> {
+    fn context_commit(&self, j: &mut Job, st: &State, status: &str, acknowledge: bool) -> Result<()> {
         ai::permit(&self.engine, &j.scope())?;
         if self.engine.now() >= j.deadline {
             return Err("Investigation deadline exceeded".into());
@@ -82,7 +82,17 @@ impl Worker {
         self.engine.store.borrow_mut().alert_atomic(|s| {
             put_state(s, j, st)?;
             j.context_revision += 1;
-            s.telegram_job_put(j, status)
+            s.telegram_job_put(j, status)?;
+            if acknowledge {
+                s.telegram_enqueue(
+                    &format!("ack-{}", j.id),
+                    j.chat,
+                    "chat",
+                    Some(&j.user.to_string()),
+                    "Got it — I’ll start a new investigation and reply here.",
+                )?;
+            }
+            Ok(())
         })
     }
     async fn context_infer(
@@ -147,6 +157,7 @@ impl Worker {
                 if self.engine.now() >= j.deadline {
                     return Err("Investigation deadline exceeded".into());
                 }
+                let mut acknowledge = false;
                 match result {
                     Ok(c) => {
                         let pending = if c.resume_pending {
@@ -179,6 +190,7 @@ impl Worker {
                         }
                         if c.decision == "new_session" {
                             st.cutoff = Some(j.id);
+                            acknowledge = true;
                         }
                         if j.report.is_none() {
                             j.report = pending.as_ref().and_then(|p| p.report.clone());
@@ -202,7 +214,7 @@ impl Worker {
                 }
                 j.ai_run = None;
                 j.maintenance_deadline = None;
-                self.context_commit(j, &st, "queued")?;
+                self.context_commit(j, &st, "queued", acknowledge)?;
                 continue;
             }
             if j.phase == "maintain" {
@@ -229,7 +241,7 @@ impl Worker {
                         return self.finish_compact(j, None);
                     }
                     j.phase = "answer".into();
-                    self.context_commit(j, &st, "queued")?;
+                    self.context_commit(j, &st, "queued", false)?;
                     continue;
                 }
                 // Saved offered IDs make a resumed inference independent of future queued outcomes.
@@ -303,7 +315,7 @@ impl Worker {
                         j.phase = "answer".into();
                         j.offered.clear();
                         j.ai_run = None;
-                        self.context_commit(j, &st, "queued")?;
+                        self.context_commit(j, &st, "queued", false)?;
                     }
                 }
                 continue;
