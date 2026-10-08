@@ -10,13 +10,13 @@ use std::time::Duration;
 pub mod account;
 #[cfg(test)]
 mod account_tests;
+mod alert_diagnostics;
 mod crypto;
-mod text_calls;
+mod host_shell;
 #[cfg(test)]
 pub(crate) mod tests;
+mod text_calls;
 mod tools;
-mod alert_diagnostics;
-mod host_shell;
 fn err(e: impl std::fmt::Display) -> String {
     e.to_string()
 }
@@ -186,6 +186,7 @@ pub(crate) fn permit(engine: &Engine, scope: &Scope) -> Result<()> {
 pub(crate) struct ExecutionOptions {
     pub max_tokens: u32,
     pub max_turns: u32,
+    pub thinking_budget_tokens: u32,
     /// Unicode scalar values in the complete serialized HTTP request body.
     pub max_request_chars: Option<usize>,
 }
@@ -194,6 +195,7 @@ impl Default for ExecutionOptions {
         Self {
             max_tokens: 4096,
             max_turns: 6,
+            thinking_budget_tokens: 1024,
             max_request_chars: None,
         }
     }
@@ -226,7 +228,10 @@ pub async fn execute(
         instructions,
         context,
         with_tools,
-        ExecutionOptions::default(),
+        ExecutionOptions {
+            max_tokens: if with_tools { 8192 } else { 4096 },
+            ..ExecutionOptions::default()
+        },
     )
     .await
 }
@@ -241,7 +246,10 @@ pub(crate) async fn execute_with_options(
     with_tools: bool,
     options: ExecutionOptions,
 ) -> Result<Value> {
-    if !(1..=8192).contains(&options.max_tokens) || !(1..=6).contains(&options.max_turns) {
+    if !(1..=8192).contains(&options.max_tokens)
+        || !(1..=6).contains(&options.max_turns)
+        || options.thinking_budget_tokens >= options.max_tokens
+    {
         return Err("invalid AI execution options".into());
     }
     permit(engine, &scope)?;
@@ -341,8 +349,18 @@ async fn run(engine: &Engine, r: &mut Run, options: ExecutionOptions) -> Result<
         }
         r.turns += 1;
         engine.store.borrow().ai_put(r)?;
-        let mut request = json!({"model":config.model,"messages":r.messages,"stream":false,"max_tokens":options.max_tokens});
-        if r.tools {
+        // Reserve the last turn for a completed answer instead of executing tools
+        // whose results the model would never get to interpret.
+        let final_turn = r.tools && turn + 1 == options.max_turns;
+        if final_turn {
+            append(
+                r,
+                json!({"role":"user","content":"The diagnostic step budget is exhausted. Give your final answer using the evidence already collected. State what remains unverified. Do not call more tools or invent results."}),
+            )?;
+        }
+        let mut request = json!({"model":config.model,"messages":r.messages,"stream":false,"max_tokens":options.max_tokens,
+            "thinking_budget_tokens":options.thinking_budget_tokens});
+        if r.tools && !final_turn {
             request["tools"] = json!(tools::definitions());
         }
         // Check the exact body sent, including model, instructions, JSON escaping
@@ -404,16 +422,27 @@ async fn run(engine: &Engine, r: &mut Run, options: ExecutionOptions) -> Result<
         // Some runtimes leave tool calls in the text. Convert them before the normal
         // validation; markup that is not understood never becomes an answer.
         let mut finish = choice["finish_reason"].clone();
-        if message["tool_calls"].as_array().is_none_or(|c| c.is_empty()) {
-            if let Some(extracted) = message["content"].as_str().and_then(|t| text_calls::extract(t, r.turns)) {
+        if message["tool_calls"]
+            .as_array()
+            .is_none_or(|c| c.is_empty())
+        {
+            if let Some(extracted) = message["content"]
+                .as_str()
+                .and_then(|t| text_calls::extract(t, r.turns))
+            {
                 if finish == "length" {
                     return Err("simple-ai output truncated at token limit".into());
                 }
                 if !r.tools {
                     return Err("simple-ai returned a malformed tool call".into());
                 }
-                let (prose, calls) = extracted.map_err(|_| "simple-ai returned a malformed tool call")?;
-                message["content"] = if prose.is_empty() { Value::Null } else { json!(prose) };
+                let (prose, calls) =
+                    extracted.map_err(|_| "simple-ai returned a malformed tool call")?;
+                message["content"] = if prose.is_empty() {
+                    Value::Null
+                } else {
+                    json!(prose)
+                };
                 message["tool_calls"] = json!(calls);
                 finish = json!("tool_calls");
             }
@@ -422,7 +451,7 @@ async fn run(engine: &Engine, r: &mut Run, options: ExecutionOptions) -> Result<
             if finish == "length" {
                 return Err("simple-ai output truncated at token limit".into());
             }
-            if !r.tools || finish != "tool_calls" || calls.len() > 4 {
+            if !r.tools || final_turn || finish != "tool_calls" || calls.len() > 4 {
                 return Err("unexpected or excessive AI tool calls".into());
             }
             let mut ids = std::collections::BTreeSet::new();

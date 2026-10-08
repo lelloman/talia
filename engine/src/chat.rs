@@ -558,15 +558,15 @@ impl Worker {
                         ai::ExecutionOptions {
                             max_tokens: 8192,
                             max_turns: 1,
+                            thinking_budget_tokens: 0,
                             max_request_chars: None,
                         },
                     )
                     .await
                     .and_then(|v| {
-                        serde_json::from_str::<Selection>(
+                        core::parse_json::<Selection>(
                             v["summary"].as_str().ok_or("summary missing")?,
                         )
-                        .map_err(err)
                     })
                     .and_then(|v| {
                         core::validate_selection(&offered, &v)?;

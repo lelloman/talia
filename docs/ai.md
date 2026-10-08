@@ -232,8 +232,10 @@ retried. Ask a new question or start a new report run to try again. An HTTP fail
 cannot prove the remote model did no computation; Talìa does not claim to cancel
 simple-ai inference remotely.
 
-Limits per run: six model requests, at most four tool calls per response, 2,048
-requested output tokens per normal completion. Telegram requests have a fifteen-minute
+Limits per run: six model requests, at most four tool calls per response, 8,192
+requested output tokens for investigations and 4,096 for report analysis. Model
+thinking is capped at 1,024 tokens. The last investigation turn has no tools and
+requests a final answer identifying any evidence still missing. Telegram requests have a fifteen-minute
 overall owner deadline; report analysis follows its report deadline, capped at twenty
 minutes. Each HTTP request uses the remaining execution deadline. Inputs allow 16 KiB of
 instructions and 64 KiB of context; accumulated messages and HTTP responses each
@@ -246,9 +248,10 @@ output tokens with a 120-second budget. Its complete serialized request body is
 hard-capped at 10,000 Unicode characters, including instructions and JSON escaping.
 An oversized classification is not sent and does not advance the session cutoff;
 normal context maintenance and answering still run with bounded history.
-Summarization requests 8,192 tokens, with
-at most two batches sharing a 180-second budget. These are internal execution
-options; report analysis and investigation tool-loop defaults are unchanged.
+Summarization requests 8,192 tokens, with at most two 12-KiB batches of up to 16
+entries sharing a 180-second budget and a 4-KiB replacement target. Classification
+and summarization disable model thinking. Complete JSON in a single Markdown
+fence is accepted; partial JSON, prose, invalid coverage and truncated output are rejected.
 Token-limit truncation is retained as an explicit error. Context maintenance
 failures use the [bounded Telegram fallback](telegram.md#investigation-setup-and-conversation)
 instead of discarding a self-contained question. Phase IDs and completed outputs

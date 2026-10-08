@@ -74,7 +74,13 @@ pub(super) fn record_turn(s: &Store, j: &Job, answer: &str, now: i64) -> Result<
     )
 }
 impl Worker {
-    fn context_commit(&self, j: &mut Job, st: &State, status: &str, acknowledge: bool) -> Result<()> {
+    fn context_commit(
+        &self,
+        j: &mut Job,
+        st: &State,
+        status: &str,
+        acknowledge: bool,
+    ) -> Result<()> {
         ai::permit(&self.engine, &j.scope())?;
         if self.engine.now() >= j.deadline {
             return Err("Investigation deadline exceeded".into());
@@ -116,6 +122,7 @@ impl Worker {
             ai::ExecutionOptions {
                 max_tokens: tokens,
                 max_turns: 1,
+                thinking_budget_tokens: 0,
                 max_request_chars: (instructions == CLASSIFY).then_some(CLASSIFIER_REQUEST_CHARS),
             },
         )
@@ -144,7 +151,7 @@ impl Worker {
                     self.context_infer(j,CLASSIFY,json!({"question":j.text,"report":j.report,
                     "session_active":st.cutoff.is_some(),"history":history,"context_omitted":false,"pending":st.pending}),2048,deadline).await
                 }
-                    .and_then(|v|serde_json::from_str::<Classification>(v["summary"].as_str().ok_or("classifier result missing")?).map_err(err))
+                    .and_then(|v|core::parse_json::<Classification>(v["summary"].as_str().ok_or("classifier result missing")?))
                     .and_then(|v|{
                         if !["continue","new_session","clarify"].contains(&v.decision.as_str())
                             || v.resume_pending && st.pending.is_none()
@@ -269,10 +276,9 @@ impl Worker {
                     )
                     .await
                     .and_then(|v| {
-                        serde_json::from_str::<Selection>(
+                        core::parse_json::<Selection>(
                             v["summary"].as_str().ok_or("summary missing")?,
                         )
-                        .map_err(err)
                     })
                     .and_then(|v| {
                         validate_selection(&offered, &v)?;

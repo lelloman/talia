@@ -103,10 +103,11 @@ entries. Summary coverage can reference an earlier summary, preserving its
 provenance without loading all original messages again. `/compact` requests one
 selective batch without changing the cutoff. Original messages are never deleted.
 
-Automatic maintenance allows at most two 32-KiB batches in a shared 180-second
+Automatic maintenance allows at most two 12-KiB batches of up to 16 entries in a shared 180-second
 budget, with 8,192 output tokens per completion. Classification allows 120 seconds
-and 2,048 output tokens. Both use the existing model and stay within the request's
-fifteen-minute deadline. Compaction aims for 12 KiB per replacement batch; answer
+and 2,048 output tokens. Both disable model thinking to reserve output for their
+structured JSON result, use the existing model and stay within the request's
+fifteen-minute deadline. Compaction aims for 4 KiB per replacement batch; answer
 history is capped at 24 KiB, prioritizing the latest turn and summaries. At most
 512 active entries are considered per pass. Any omitted context is explicitly
 marked; the incoming question and explicitly selected report are included

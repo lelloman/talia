@@ -36,6 +36,7 @@ async fn request_character_cap_is_enforced_before_http_and_includes_envelope() {
     let options = ExecutionOptions {
         max_tokens: 2048,
         max_turns: 1,
+        thinking_budget_tokens: 0,
         max_request_chars: Some(10_000),
     };
     // The user text alone fits, but the complete request does not.
@@ -300,27 +301,40 @@ async fn turns_are_bounded_and_inflight_recovery_does_not_resubmit() {
     let http = MockServer::start().await;
     let dir = config(&http.uri());
     Mock::given(path("/v1/chat/completions"))
-        .respond_with(
-            ResponseTemplate::new(200).set_body_json(call("monitoring_snapshot", json!({}))),
-        )
+        .respond_with(|r: &wiremock::Request| {
+            let request: Value = serde_json::from_slice(&r.body).unwrap();
+            assert_eq!(request["thinking_budget_tokens"], 1024);
+            ResponseTemplate::new(200).set_body_json(if request.get("tools").is_some() {
+                call("monitoring_snapshot", json!({}))
+            } else {
+                assert!(
+                    request["messages"].as_array().unwrap().last().unwrap()["content"]
+                        .as_str()
+                        .unwrap()
+                        .contains("budget is exhausted")
+                );
+                answer("The recorded evidence is incomplete; the cause remains unverified.")
+            })
+        })
         .expect(6)
         .mount(&http)
         .await;
     let s = Store::open(dir.join("engine.db")).unwrap();
     let scope = telegram(&s);
     let e = Engine::with_clock(s, Rc::new(|| 1000));
-    assert!(execute(
+    let result = execute(
         &e,
         "loop",
         scope.clone(),
         900000,
         "Investigate",
         json!({}),
-        true
+        true,
     )
     .await
-    .unwrap_err()
-    .contains("turn limit"));
+    .unwrap();
+    assert_eq!(result["turns"], 6);
+    assert!(result["summary"].as_str().unwrap().contains("unverified"));
     let mut interrupted = e.store.borrow().ai_run("loop").unwrap().unwrap();
     interrupted.id = "interrupted".into();
     interrupted.status = "running".into();

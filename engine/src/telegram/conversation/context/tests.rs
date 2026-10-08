@@ -17,8 +17,15 @@ fn ingest(w: &Worker, id: i64, text: &str) {
 }
 fn acknowledgements(w: &Worker) -> Vec<String> {
     let s = w.engine.store.borrow();
-    let mut query = s.conn.prepare("SELECT id FROM telegram_outbox WHERE id GLOB 'ack-*' ORDER BY id").unwrap();
-    query.query_map([], |r| r.get(0)).unwrap().collect::<std::result::Result<Vec<_>, _>>().unwrap()
+    let mut query = s
+        .conn
+        .prepare("SELECT id FROM telegram_outbox WHERE id GLOB 'ack-*' ORDER BY id")
+        .unwrap();
+    query
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .collect::<std::result::Result<Vec<_>, _>>()
+        .unwrap()
 }
 
 fn job(w: &Worker, id: i64) -> Job {
@@ -237,12 +244,15 @@ async fn selective_compaction_keeps_exact_constraint_and_tracks_nonoverlapping_c
         if system.contains(CLASSIFY) {return response(&classification("continue"));}
         if system.contains(SUMMARIZE) {
             assert_eq!(request["max_tokens"],8192);assert!(request.get("tools").is_none());
+            assert_eq!(request["thinking_budget_tokens"],0);
+            assert!(input["entries"].as_array().unwrap().len() <= 16);
+            assert!(encoded(&input["entries"]) <= BATCH_LIMIT);
             let mut keep=vec![];let mut sources=vec![];
             for e in input["entries"].as_array().unwrap() {
                 if e.to_string().contains("0.012345") {keep.push(e["id"].clone());}
                 else{sources.push(e["id"].clone());}
             }
-            return response(&json!({"keep":keep,"summaries":[{"sources":sources,"text":"Repeated image checks; cause remains unconfirmed."}]}).to_string());
+            return response(&format!("```json\n{}\n```", json!({"keep":keep,"summaries":[{"sources":sources,"text":"Repeated image checks; cause remains unconfirmed."}]})));
         }
         assert!(input.to_string().contains("0.012345"));
         assert!(input.to_string().contains("cause remains unconfirmed"));
@@ -571,6 +581,7 @@ async fn completed_classifier_is_reused_after_restart_without_resubmission() {
         ai::ExecutionOptions {
             max_tokens: 2048,
             max_turns: 1,
+            thinking_budget_tokens: 0,
             max_request_chars: Some(CLASSIFIER_REQUEST_CHARS),
         },
     )
@@ -788,6 +799,7 @@ async fn maintenance_reconsiders_kept_messages_and_reuses_completed_batch_after_
         ai::ExecutionOptions {
             max_tokens: 8192,
             max_turns: 1,
+            thinking_budget_tokens: 0,
             max_request_chars: None,
         },
     )
@@ -1088,4 +1100,29 @@ fn context_preserves_turn_order_and_fitting_exact_messages() {
     assert_eq!(result[0].id, "message-9");
     assert_eq!(result[0].content["text"].as_str().unwrap().len(), 16000);
     assert_eq!(result[1].id, "message-10");
+}
+
+#[test]
+fn structured_context_requires_complete_json_and_valid_source_coverage() {
+    let entries = vec![Entry {
+        id: "message-1".into(),
+        request: 1,
+        kind: "chat".into(),
+        content: json!({"role":"user","text":"Exact threshold 0.012345"}),
+    }];
+    let valid = r#"{"keep":[],"summaries":[{"sources":["message-1"],"text":"Threshold remains 0.012345."}]}"#;
+    let selection: Selection = core::parse_json(&format!("```json\n{valid}\n```")).unwrap();
+    validate_selection(&entries, &selection).unwrap();
+    for invalid in [
+        format!("Here is JSON: {valid}"),
+        format!("```json\n{valid}"),
+        valid[..valid.len() - 1].into(),
+    ] {
+        assert!(core::parse_json::<Selection>(&invalid).is_err());
+    }
+    let duplicate: Selection = core::parse_json(
+        r#"{"keep":["message-1"],"summaries":[{"sources":["message-1"],"text":"Duplicate"}]}"#,
+    )
+    .unwrap();
+    assert!(validate_selection(&entries, &duplicate).is_err());
 }
