@@ -201,3 +201,26 @@ backups passed integrity checks; all eight Telegram tests passed.
 Schema version 21 adds persisted formatting entities to the Telegram outbox.
 Back up the engine database before upgrading; older binaries reject this newer
 schema, so rolling back requires a compatible binary or the pre-upgrade backup.
+
+
+## Formatting rollout — 2026-10-08
+
+The October 7 host-shell image was still live with schema 20; sent replies 149
+and 155 contained literal Markdown. Deployed `network-formatting-20261008`
+(image `sha256:4c924963ef3cec274a42ea5aee472a2e43c5e1c19bfa123871514f619b10ec9d`)
+and updated the registry's `latest` tag. The service is healthy on schema 21
+with the outbox `entities` column. Previously sent or queued plain-text messages
+are not rewritten. New messages use the existing Markdown-to-entities renderer.
+No live test message was sent.
+
+Both pre-upgrade database backups passed integrity checks and are stored under
+`/data/backups/network-formatting-20261008/`. The previous image is retained as
+`talia:before-network-formatting-20261008`; rollback across schema 21 requires
+a compatible binary or restored backups. Verification: 202 engine tests passed,
+one provisioned-host test skipped; 22 restricted-runner tests passed.
+
+The read-only network runner is installed on homelab, vps-eu and vps-us.
+Live checks through Talìa's pinned SSH credentials verified `ip -br addr`,
+`ip route get 82.152.141.21` and `connections` on each host; all three rejected
+`ip link set lo down` with exit code 126. Root-owned runner backups remain
+beside `/opt/talia-diagnostics/runner.py` with `before-network` suffixes.

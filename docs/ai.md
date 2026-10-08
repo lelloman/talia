@@ -138,7 +138,9 @@ The tools are internal Rust dispatch, not another MCP connection:
   a local shell or passes model text as an SSH command. Host enforcement permits
   only scoped reads, bounded diagnostic processes and text filters. Upgraded hosts
   additionally provide named `containers`, `container-logs`, `deployments`, `dns`,
-  `tcp-check`, and `listeners` operations. `help` exposes approved aliases. The
+  `tcp-check`, `listeners`, `connections`, and read-only `ip` operations.
+  Use `ip -br addr` for host addresses, `ip route get IP` for the local route
+  and source address, and `ip link`, `ip neigh`, or `ip rule` for network state. `help` exposes approved aliases. The
   account has no Docker socket access: a separate root-owned Unix broker checks
   the peer UID and independently validates each container operation. Observed
   deployment history begins with the first successful sample and can miss changes
