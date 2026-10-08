@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{cell::Cell, rc::Rc, time::Duration};
 mod conversation;
+pub(crate) mod formatting;
 pub mod transport;
 use transport::{random, Bot};
 fn err(e: impl std::fmt::Display) -> String {
@@ -107,10 +108,8 @@ impl Store {
             return Err("Telegram outbox capacity reached".into());
         }
         // Parts are durable and individually tracked. Sending is never automatically retried.
-        let chars: Vec<char> = text.chars().collect();
-        for (index, part) in chars.chunks(1800).enumerate() {
-            let body: String = part.iter().collect();
-            self.conn.execute("INSERT OR IGNORE INTO telegram_outbox(id,chat,kind,reference,status,body) VALUES(?,?,?,?,'pending',?)",params![format!("{id}-{index:03}"),chat,kind,reference,body]).map_err(err)?;
+        for (index, part) in formatting::markdown(text, 3600).into_iter().enumerate() {
+            self.conn.execute("INSERT OR IGNORE INTO telegram_outbox(id,chat,kind,reference,status,body,entities) VALUES(?,?,?,?,'pending',?,?)",params![format!("{id}-{index:03}"),chat,kind,reference,part.text,serde_json::to_string(&part.entities).map_err(err)?]).map_err(err)?;
         }
         Ok(())
     }
@@ -254,11 +253,11 @@ impl Worker {
         updates.map(|_| ())
     }
     async fn dispatch(&self, bot: &Bot, version: u64) -> Result<()> {
-        let pending: Option<(String, i64, String, String, Option<String>)> = {
+        let pending: Option<(String, i64, String, String, Option<String>, String)> = {
             let s = self.engine.store.borrow();
-            s.conn.query_row("SELECT id,chat,body,kind,reference FROM telegram_outbox WHERE status='pending' ORDER BY CASE WHEN kind='chat' AND id GLOB 'ack-*' THEN 0 ELSE 1 END, rowid LIMIT 1",[],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?,r.get(4)?))).optional().map_err(err)?
+            s.conn.query_row("SELECT id,chat,body,kind,reference,entities FROM telegram_outbox WHERE status='pending' ORDER BY CASE WHEN kind='chat' AND id GLOB 'ack-*' THEN 0 ELSE 1 END, rowid LIMIT 1",[],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?,r.get(4)?,r.get(5)?))).optional().map_err(err)?
         };
-        let Some((id, chat, text, kind, reference)) = pending else {
+        let Some((id, chat, text, kind, reference, entities)) = pending else {
             return Ok(());
         };
         {
@@ -310,10 +309,11 @@ impl Worker {
                 )
                 .map_err(err)?;
         }
+        let entities: Value = serde_json::from_str(&entities).map_err(err)?;
         let result = bot
             .call(
                 "sendMessage",
-                json!({"chat_id":chat,"text":text,"link_preview_options":{"is_disabled":true}}),
+                json!({"chat_id":chat,"text":text,"entities":entities,"link_preview_options":{"is_disabled":true}}),
             )
             .await;
         let mid = result

@@ -165,7 +165,7 @@ async fn delivery_chunks_are_tracked_and_never_replayed_after_uncertainty() {
     w.engine
         .store
         .borrow()
-        .telegram_enqueue("report-a", 10, "report", Some("run-1"), &"😀".repeat(2000))
+        .telegram_enqueue("report-a", 10, "report", Some("run-1"), &format!("**{}**", "😀".repeat(2000)))
         .unwrap();
     let (c, bot) = Bot::load(&w.engine).await.unwrap();
     for _ in 0..3 {
@@ -175,6 +175,7 @@ async fn delivery_chunks_are_tracked_and_never_replayed_after_uncertainty() {
     for v in bodies.lock().unwrap().iter() {
         assert!(v["text"].as_str().unwrap().encode_utf16().count() <= 4096);
         assert!(v.get("parse_mode").is_none());
+        assert_eq!(v["entities"], json!([{"type":"bold","offset":0,"length":v["text"].as_str().unwrap().encode_utf16().count()}]));
     }
     assert_eq!(
         w.engine
@@ -792,4 +793,26 @@ impl Store {
         self.conn.execute("UPDATE telegram_jobs SET body=json_set(body,'$.context_version',0,'$.phase',CASE json_extract(body,'$.phase') WHEN 'classify' THEN 'answer' WHEN 'maintain' THEN 'compact' ELSE json_extract(body,'$.phase') END) WHERE id=?", [update["update_id"].as_i64().unwrap_or(-1)]).map_err(err)?;
         Ok(())
     }
+}
+
+#[test]
+fn formatting_migration_preserves_queued_plain_text() {
+    let (w, dir) = fixture();
+    let s = w.engine.store.borrow();
+    s.conn.execute("INSERT INTO telegram_outbox(id,chat,kind,status,body) VALUES('legacy',1,'chat','pending','**literal old text**')", []).unwrap();
+    // Recreate the previous schema while retaining the pending message.
+    s.conn.execute_batch("ALTER TABLE telegram_outbox DROP COLUMN entities; PRAGMA user_version=20;").unwrap();
+    drop(s);
+    drop(w);
+    let s = Store::open(dir.join("engine.db")).unwrap();
+    let row: (String,String,String) = s.conn.query_row("SELECT body,entities,status FROM telegram_outbox WHERE id='legacy'", [], |r| Ok((r.get(0)?,r.get(1)?,r.get(2)?))).unwrap();
+    assert_eq!(row, ("**literal old text**".into(), "[]".into(), "pending".into()));
+    s.telegram_enqueue("formatted", 1, "report", None, "**new bold**").unwrap();
+    drop(s);
+    let s = Store::open(dir.join("engine.db")).unwrap();
+    let row: (String,String) = s.conn.query_row("SELECT body,entities FROM telegram_outbox WHERE id='formatted-000'", [], |r| Ok((r.get(0)?,r.get(1)?))).unwrap();
+    assert_eq!(row.0, "new bold");
+    assert_eq!(serde_json::from_str::<Value>(&row.1).unwrap(), json!([{"type":"bold","offset":0,"length":8}]));
+    drop(s);
+    std::fs::remove_dir_all(dir).unwrap();
 }

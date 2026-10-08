@@ -155,10 +155,14 @@ for the normal `/data/talia.sqlite3` deployment.
 Inbound update IDs and pairing admissions commit together before polling advances
 the offset. One poll/dispatch loop runs per service. No external agent is contacted.
 
-Outgoing text is plain text, split into at most 1,800 Unicode scalar values per
-message (also below Telegram's UTF-16 limit). Every part has its own durable
-delivery state and report reference. A restart or uncertain response during send
-becomes `unknown`, with no automatic retry or duplicate send. Report delivery is
+Outgoing chat replies, reports and alerts render Markdown as Telegram text and
+formatting entities: bold, italics, strikethrough, links, inline code and fenced
+code blocks. Headings become bold and lists remain readable text. Raw HTML stays
+literal; unsupported formatting falls back to readable text. Long outbox messages
+are split at 3,600 UTF-16 units, preserving formatting across parts and emoji
+boundaries. Every part has its own durable text, entities, delivery state and
+report reference. Existing queued messages retain their original plain text.
+A restart or uncertain response during send becomes `unknown`, with no automatic retry or duplicate send. Report delivery is
 complete only when all parts are confirmed. Telegram acceptance is not a read
 receipt. The settings page displays polling errors, delivery counts and recent
 investigation failures and local AI run IDs. Job status also exposes the execution
@@ -193,3 +197,7 @@ The working-tree build includes the compact report layout. Deployment uses
 `/tmp/talia-telegram-timeout-15-20260926.yml` on homelab; future base-Compose
 `latest` deployments must include these changes. Both pre-deployment SQLite
 backups passed integrity checks; all eight Telegram tests passed.
+
+Schema version 21 adds persisted formatting entities to the Telegram outbox.
+Back up the engine database before upgrading; older binaries reject this newer
+schema, so rolling back requires a compatible binary or the pre-upgrade backup.

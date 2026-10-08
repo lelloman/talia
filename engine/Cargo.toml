@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 default-run = "talia-engine"
 [dependencies]
+pulldown-cmark = { version = "=0.13.4", default-features = false }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 rquickjs = { version = "=0.13.0", features = ["bindgen"] }

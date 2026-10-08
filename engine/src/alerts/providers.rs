@@ -162,7 +162,10 @@ async fn send_inner(p: &Provider, d: &Dispatch) -> Outcome {
             else {
                 return Outcome::Failed("HTTP transport unavailable".into());
             };
-            let response=client.post(format!("{}/bot{token}/sendMessage",base_url.trim_end_matches('/'))).json(&json!({"chat_id":d.address,"text":text.chars().take(4000).collect::<String>()})).send().await;
+            let Some(part) = crate::telegram::formatting::markdown(&text, 4000).into_iter().next() else {
+                return Outcome::Failed("Empty Telegram message".into());
+            };
+            let response=client.post(format!("{}/bot{token}/sendMessage",base_url.trim_end_matches('/'))).json(&json!({"chat_id":d.address,"text":part.text,"entities":part.entities})).send().await;
             let Ok(mut response) = response else {
                 return Outcome::Unknown("Telegram delivery outcome unknown".into());
             };

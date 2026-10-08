@@ -969,7 +969,7 @@ fn migration_preserves_original_history_and_legacy_job_shape() {
             INSERT INTO telegram_context(chat,user,summary,through) VALUES(55,55,'legacy summary',1);
             INSERT INTO telegram_history(chat,user,epoch,role,body) VALUES(55,55,0,'user','legacy question');
             INSERT INTO telegram_jobs VALUES(60,55,55,'queued','{\"id\":60,\"chat\":55,\"user\":55,\"epoch\":0,\"text\":\"legacy question\",\"report\":null,\"created\":1000,\"deadline\":901000,\"revision\":2,\"phase\":\"answer\",\"through\":0,\"ai_run\":null,\"error\":null}');
-            PRAGMA user_version=17;").unwrap();
+            ALTER TABLE telegram_outbox DROP COLUMN entities; PRAGMA user_version=17;").unwrap();
     }
     drop(w);
     let s = Store::open(dir.join("engine.db")).unwrap();
@@ -977,7 +977,7 @@ fn migration_preserves_original_history_and_legacy_job_shape() {
         s.conn
             .query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
             .unwrap(),
-        20
+        21
     );
     assert_eq!(
         s.conn
