@@ -391,3 +391,17 @@ passed; the payload is compatible with the APK 6 contract. Published on LelloSto
 (publication revision 36), replacing payload 17. The VPK is 10,827,521 bytes, SHA-256
 `18bc9155bcaaec1e167d3c5ce2d125442b0996a4dae6257f7d8a29f45f5198f4`; source commit
 `21ece6e`; artifacts archived in `.local/android-releases/payload-155`.
+
+## Dashboard chart compatibility (payload 174)
+
+Payload 174 (app version 0.3.174, source `4018a8e`) updates the renderer for the
+delivered CPU/network chart properties. Payload 160 rejected `primaryLabel` and
+could not open those dashboards. The updated renderer also handles absent optional
+chart series without a null-pointer crash.
+
+The dashboard regression passed on the physical Android 16 phone, including light
+and dark rendering and the Git recheck action. The signed minified payload passed
+APK 6 contract validation, was published through LelloStore, and the updated phone
+rendered a live host dashboard. Build dependency: LelloDesign Compose 0.3.0 source
+`3fc683b` (selected with `LELLODESIGN_COMPOSE_DIRECTORY`). Artifacts and provenance
+are archived in `.local/android-releases/payload-174`.
