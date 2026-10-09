@@ -29,6 +29,11 @@ Full label/value evidence is in `engine_read` on `infra-ALERT_NAME`; notificatio
 messages are bounded. Critical alerts notify immediately and repeat every four hours;
 warnings wait 30 seconds and repeat every twelve hours. Acknowledgement stops repeats.
 Recovery sends once. Delivery retries, silences and history are owned by Talìa.
+Failed SSH authentication bursts are monitoring-only (`notify: false`): both
+firing and recovery messages are suppressed while measurements and alert history
+remain available. Unexpected successful logins, security-file changes, and missing
+SSH monitoring data retain their notifications. Existing bindings preserve live
+overrides on redeployment; update their parameters explicitly to apply this default.
 
 These are native queries and policies, not an Alertmanager forwarding bridge.
 Missing data freezes the affected condition and surfaces the separate input warning;

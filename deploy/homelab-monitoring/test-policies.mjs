@@ -18,6 +18,7 @@ assert.equal((await step(0,[a])).stage,both,'partial recovery preserves acknowle
 await step(0,[a,b]);await step(30000,[a,b]);
 assert.notEqual((await step(30000,[a,b])).stage,both,'a returning member triggers a new warning');
 assert.equal((await step(0,[])).active,false);
+
 await step(0,[a]);assert.equal((await step(60000,[a])).active,false,'sampling gaps reset pending time');
 sample.quality='error';await assert.rejects(policy.evaluate(ctx));
 const health={...ctx,state:{}};
@@ -27,4 +28,13 @@ sample.quality='good';sample.timestamp=now;assert.equal((await guard.evaluate(he
 ctx.params.forMs=0;assert.equal((await step(0,[a])).active,true);
 assert.match((await step(0,[a])).message,/101 failures/);
 assert.equal((await step(0,[])).active,false);
+ctx.params.notify=false;
+let quiet=await step(0,[a]);
+assert.equal(quiet.active,true,'quiet conditions still record failures');
+assert.deepEqual(quiet.actions,[],'quiet conditions suppress firing messages');
+quiet=await step(0,[]);
+assert.equal(quiet.active,false);
+assert.deepEqual(quiet.actions,[],'quiet conditions also suppress recovery messages');
+delete ctx.params.notify;
+assert.equal((await step(0,[a])).actions,undefined,'other warnings retain their configured actions');
 console.log('Policy checks passed: durations, per-series timing, membership changes, recovery, gaps, unavailable input, immediate security alerts.');

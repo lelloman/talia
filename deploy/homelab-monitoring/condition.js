@@ -25,5 +25,7 @@
   format(p.summary,item)+'\n'+format(p.description,item)+'\n'+Object.entries(item.labels).map(([k,v])=>k+'='+v).join(', ')).join('\n\n');
  // Keep below both the engine's UTF-8 message bound and Telegram's message bound.
  if(message.length>1000)message=message.slice(0,950)+'\n… See Talìa monitoring input for all affected series.';
- return {active:!!firing.length,stage:ctx.state.stage||'firing-a',severity:p.severity,message};
+ // Informational conditions remain visible without firing or recovery messages.
+ return {active:!!firing.length,stage:ctx.state.stage||'firing-a',severity:p.severity,message,
+  ...(p.notify===false?{actions:[]}:{})};
 }}
