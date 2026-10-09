@@ -122,7 +122,6 @@ impl Worker {
             ai::ExecutionOptions {
                 max_tokens: tokens,
                 max_turns: 1,
-                thinking_budget_tokens: 0,
                 max_request_chars: (instructions == CLASSIFY).then_some(CLASSIFIER_REQUEST_CHARS),
             },
         )

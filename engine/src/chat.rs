@@ -558,7 +558,6 @@ impl Worker {
                         ai::ExecutionOptions {
                             max_tokens: 8192,
                             max_turns: 1,
-                            thinking_budget_tokens: 0,
                             max_request_chars: None,
                         },
                     )

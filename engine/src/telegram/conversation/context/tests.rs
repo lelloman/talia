@@ -244,7 +244,7 @@ async fn selective_compaction_keeps_exact_constraint_and_tracks_nonoverlapping_c
         if system.contains(CLASSIFY) {return response(&classification("continue"));}
         if system.contains(SUMMARIZE) {
             assert_eq!(request["max_tokens"],8192);assert!(request.get("tools").is_none());
-            assert_eq!(request["thinking_budget_tokens"],0);
+            assert!(request.get("thinking_budget_tokens").is_none());
             assert!(input["entries"].as_array().unwrap().len() <= 16);
             assert!(encoded(&input["entries"]) <= BATCH_LIMIT);
             let mut keep=vec![];let mut sources=vec![];
@@ -581,7 +581,6 @@ async fn completed_classifier_is_reused_after_restart_without_resubmission() {
         ai::ExecutionOptions {
             max_tokens: 2048,
             max_turns: 1,
-            thinking_budget_tokens: 0,
             max_request_chars: Some(CLASSIFIER_REQUEST_CHARS),
         },
     )
@@ -799,7 +798,6 @@ async fn maintenance_reconsiders_kept_messages_and_reuses_completed_batch_after_
         ai::ExecutionOptions {
             max_tokens: 8192,
             max_turns: 1,
-            thinking_budget_tokens: 0,
             max_request_chars: None,
         },
     )

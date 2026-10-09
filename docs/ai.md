@@ -234,7 +234,8 @@ simple-ai inference remotely.
 
 Limits per run: six model requests, at most four tool calls per response, 8,192
 requested output tokens for investigations and 4,096 for report analysis. Model
-thinking is capped at 1,024 tokens. The last investigation turn has no tools and
+reasoning follows the configured model defaults; Talìa does not send optional
+reasoning parameters because backend support varies by model. The last investigation turn has no tools and
 requests a final answer identifying any evidence still missing. Telegram requests have a fifteen-minute
 overall owner deadline; report analysis follows its report deadline, capped at twenty
 minutes. Each HTTP request uses the remaining execution deadline. Inputs allow 16 KiB of
@@ -250,7 +251,7 @@ An oversized classification is not sent and does not advance the session cutoff;
 normal context maintenance and answering still run with bounded history.
 Summarization requests 8,192 tokens, with at most two 12-KiB batches of up to 16
 entries sharing a 180-second budget and a 4-KiB replacement target. Classification
-and summarization disable model thinking. Complete JSON in a single Markdown
+and summarization use the same model defaults. Complete JSON in a single Markdown
 fence is accepted; partial JSON, prose, invalid coverage and truncated output are rejected.
 Token-limit truncation is retained as an explicit error. Context maintenance
 failures use the [bounded Telegram fallback](telegram.md#investigation-setup-and-conversation)

@@ -186,7 +186,6 @@ pub(crate) fn permit(engine: &Engine, scope: &Scope) -> Result<()> {
 pub(crate) struct ExecutionOptions {
     pub max_tokens: u32,
     pub max_turns: u32,
-    pub thinking_budget_tokens: u32,
     /// Unicode scalar values in the complete serialized HTTP request body.
     pub max_request_chars: Option<usize>,
 }
@@ -195,7 +194,6 @@ impl Default for ExecutionOptions {
         Self {
             max_tokens: 4096,
             max_turns: 6,
-            thinking_budget_tokens: 1024,
             max_request_chars: None,
         }
     }
@@ -248,7 +246,6 @@ pub(crate) async fn execute_with_options(
 ) -> Result<Value> {
     if !(1..=8192).contains(&options.max_tokens)
         || !(1..=6).contains(&options.max_turns)
-        || options.thinking_budget_tokens >= options.max_tokens
     {
         return Err("invalid AI execution options".into());
     }
@@ -358,8 +355,7 @@ async fn run(engine: &Engine, r: &mut Run, options: ExecutionOptions) -> Result<
                 json!({"role":"user","content":"The diagnostic step budget is exhausted. Give your final answer using the evidence already collected. State what remains unverified. Do not call more tools or invent results."}),
             )?;
         }
-        let mut request = json!({"model":config.model,"messages":r.messages,"stream":false,"max_tokens":options.max_tokens,
-            "thinking_budget_tokens":options.thinking_budget_tokens});
+        let mut request = json!({"model":config.model,"messages":r.messages,"stream":false,"max_tokens":options.max_tokens});
         if r.tools && !final_turn {
             request["tools"] = json!(tools::definitions());
         }

@@ -36,7 +36,6 @@ async fn request_character_cap_is_enforced_before_http_and_includes_envelope() {
     let options = ExecutionOptions {
         max_tokens: 2048,
         max_turns: 1,
-        thinking_budget_tokens: 0,
         max_request_chars: Some(10_000),
     };
     // The user text alone fits, but the complete request does not.
@@ -303,7 +302,7 @@ async fn turns_are_bounded_and_inflight_recovery_does_not_resubmit() {
     Mock::given(path("/v1/chat/completions"))
         .respond_with(|r: &wiremock::Request| {
             let request: Value = serde_json::from_slice(&r.body).unwrap();
-            assert_eq!(request["thinking_budget_tokens"], 1024);
+            assert!(request.get("thinking_budget_tokens").is_none());
             ResponseTemplate::new(200).set_body_json(if request.get("tools").is_some() {
                 call("monitoring_snapshot", json!({}))
             } else {
