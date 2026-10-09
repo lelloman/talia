@@ -28,11 +28,11 @@ internal fun DashboardChart(p: JSONObject, modifier: Modifier) {
     val palette = LocalLelloPalette.current
     val measurer = rememberTextMeasurer()
     val array = p.optJSONArray("values")
-    val values = remember(array.toString()) { (0 until (array?.length() ?: 0)).map { i -> array!!.opt(i).let { (it as? Number)?.toDouble()?.takeIf(Double::isFinite) } } }
+    val values = remember(array?.toString()) { (0 until (array?.length() ?: 0)).map { i -> array!!.opt(i).let { (it as? Number)?.toDouble()?.takeIf(Double::isFinite) } } }
     val peakArray = p.optJSONArray("secondaryValues") ?: p.optJSONArray("peakValues")
     val primaryLabel = p.optString("primaryLabel").ifEmpty { "Average" }
     val secondaryLabel = p.optString("secondaryLabel").ifEmpty { "Max" }
-    val peaks = remember(peakArray.toString()) { (0 until (peakArray?.length() ?: 0)).map { i -> (peakArray!!.opt(i) as? Number)?.toDouble()?.takeIf(Double::isFinite) } }
+    val peaks = remember(peakArray?.toString()) { (0 until (peakArray?.length() ?: 0)).map { i -> (peakArray!!.opt(i) as? Number)?.toDouble()?.takeIf(Double::isFinite) } }
     val finite = (values + peaks).filterNotNull()
     val fixed = p.has("min") && p.has("max")
     val min = if (fixed) p.getDouble("min") else minOf(0.0, finite.minOrNull() ?: 0.0)

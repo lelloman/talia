@@ -26,6 +26,19 @@ import java.io.File
 class DashboardsReviewTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private val fixture = JSONObject(instrumentation.context.assets.open("dashboard-fixture.json").bufferedReader().use { it.readText() })
+        .also { fixture ->
+            // Delivered dashboards use these chart properties. An older packaged
+            // validator rejected them before the dashboard could render at all.
+            fun chartLabels(node: JSONObject) {
+                if (node.optString("type") == "Chart") {
+                    node.getJSONObject("props").put("primaryLabel", "Average").put("secondaryLabel", "Max")
+                }
+                val children = node.optJSONArray("children")
+                for (i in 0 until (children?.length() ?: 0)) chartLabels(children!!.getJSONObject(i))
+            }
+            val definitions = fixture.getJSONObject("package").getJSONObject("definitions")
+            definitions.keys().forEach { chartLabels(definitions.getJSONObject(it)) }
+        }
     private val engineOps = mutableListOf<String>()
     private val runs = mutableListOf<String>()
 
@@ -68,7 +81,8 @@ class DashboardsReviewTest {
     private fun await(text: String) {
         val deadline = System.currentTimeMillis() + 15000
         while (texts(instrumentation.uiAutomation.rootInActiveWindow).none { it.contains(text) } && System.currentTimeMillis() < deadline) Thread.sleep(100)
-        assertTrue("missing '$text'", texts(instrumentation.uiAutomation.rootInActiveWindow).any { it.contains(text) })
+        val visible = texts(instrumentation.uiAutomation.rootInActiveWindow)
+        assertTrue("missing '$text'; visible: $visible", visible.any { it.contains(text) })
     }
     private fun shot(name: String) {
         val directory = File(instrumentation.targetContext.externalCacheDir, "ui-review").apply { mkdirs() }
@@ -117,6 +131,12 @@ class DashboardsReviewTest {
                     find(instrumentation.uiAutomation.rootInActiveWindow) { it.isScrollable }?.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
                     Thread.sleep(500)
                     await("41.3% free")
+                    // Physical phones can show fewer cards than the emulator.
+                    for (attempt in 0 until 6) {
+                        if (texts(instrumentation.uiAutomation.rootInActiveWindow).any { it.contains("Git worktrees need attention") }) break
+                        find(instrumentation.uiAutomation.rootInActiveWindow) { it.isScrollable }?.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
+                        Thread.sleep(400)
+                    }
                     await("Git worktrees need attention")
                     shot("dashboard-storage")
                     find(instrumentation.uiAutomation.rootInActiveWindow) { it.isScrollable }?.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
