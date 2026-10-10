@@ -41,10 +41,13 @@ LelloAuth's SSO session and other applications are unaffected.
 Rotation is serialized per browser session across tabs, browser APIs and agent-key
 checks; unrelated sessions can refresh concurrently. The encrypted successor is
 saved before introspection. In-flight logout never recreates a deleted session.
-A durable pending marker prevents reuse of a refresh token after an interrupted
-rotation (crash, cancellation, lost response); that session must sign in again.
-Explicit provider 5xx responses can be retried, while failed identity validation,
-invalid grants and ambiguous transport failures require a new login. A temporary
+Rotation runs detached from the request, so a browser fetch timeout or aborted
+request cannot cancel it. A durable pending marker records an interrupted rotation
+(crash, lost response); the next check retries the same refresh token, which
+LelloAuth answers with the persisted successor within its 30-second rotation grace
+period and rejects afterwards. Provider 5xx responses and transport failures keep
+the session for retry, while failed identity validation and invalid grants require
+a new login. A temporary
 introspection outage retains the session and its latest token pair while denying
 requests until validation succeeds.
 

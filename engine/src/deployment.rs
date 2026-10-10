@@ -214,7 +214,17 @@ impl Deployment {
                 lock
             }
         };
-        let _check = check.lock().await;
+        // Detached: an aborted browser request must not cancel a provider rotation midway.
+        let d = self.clone();
+        let id = id.to_owned();
+        tokio::spawn(async move {
+            let _check = check.lock_owned().await;
+            d.check_identity(&id).await
+        })
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+    }
+    async fn check_identity(&self, id: &str) -> Result<Identity, StatusCode> {
         let (subject, name, encrypted, checked) = {
             let mut inner = self.inner.lock().unwrap();
             inner.checked.retain(|_, t| now() - *t < 30);
@@ -240,19 +250,18 @@ impl Deployment {
                 nonce: String::new(),
                 refreshing: false,
             });
-        if tokens.refreshing {
-            self.remove_session(id)?;
-            return Err(StatusCode::UNAUTHORIZED);
-        }
-        let refresh_due = tokens.refresh.is_some() && tokens.access_expires <= now() + 30;
+        // An interrupted rotation retries the same refresh token: LelloAuth returns the
+        // persisted successor within its rotation grace period and rejects it afterwards.
+        let refresh_due = tokens.refresh.is_some()
+            && (tokens.refreshing || tokens.access_expires <= now() + 30);
         if !checked || refresh_due {
             let _permit = self
                 .budget
                 .try_acquire()
                 .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
             if refresh_due {
-                // Persist before consuming a rotating credential. A crash/cancellation
-                // cannot replay the old token and revoke its whole provider family.
+                // Persist before consuming a rotating credential, so a crash or lost
+                // response is retried as an interrupted rotation.
                 tokens.refreshing = true;
                 self.store_tokens(id, &tokens)?;
                 let next = self.client.refresh_session(&tokens, &subject).await;
@@ -261,6 +270,10 @@ impl Deployment {
                     Err(crate::oidc::OidcError::RefreshUnavailable) => {
                         tokens.refreshing = false;
                         self.store_tokens(id, &tokens)?;
+                        return Err(StatusCode::SERVICE_UNAVAILABLE);
+                    }
+                    // The provider may have rotated; keep the marker so the next check retries.
+                    Err(crate::oidc::OidcError::ProviderRequest(_)) => {
                         return Err(StatusCode::SERVICE_UNAVAILABLE);
                     }
                     Err(_) => {
@@ -1113,10 +1126,10 @@ mod tests {
         );
     }
     #[tokio::test]
-    async fn refresh_rejects_identity_change_invalid_grant_and_interrupted_rotation() {
-        for mode in ["subject", "nonce", "audience", "grant", "interrupted"] {
+    async fn refresh_rejects_identity_change_and_invalid_grant() {
+        for mode in ["subject", "nonce", "audience", "grant"] {
             let (server, d) = fixture().await;
-            let (id, h) = renewable(&server, &d).await;
+            let (_, h) = renewable(&server, &d).await;
             if mode == "subject" {
                 refreshed(&server, "someone-else", 0).await;
             } else if mode == "nonce" || mode == "audience" {
@@ -1132,7 +1145,7 @@ mod tests {
                 Mock::given(path("/token")).respond_with(ResponseTemplate::new(200).set_body_json(json!({
                     "id_token":keys().0.sign(&claims),"access_token":"next-access","refresh_token":"next-refresh","expires_in":900
                 }))).expect(1).mount(&server).await;
-            } else if mode == "grant" {
+            } else {
                 Mock::given(path("/token"))
                     .respond_with(
                         ResponseTemplate::new(400).set_body_json(json!({"error":"invalid_grant"})),
@@ -1140,17 +1153,6 @@ mod tests {
                     .expect(1)
                     .mount(&server)
                     .await;
-            } else {
-                let raw: Vec<u8> = d
-                    .inner
-                    .lock()
-                    .unwrap()
-                    .db
-                    .query_row("SELECT token FROM sessions WHERE id=?", [&id], |r| r.get(0))
-                    .unwrap();
-                let mut t: SessionTokens = serde_json::from_str(&d.open(raw).unwrap()).unwrap();
-                t.refreshing = true;
-                d.store_tokens(&id, &t).unwrap();
             }
             assert!(matches!(
                 d.identity(&h).await,
@@ -1162,6 +1164,48 @@ mod tests {
             ));
             server.verify().await;
         }
+    }
+    fn stored(d: &Deployment, id: &str) -> SessionTokens {
+        let raw: Vec<u8> = d
+            .inner
+            .lock()
+            .unwrap()
+            .db
+            .query_row("SELECT token FROM sessions WHERE id=?", [id], |r| r.get(0))
+            .unwrap();
+        serde_json::from_str(&d.open(raw).unwrap()).unwrap()
+    }
+    #[tokio::test]
+    async fn interrupted_rotation_retries_the_same_refresh_token() {
+        let (server, d) = fixture().await;
+        let (id, h) = renewable(&server, &d).await;
+        let mut t = stored(&d, &id);
+        t.refreshing = true;
+        t.access_expires = now() + 600;
+        d.store_tokens(&id, &t).unwrap();
+        refreshed(&server, "provider-subject-123", 0).await;
+        assert!(d.identity(&h).await.is_ok());
+        let t = stored(&d, &id);
+        assert_eq!(t.refresh.as_deref(), Some("next-refresh"));
+        assert!(!t.refreshing);
+        server.verify().await;
+    }
+    #[tokio::test]
+    async fn cancelled_request_does_not_interrupt_refresh() {
+        let (server, d) = fixture().await;
+        let (id, h) = renewable(&server, &d).await;
+        refreshed(&server, "provider-subject-123", 200).await;
+        // A browser fetch timeout drops the request while the provider is rotating.
+        assert!(
+            tokio::time::timeout(std::time::Duration::from_millis(50), d.identity(&h))
+                .await
+                .is_err()
+        );
+        assert!(d.identity(&h).await.is_ok());
+        let t = stored(&d, &id);
+        assert_eq!(t.refresh.as_deref(), Some("next-refresh"));
+        assert!(!t.refreshing);
+        server.verify().await;
     }
     #[tokio::test]
     async fn refresh_outage_preserves_session_and_successor_survives_introspection_outage() {
