@@ -59,7 +59,7 @@ impl Store {
         let version: i64 = conn
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .map_err(err)?;
-        if version > 21 {
+        if version > 22 {
             return Err("database schema newer than engine".into());
         }
         if version == 0 {
@@ -129,6 +129,7 @@ PRAGMA user_version=3;").map_err(err)?;
         if version < 19 {let tx=conn.transaction().map_err(err)?;tx.execute_batch(include_str!("../migrations/019_store_notifications.sql")).map_err(err)?;tx.commit().map_err(err)?;}
         if version < 20 {let tx=conn.transaction().map_err(err)?;tx.execute_batch(include_str!("../migrations/020_chat.sql")).map_err(err)?;tx.commit().map_err(err)?;}
         if version < 21 {let tx=conn.transaction().map_err(err)?;tx.execute_batch(include_str!("../migrations/021_telegram_formatting.sql")).map_err(err)?;tx.commit().map_err(err)?;}
+        if version < 22 {let tx=conn.transaction().map_err(err)?;tx.execute_batch(include_str!("../migrations/022_monitoring_run_status.sql")).map_err(err)?;tx.commit().map_err(err)?;}
         Ok(Self { conn })
     }
     pub fn definition(&self, id: &str) -> Result<Definition> {
@@ -357,6 +358,30 @@ PRAGMA user_version=3;").map_err(err)?;
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
+    #[test]
+    fn monitoring_status_index_migrates_and_avoids_history_scans() {
+        let path = std::env::temp_dir().join(format!("talia-status-index-{}.sqlite3", std::process::id()));
+        {
+            let s = Store::open(&path).unwrap();
+            s.conn.execute_batch("DROP INDEX monitoring_runs_status; PRAGMA user_version=21; INSERT INTO monitoring_runs VALUES('retained','probe','completed','{}');").unwrap();
+        }
+        let s = Store::open(&path).unwrap();
+        assert_eq!(s.conn.query_row("SELECT count(*) FROM monitoring_runs WHERE id='retained'", [], |r| r.get::<_, i64>(0)).unwrap(), 1);
+        for query in [
+            "SELECT id FROM monitoring_runs WHERE status IN ('pending','queued') ORDER BY rowid",
+            "SELECT count(*) FROM monitoring_runs WHERE status IN ('pending','running','queued')",
+            "SELECT id FROM monitoring_runs WHERE status='running'",
+        ] {
+            let mut statement = s.conn.prepare(&format!("EXPLAIN QUERY PLAN {query}")).unwrap();
+            let plan: Vec<String> = statement.query_map([], |r| r.get(3)).unwrap().map(|r| r.unwrap()).collect();
+            assert!(plan.iter().any(|step| step.contains("SEARCH monitoring_runs") && step.contains("monitoring_runs_status")), "{plan:?}");
+            assert!(!plan.iter().any(|step| step.contains("SCAN monitoring_runs")), "{plan:?}");
+        }
+        drop(s);
+        // Reopening an already migrated database must also succeed.
+        drop(Store::open(&path).unwrap());
+        std::fs::remove_file(path).unwrap();
+    }
     pub fn seed(s: &mut Store) -> Instance {
         let d = Definition {
             id: "stored".into(),
