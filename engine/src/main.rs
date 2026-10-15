@@ -126,6 +126,9 @@ impl Service {
         }
         let op = r["op"].as_str().ok_or("operation")?;
         let a = &r["args"];
+        if op == "health" {
+            return Ok(json!({"revision":self.engine.store.borrow().revision()?}));
+        }
         if op == "hello" {
             return self.snapshot();
         }
@@ -300,10 +303,40 @@ impl Service {
 }
 async fn health(State(tx): State<mpsc::Sender<Request>>) -> axum::http::StatusCode {
     let (reply, rx)=oneshot::channel();
-    if tx.try_send(Request { http_mcp:false,browser_subject:None,body:json!({"version":1,"client":"healthcheck","epoch":1,"op":"hello"}),reply,credential:None,agent:false,connection:String::new(),call:String::new()}).is_err(){return axum::http::StatusCode::SERVICE_UNAVAILABLE;}
+    if tx.try_send(Request { http_mcp:false,browser_subject:None,body:json!({"version":1,"client":"healthcheck","epoch":1,"op":"health"}),reply,credential:None,agent:false,connection:String::new(),call:String::new()}).is_err(){return axum::http::StatusCode::SERVICE_UNAVAILABLE;}
     match tokio::time::timeout(Duration::from_secs(3),rx).await {
         Ok(Ok(v)) if v.get("error").is_none() => axum::http::StatusCode::OK,
         _=>axum::http::StatusCode::SERVICE_UNAVAILABLE
+    }
+}
+#[cfg(test)]
+mod health_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn health_checks_queue_and_database_without_requesting_snapshot() {
+        let (tx, mut rx) = mpsc::channel::<Request>(1);
+        let probe = health(State(tx));
+        let worker = async {
+            let request = rx.recv().await.unwrap();
+            assert_eq!(request.body["op"], "health");
+            request.reply.send(json!({"value":{"revision":1}})).unwrap();
+        };
+        let (status, _) = tokio::join!(probe, worker);
+        assert_eq!(status, axum::http::StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn health_rejects_database_error_and_closed_queue() {
+        let (tx, mut rx) = mpsc::channel::<Request>(1);
+        let worker = async {
+            rx.recv().await.unwrap().reply.send(json!({"error":"database unavailable"})).unwrap();
+        };
+        let (status, _) = tokio::join!(health(State(tx)), worker);
+        assert_eq!(status, axum::http::StatusCode::SERVICE_UNAVAILABLE);
+        let (tx, rx) = mpsc::channel::<Request>(1);
+        drop(rx);
+        assert_eq!(health(State(tx)).await, axum::http::StatusCode::SERVICE_UNAVAILABLE);
     }
 }
 async fn rpc(State(tx): State<mpsc::Sender<Request>>, browser:Option<axum::Extension<deployment::Identity>>, Json(body): Json<Value>) -> Json<Value> {

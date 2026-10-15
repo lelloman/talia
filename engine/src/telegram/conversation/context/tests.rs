@@ -1002,7 +1002,7 @@ fn migration_preserves_original_history_and_legacy_job_shape() {
         s.conn
             .query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
             .unwrap(),
-        22
+        23
     );
     assert_eq!(
         s.conn

@@ -59,7 +59,7 @@ impl Store {
         let version: i64 = conn
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .map_err(err)?;
-        if version > 22 {
+        if version > 23 {
             return Err("database schema newer than engine".into());
         }
         if version == 0 {
@@ -130,6 +130,7 @@ PRAGMA user_version=3;").map_err(err)?;
         if version < 20 {let tx=conn.transaction().map_err(err)?;tx.execute_batch(include_str!("../migrations/020_chat.sql")).map_err(err)?;tx.commit().map_err(err)?;}
         if version < 21 {let tx=conn.transaction().map_err(err)?;tx.execute_batch(include_str!("../migrations/021_telegram_formatting.sql")).map_err(err)?;tx.commit().map_err(err)?;}
         if version < 22 {let tx=conn.transaction().map_err(err)?;tx.execute_batch(include_str!("../migrations/022_monitoring_run_status.sql")).map_err(err)?;tx.commit().map_err(err)?;}
+        if version < 23 {let tx=conn.transaction().map_err(err)?;tx.execute_batch(include_str!("../migrations/023_monitoring_run_latest.sql")).map_err(err)?;tx.commit().map_err(err)?;}
         Ok(Self { conn })
     }
     pub fn definition(&self, id: &str) -> Result<Definition> {
@@ -379,6 +380,25 @@ pub(crate) mod tests {
         }
         drop(s);
         // Reopening an already migrated database must also succeed.
+        drop(Store::open(&path).unwrap());
+        std::fs::remove_file(path).unwrap();
+    }
+    #[test]
+    fn latest_run_index_migrates_without_sorting_history() {
+        let path = std::env::temp_dir().join(format!("talia-latest-index-{}.sqlite3", std::process::id()));
+        {
+            let s = Store::open(&path).unwrap();
+            s.conn.execute_batch("DROP INDEX monitoring_runs_latest; PRAGMA user_version=22; INSERT INTO monitoring_runs VALUES('older','probe','complete','{}'),('newer','probe','failed','{}');").unwrap();
+        }
+        let s = Store::open(&path).unwrap();
+        let query = "SELECT id FROM monitoring_runs WHERE instance='probe' ORDER BY rowid DESC LIMIT 1";
+        assert_eq!(s.conn.query_row(query, [], |r| r.get::<_, String>(0)).unwrap(), "newer");
+        let mut statement = s.conn.prepare(&format!("EXPLAIN QUERY PLAN {query}")).unwrap();
+        let plan: Vec<String> = statement.query_map([], |r| r.get(3)).unwrap().map(|r| r.unwrap()).collect();
+        assert!(plan.iter().any(|s| s.contains("monitoring_runs_latest")), "{plan:?}");
+        assert!(!plan.iter().any(|s| s.contains("TEMP B-TREE") || s.contains("SCAN monitoring_runs")), "{plan:?}");
+        drop(statement);
+        drop(s);
         drop(Store::open(&path).unwrap());
         std::fs::remove_file(path).unwrap();
     }

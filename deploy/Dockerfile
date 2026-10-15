@@ -18,7 +18,10 @@ COPY dashboard/shared dashboard/shared
 COPY dashboard/examples dashboard/examples
 COPY deploy/login.html deploy/login.html
 COPY deploy/operator-policy.json deploy/operator-policy.json
+# Exported sources can be older than artifacts in the shared target cache.
+# Refresh timestamps so Cargo recompiles the current application and migrations.
 RUN --mount=type=cache,target=/usr/local/cargo/registry --mount=type=cache,target=/src/engine/target \
+    find engine/src engine/migrations -type f -exec touch {} + && \
     cargo build --manifest-path engine/Cargo.toml --locked --release --bins && \
     mkdir /out && cp engine/target/release/talia-engine engine/target/release/talia-agent engine/target/release/talia-mcp engine/target/release/talia-bootstrap /out/
 

@@ -166,3 +166,29 @@ See [configurable alerts](alerts.md) for the accepted staged-policy, acknowledge
 silence, destination and durable delivery model. Android push, email and Telegram
 alert delivery precede deployment and homelab migration; LLM investigations and Crumbles
 delegation follow migration. Current work is tracked in TALIA-47.
+
+## Health and retained run history
+
+`/healthz` checks the request queue and reads the database revision. It does not
+build a monitoring snapshot or enumerate retained runs. Queue admission failure,
+a database error or a three-second response timeout returns service unavailable.
+
+Schema 23 adds `monitoring_runs_latest(instance)`. SQLite's implicit rowid suffix
+lets newest-run lookups seek directly to the last run for an instance, including
+failed runs, without sorting that instance's retained history. The existing
+instance/status and status indexes continue serving scheduler queries. Index
+creation uses in-memory temporary storage because deployed `/tmp` is a bounded
+32 MiB filesystem. No run or admission history is deleted.
+
+Back up SQLite before upgrading. Older engines reject schema 23; preserve newer
+application data and use a compatible engine for recovery rather than restoring
+a stale database over subsequent writes.
+
+Deployed 2026-10-15 as `registry.homelab:5000/talia:alert-fixes-final-20261015`
+(image `sha256:a6642d5831ef69a906ffbc661fdf9bf64316493b07c654cf56dbba902a32b551`).
+The pre-upgrade engine/auth backups under `/data/backups/alert-fixes-20261015/`
+both passed integrity checks. The previous image remains
+`talia:before-alert-fixes-20261015`. Post-start health checks returned HTTP 200
+in under one millisecond. Store migration, health-route, engine and host-probe
+regression checks passed. The Docker build refreshes source timestamps before
+compiling to prevent stale application artifacts from its shared Cargo target cache.
