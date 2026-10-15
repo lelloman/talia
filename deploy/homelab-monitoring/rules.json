@@ -558,5 +558,33 @@
       "summary": "More than ten error/panic/fatal log messages in the last hour",
       "description": "Measured value: {{ $value }}. Hourly host probe; inspect Tal\u00eca and the host health-check log."
     }
+  },
+  {
+    "name": "PeppinoHighErrorRate",
+    "query": "sum(rate(peppino_http_requests_total{job=\"peppino\",status=~\"5..\",route!~\"/metrics|/health|/ready\"}[5m])) > 0.1",
+    "forMs": 300000,
+    "intervalMs": 30000,
+    "labels": {
+      "category": "availability",
+      "severity": "critical"
+    },
+    "annotations": {
+      "summary": "Peppino HTTP 5xx error rate is high",
+      "description": "{{ $value }} application server errors/sec over 5 minutes. Inspect docker logs --since 10m peppino. Probe routes are excluded."
+    }
+  },
+  {
+    "name": "PeppinoReadinessFailing",
+    "query": "talia_health_service_healthy{service=\"peppino-ready\"} == 0",
+    "forMs": 0,
+    "intervalMs": 60000,
+    "labels": {
+      "category": "health",
+      "severity": "warning"
+    },
+    "annotations": {
+      "summary": "Peppino readiness is failing",
+      "description": "Hourly host probe: /ready failed. Check Peppino logs, storage and LelloAuth discovery/JWKS reachability. This is not proof that LelloAuth alone failed; /health may remain healthy. Run the host health probe again after recovery."
+    }
   }
 ]
