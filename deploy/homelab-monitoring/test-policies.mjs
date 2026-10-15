@@ -38,3 +38,18 @@ assert.deepEqual(quiet.actions,[],'quiet conditions also suppress recovery messa
 delete ctx.params.notify;
 assert.equal((await step(0,[a])).actions,undefined,'other warnings retain their configured actions');
 console.log('Policy checks passed: durations, per-series timing, membership changes, recovery, gaps, unavailable input, immediate security alerts.');
+
+ctx.state={};ctx.params.quietStates=['queued'];
+const queued={labels:{state:'queued'},value:3600};
+const running={labels:{state:'running'},value:3600};
+assert.deepEqual((await step(0,[queued])).actions,[],'queued work stays visible without Telegram');
+assert.deepEqual((await step(0,[])).actions,[],'queue recovery is quiet');
+assert.equal((await step(0,[running])).actions,undefined,'running stalls still notify');
+assert.equal((await step(0,[])).actions,undefined,'running stall recovery still notifies');
+assert.deepEqual((await step(0,[])).actions,[],'idle evaluations cannot repeat recovery');
+assert.equal((await step(0,[queued,running])).actions,undefined,'queue waiting never hides a running stall');
+assert.deepEqual((await step(0,[queued])).actions,[],'remaining queue waiting is quiet');
+assert.deepEqual((await step(0,[])).actions,[]);
+ctx.params.notify=false;
+assert.deepEqual((await step(0,[running])).actions,[],'explicit informational override wins');
+console.log('Notification checks passed: queue waits, real stalls, recovery and mixed membership.');

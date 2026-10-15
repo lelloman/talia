@@ -25,7 +25,14 @@
   format(p.summary,item)+'\n'+format(p.description,item)+'\n'+Object.entries(item.labels).map(([k,v])=>k+'='+v).join(', ')).join('\n\n');
  // Keep below both the engine's UTF-8 message bound and Telegram's message bound.
  if(message.length>1000)message=message.slice(0,950)+'\n… See Talìa monitoring input for all affected series.';
+ // Queue waits (including deliberate usage pacing) can be informational while
+ // running/cleanup stalls retain delivery. Remember eligibility for recovery.
+ const quietStates=p.quietStates||[];
+ const quiet=p.notify===false||(firing.length
+  ? firing.every(item=>quietStates.includes(item.labels.state))
+  : ctx.state.notifiable===false);
+ ctx.state.notifiable=firing.length>0&&!quiet;
  // Informational conditions remain visible without firing or recovery messages.
  return {active:!!firing.length,stage:ctx.state.stage||'firing-a',severity:p.severity,message,
-  ...(p.notify===false?{actions:[]}:{})};
+  ...(quiet?{actions:[]}:{})};
 }}

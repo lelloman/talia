@@ -29,6 +29,31 @@ Full label/value evidence is in `engine_read` on `infra-ALERT_NAME`; notificatio
 messages are bounded. Critical alerts notify immediately and repeat every four hours;
 warnings wait 30 seconds and repeat every twelve hours. Acknowledgement stops repeats.
 Recovery sends once. Delivery retries, silences and history are owned by Talìa.
+
+Notification tuning applied 2026-10-15 keeps aggregate log counts, ordinary runner
+capacity saturation and queue-only session waits in Talìa without Telegram firing
+or recovery messages. Queue waiting can be deliberate weekly usage pacing and is
+not proof of a stuck worker. Running, pausing and cancelling stalls still notify,
+as do service/database failures, security conditions and missing monitoring data.
+The session policy remembers whether a condition was eligible to notify so a
+quiet queue recovery does not generate a message. These settings do not cancel,
+retry or change the pacing of any session.
+
+The publisher uses these defaults for new bindings and preserves existing live
+overrides. To apply the targeted tuning to existing bindings, preview the guarded
+changes with a fresh private backup directory, then use another directory to apply:
+
+```sh
+python3 deploy/homelab-monitoring/tune-notifications.py --backup /private/tuning-preview
+python3 deploy/homelab-monitoring/tune-notifications.py --backup /private/tuning-applied --apply
+```
+
+The helper updates only the warning policy source and the three notification
+bindings, preserving policy destinations, schedules, stages and other parameters.
+It saves the original configuration and requests, checks current versions, and
+reads back every change. It does not republish collectors or disable delivery for
+other conditions. Inspect an uncertain operation before retrying.
+
 Failed SSH authentication bursts are monitoring-only (`notify: false`): both
 firing and recovery messages are suppressed while measurements and alert history
 remain available. Unexpected successful logins, security-file changes, and missing
