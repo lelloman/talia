@@ -2,7 +2,7 @@ const fs=require('fs'), assert=require('assert');
 const facts=eval('('+fs.readFileSync(__dirname+'/report-checklist-facts.js','utf8')+')');
 const compose=eval('('+fs.readFileSync(__dirname+'/report-checklist-compose.js','utf8')+')');
 const hosts=[['node-exporter','node-exporter:9100'],['node-exporter-vps','vps-eu'],['node-exporter-vps','vps-us']];
-const services=[['lelloauth','lelloauth:8080'],['knot-resolver','knot-resolver:8453'],['pezzottify-server','pezzottify-server:9091'],['pezzottflix','pezzottflix:9092'],['simple-ai','simple-ai:8080'],['simple-agents','simple-agents:9781']];
+const services=[['lelloauth','lelloauth:8080'],['knot-resolver','knot-resolver:8453'],['pezzottify-server','192.168.1.34:9091'],['pezzottflix','pezzottflix:9092'],['simple-ai','simple-ai:8080'],['simple-agents','simple-agents:9781']];
 const row=(h,n,extra={})=>({metric:{job:h[0],instance:h[1],...extra},samples:[[1000,n]]});
 const metric=(name,n,labels={})=>row(['',''],n,{__name__:name,...labels});
 function context(){const steps={};for(const [id,n] of Object.entries({reachability:1,cpu:20,memory:30,disks:50,availability:1,systemd:10,failed:0}))steps[id]={status:'succeeded',value:{wire:{result:id==='failed'?[]:hosts.map(h=>row(h,n,id==='disks'?{mountpoint:'/'}:{}))}}};steps.disks.value.wire.result.push(row(hosts[0],90,{mountpoint:'/boot/efi'}),row(hosts[0],80,{mountpoint:'/mnt/external'}));for(const id of ['reachability','availability'])steps[id].value.wire.result.push(...services.map(s=>row(s,1)));
@@ -29,3 +29,12 @@ for (const definition of JSON.parse(fs.readFileSync(__dirname+"/homelab-telegram
   assert.equal(definition.compose,fs.readFileSync(__dirname+"/report-checklist-compose.js","utf8"),definition.id+" composer must match deployment source");
 }
 console.log("Composer severity and deployment template consistency passed.");
+const boxo=n=>({metric:{__name__:'idle_manager_node_state',job:'idle-manager',instance:'idle-manager:8090',node:'boxo'},samples:[[1000,n]]});
+const pezzottify=c=>facts(c).items.find(i=>i.id==='pezzottify');
+const sleeping=c=>{const s=c.steps.reachability.value.wire.result.find(r=>r.metric.job==='pezzottify-server');s.samples[0][1]=0;c.steps.availability.value.wire.result=c.steps.availability.value.wire.result.filter(r=>r.metric.job!=='pezzottify-server');c.steps.signals.value.wire.result=c.steps.signals.value.wire.result.filter(r=>r.metric.__name__!=='talia_music_error_ratio');};
+c=context();sleeping(c);c.steps.reachability.value.wire.result.push(boxo(5));assert.equal(pezzottify(c).state,'OK');assert.equal(facts(c).state,'Nominal');
+c=context();sleeping(c);c.steps.reachability.value.wire.result.push(boxo(2));assert.equal(pezzottify(c).state,'ERR');
+c=context();sleeping(c);assert.equal(pezzottify(c).state,'ERR','unknown node state still checks the service');
+c=context();c.steps.availability.value.wire.result=c.steps.availability.value.wire.result.filter(r=>r.metric.job!=='pezzottify-server');c.steps.reachability.value.wire.result.push(boxo(2));assert.equal(pezzottify(c).state,'OK','no settled awake time is not a warning');
+c=context();c.steps.reachability.value.wire.result.push(boxo(3));c.steps.availability.value.wire.result.find(r=>r.metric.job==='pezzottify-server').samples[0][1]=0.9;assert.equal(pezzottify(c).state,'WARN');
+console.log("Sleeping Boxo is expected; awake or unknown Boxo still checks Pezzottify.");

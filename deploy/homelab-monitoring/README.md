@@ -54,6 +54,18 @@ It saves the original configuration and requests, checks current versions, and
 reads back every change. It does not republish collectors or disable delivery for
 other conditions. Inspect an uncertain operation before retrying.
 
+`ServiceDown` ignores targets on Boxo (`192.168.1.34`) while idle-manager reports
+it off, waking, suspending or suspended, and for five minutes after any Boxo state
+change, so its five-minute idle suspend is not reported as Pezzottify being down.
+A failure while Boxo is settled awake still alerts, as does any target when the
+idle-manager metric is missing. Apply query-only changes from `rules.json` with
+`update-queries.py`; it touches only collectors whose query differs:
+
+```sh
+python3 deploy/homelab-monitoring/update-queries.py --backup /private/query-preview
+python3 deploy/homelab-monitoring/update-queries.py --backup /private/query-applied --apply
+```
+
 Failed SSH authentication bursts are monitoring-only (`notify: false`): both
 firing and recovery messages are suppressed while measurements and alert history
 remain available. Unexpected successful logins, security-file changes, and missing

@@ -1,7 +1,7 @@
 [
   {
     "name": "ServiceDown",
-    "query": "up == 0",
+    "query": "up == 0 unless on(instance) (up{instance=~\"192\\\\.168\\\\.1\\\\.34:.*\"} and on() (idle_manager_node_state{node=\"boxo\"} != 2 != 3 != -1 or changes(idle_manager_node_state{node=\"boxo\"}[5m]) > 0))",
     "forMs": 60000,
     "intervalMs": 30000,
     "labels": {

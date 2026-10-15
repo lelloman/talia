@@ -163,3 +163,25 @@ The deployment uses `/tmp/talia-report-layout-20260926.yml` on homelab. Both
 All six report tests and the local checklist checks passed. Unsent preview
 `report-a411ca19b3be6dc424ea8f6346ff4ff5` verified the heading, single blank line,
 unlabeled checklist, separate date lines and run ID; all 11 items were healthy.
+
+
+## Sleep-managed Pezzottify — 2026-10-15
+
+Pezzottify now runs on Boxo (`192.168.1.34:9091`), which idle-manager suspends after
+five idle minutes. The checklist previously looked up the retired
+`pezzottify-server:9091` target and reported missing reachability data.
+The reachability step now also returns `idle_manager_node_state`. While Boxo is
+off, waking, suspending or suspended, the Pezzottify item is healthy without
+measurements. Its 24-hour availability counts only settled awake time (awake or
+idle, no state change in five minutes). No settled awake time is not a warning.
+An unknown Boxo state checks Pezzottify normally.
+
+`update-report-checks.py` replaces only the reachability, availability and facts
+steps and requires the live versions to be the ones this change is based on
+(12, 11, 11 → 13, 12, 12). The live composer is newer than the checked-in copy and
+is preserved.
+
+```sh
+python3 deploy/update-report-checks.py --backup /private/report-checks-preview
+python3 deploy/update-report-checks.py --backup /private/report-checks-applied --apply
+```

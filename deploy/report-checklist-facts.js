@@ -66,16 +66,22 @@ ctx => {
   const services = [
     {id:'lelloauth',name:'LelloAuth',job:'lelloauth',instance:'lelloauth:8080'},
     {id:'dns',name:'Knot Resolver',job:'knot-resolver',instance:'knot-resolver:8453'},
-    {id:'pezzottify',name:'Pezzottify',job:'pezzottify-server',instance:'pezzottify-server:9091'},
+    {id:'pezzottify',name:'Pezzottify',job:'pezzottify-server',instance:'192.168.1.34:9091',node:'boxo'},
     {id:'pezzottflix',name:'Pezzottflix',job:'pezzottflix',instance:'pezzottflix:9092'},
     {id:'simple-ai',name:'SimpleAI',job:'simple-ai',instance:'simple-ai:8080'},
     {id:'simple-agents',name:'Simple Agents',job:'simple-agents',instance:'simple-agents:9781'},
     {id:'lellostore',name:'LelloStore',http:'lellostore'},
     {id:'crumbles',name:'Crumbles',http:'crumbles'}
   ];
+  // idle-manager: 0 off, 1 waking, 2 awake, 3 idle, 4 suspending, 5 suspended.
+  const nodeState = node => sample((data.reachability?.result || []).find(s => s.metric.__name__ === 'idle_manager_node_state' && s.metric.node === node));
   for (const service of services) {
-    const item = {id:service.id,name:service.name,problems:[]};
-    if (service.http) {
+    // A service on a sleeping node is expected to be unscrapeable; unknown state still checks.
+    const asleep = Boolean(service.node) && [0,1,4,5].includes(nodeState(service.node));
+    const item = {id:service.id,name:service.name,problems:[],asleep};
+    if (asleep) {
+      // Nothing to measure until the node wakes.
+    } else if (service.http) {
       const step = ctx.steps[service.http];
       if (step?.status !== 'succeeded') add(item,'ERR','Health endpoint check failed'+(step?.error ? ': '+step.error : '.') );
       else {
@@ -87,7 +93,8 @@ ctx => {
       if (up === 0) add(item,'ERR','Service metrics endpoint is unreachable.');
       else if (up !== 1) add(item,'WARN','Service reachability data is missing or stale.');
       const a = sample(rows('availability',service)[0]);
-      if (a === null) add(item,'WARN','24h scrape availability is unavailable.');
+      // Sleep-managed availability covers only settled awake time, which may be none.
+      if (a === null) { if (!service.node) add(item,'WARN','24h scrape availability is unavailable.'); }
       else if (a < 0.99) add(item,'WARN','24h scrape availability '+(a*100).toFixed(2)+'% (minimum: 99%).');
     }
     for (const warning of data.reachability?.warnings || []) if (!service.http) add(item,'WARN','Reachability data warning: '+warning);
@@ -99,6 +106,7 @@ ctx => {
     ['dns','talia_dns_servfail_ratio',0.01,'DNS SERVFAIL ratio over 15m'],
     ['pezzottify','talia_music_error_ratio',0.01,'HTTP 5xx ratio over 15m']
   ]) {
+    if (byId(id).asleep) continue;
     const n = sample(metricRows(signals,metric)[0]);
     if (n === null) add(byId(id),'WARN',label+': unavailable.');
     else if (n > limit) add(byId(id),'WARN',label+': '+(n*100).toFixed(2)+'% (maximum: 1%).');
@@ -111,8 +119,9 @@ ctx => {
     if (!results.length) add(byId('simple-agents'),'WARN',metric+': unavailable.');
     else { const n=results.reduce((sum,r)=>sum+(sample(r)||0),0); if(n>0) add(byId('simple-agents'),'WARN',metric+': '+n+'.'); }
   }
-  if (!signals) for (const id of ['dns','pezzottify','simple-ai','simple-agents']) add(byId(id),'WARN','Additional service checks could not be collected.');
-  for (const warning of signals?.warnings || []) for (const id of ['dns','pezzottify','simple-ai','simple-agents']) add(byId(id),'WARN','Service data warning: '+warning);
+  const signalItems = ['dns','pezzottify','simple-ai','simple-agents'].map(byId).filter(i => !i.asleep);
+  if (!signals) for (const item of signalItems) add(item,'WARN','Additional service checks could not be collected.');
+  for (const warning of signals?.warnings || []) for (const item of signalItems) add(item,'WARN','Service data warning: '+warning);
   for (const warning of extras?.warnings || []) for(const item of hosts) add(item,'WARN','Probe data warning: '+warning);
   for (const item of items) item.state=item.problems.some(p=>p.severity==='ERR')?'ERR':item.problems.length?'WARN':'OK';
   return {items,state:items.some(i=>i.state==='ERR')?'Error':items.some(i=>i.state==='WARN')?'Warning':'Nominal'};
