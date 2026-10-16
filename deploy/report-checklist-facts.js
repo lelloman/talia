@@ -67,14 +67,15 @@ ctx => {
     {id:'lelloauth',name:'LelloAuth',job:'lelloauth',instance:'lelloauth:8080'},
     {id:'dns',name:'Knot Resolver',job:'knot-resolver',instance:'knot-resolver:8453'},
     {id:'pezzottify',name:'Pezzottify',job:'pezzottify-server',instance:'192.168.1.34:9091',node:'boxo'},
-    {id:'pezzottflix',name:'Pezzottflix',job:'pezzottflix',instance:'pezzottflix:9092'},
+    {id:'pezzottflix',name:'Pezzottflix',job:'pezzottflix',instance:'192.168.1.34:9092',node:'boxo'},
     {id:'simple-ai',name:'SimpleAI',job:'simple-ai',instance:'simple-ai:8080'},
     {id:'simple-agents',name:'Simple Agents',job:'simple-agents',instance:'simple-agents:9781'},
     {id:'lellostore',name:'LelloStore',http:'lellostore'},
     {id:'crumbles',name:'Crumbles',http:'crumbles'}
   ];
   // idle-manager: 0 off, 1 waking, 2 awake, 3 idle, 4 suspending, 5 suspended.
-  const nodeState = node => sample((data.reachability?.result || []).find(s => s.metric.__name__ === 'idle_manager_node_state' && s.metric.node === node));
+  const controllerUp = sample((data.reachability?.result || []).find(s => s.metric.job === 'idle-manager' && s.metric.__name__ === 'up')) === 1;
+  const nodeState = node => controllerUp ? sample((data.reachability?.result || []).find(s => s.metric.__name__ === 'idle_manager_node_state' && s.metric.node === node)) : null;
   for (const service of services) {
     // A service on a sleeping node is expected to be unscrapeable; unknown state still checks.
     const asleep = Boolean(service.node) && [0,1,4,5].includes(nodeState(service.node));
