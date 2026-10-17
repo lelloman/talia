@@ -370,6 +370,15 @@ async fn alerts_rpc(State(tx):State<mpsc::Sender<Request>>,headers:HeaderMap,bro
     if tx.try_send(Request{http_mcp:false,browser_subject:browser.map(|axum::Extension(i)|i.subject),body,credential:Some(credential),agent:true,connection:String::new(),call:String::new(),reply}).is_err(){return Json(json!({"error":"limit_exceeded"}));}
     Json(rx.await.unwrap_or_else(|_|json!({"error":"internal_error"})))
 }
+// Native alert access shares browser account permissions and occurrence guards.
+async fn native_alerts(State(tx):State<mpsc::Sender<Request>>,identity:Option<axum::Extension<deployment::Identity>>,Json(body):Json<Value>)->axum::response::Response {
+ use axum::response::IntoResponse;
+ if identity.is_none(){return axum::http::StatusCode::UNAUTHORIZED.into_response()}
+ if body.as_object().is_none_or(|o|o.keys().any(|k|k!="op"&&k!="args")) || !matches!(body["op"].as_str(),Some("snapshot"|"acknowledge")) || body.to_string().len()>4096 {return axum::http::StatusCode::BAD_REQUEST.into_response()}
+ let Json(value)=alerts_rpc(State(tx),HeaderMap::new(),identity,Json(body)).await;
+ let status=match value["error"].as_str(){Some("forbidden")=>axum::http::StatusCode::FORBIDDEN,Some("conflict"|"request conflict")=>axum::http::StatusCode::CONFLICT,Some("limit_exceeded"|"internal_error")=>axum::http::StatusCode::SERVICE_UNAVAILABLE,Some(_)=>axum::http::StatusCode::BAD_REQUEST,None=>axum::http::StatusCode::OK};
+ (status,Json(value)).into_response()
+}
 async fn native_overview(State(tx):State<mpsc::Sender<Request>>, identity:Option<axum::Extension<deployment::Identity>>)->axum::response::Response {
  use axum::response::IntoResponse;
  let Some(identity)=identity else {return axum::http::StatusCode::UNAUTHORIZED.into_response()};
@@ -507,6 +516,7 @@ async fn run(args:Vec<String>)->Result<()> {
         .route("/account", post(account_rpc))
         .route("/native/overview", axum::routing::get(native_overview))
         .route("/native/reports", axum::routing::post(native_reports))
+        .route("/native/alerts", axum::routing::post(native_alerts))
         .route("/native/notifications", axum::routing::post(native_notifications))
         .route("/native/dashboards", axum::routing::post(native_dashboards))
         .route("/native/clients", post(client_rpc))

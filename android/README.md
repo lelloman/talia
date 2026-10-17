@@ -405,3 +405,14 @@ APK 6 contract validation, was published through LelloStore, and the updated pho
 rendered a live host dashboard. Build dependency: LelloDesign Compose 0.3.0 source
 `3fc683b` (selected with `LELLODESIGN_COMPOSE_DIRECTORY`). Artifacts and provenance
 are archived in `.local/android-releases/payload-174`.
+
+## Native alerts
+
+The drawer's Alerts screen lists active alerts, optionally includes resolved
+alerts, and shows acknowledgement status. Administrators can acknowledge the
+selected occurrence to stop its configured reminders. The server checks the
+occurrence and revision; stale or disconnected actions never claim success.
+The screen refreshes while visible and offers explicit Refresh after errors.
+This requires the matching `/native/alerts` backend; older servers display an
+update-required message. Native alerts uses the same account permissions as web
+alerts, without storing an operator credential on the phone.

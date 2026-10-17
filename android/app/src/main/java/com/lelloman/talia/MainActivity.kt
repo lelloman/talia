@@ -101,6 +101,7 @@ class MainActivity : ComponentActivity() {
             LelloDestination("overview", "Overview") { Icon(Icons.Default.Home, null) },
             LelloDestination("dashboards", "Dashboards") { Icon(DashboardIcon, null) },
             LelloDestination("reports", "Reports") { Icon(Icons.AutoMirrored.Filled.List, null) },
+            LelloDestination("alerts", "Alerts") { Icon(Icons.Default.Notifications, null) },
             LelloDestination("automation", "Automation") { Icon(Icons.Default.DateRange, null) },
             LelloDestination("chats", "Chats") { Icon(Icons.Default.Email, null) },
             LelloDestination("settings", "Settings") { Icon(Icons.Default.Settings, null) },
@@ -124,7 +125,9 @@ class MainActivity : ComponentActivity() {
                 account = { compact -> LelloAccount(connection.name, { page = "settings" }, compact = compact) },
             ) { insets ->
                 pageState.SaveableStateProvider(page) {
-                    if (page == "reports") {
+                    if (page == "alerts") {
+                        AlertsScreen(connection, Modifier.fillMaxSize().padding(insets).consumeWindowInsets(insets)) { page = "settings" }
+                    } else if (page == "reports") {
                         ReportsScreen(connection, Modifier.fillMaxSize().padding(insets).consumeWindowInsets(insets).imePadding(),
                             investigate = { run -> connection.chats.investigate(run); page = "chats" }) { page = "settings" }
                     } else if (page == "chats") {

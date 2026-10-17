@@ -107,6 +107,14 @@ internal class NativeConnection @JvmOverloads constructor(
         })
     }
     val dashboards by dashboardSession
+    private var alertModel: AlertModel? = null
+    val alerts: AlertModel get() = alertModel ?: AlertModel { body ->
+        val token = saved.optString("token").ifEmpty { throw ApiFailure(401) }
+        try { call(server, "/native/alerts", token, body) } catch (failure: ApiFailure) {
+            if (failure.status == 401) clear()
+            throw failure
+        }
+    }.also { alertModel = it }
     private var chatModel: ChatModel? = null
     /** Chat state for the signed-in account; discarded on sign-out. */
     val chats: ChatModel get() = chatModel ?: ChatModel({ body ->
@@ -386,6 +394,7 @@ internal class NativeConnection @JvmOverloads constructor(
         reportSelected = ""; reportRunSelected = ""; reportsNext = null; pendingReport = null; pendingSchedule = false; reportsMessage = null; reportsForbidden = false
         vault.clear(); saved = JSONObject(); signedIn = false; pending = false
         overview = null; name = "Not signed in"; forbidden = false
+        alertModel = null
         chatModel = null; getApplication<Application>().getSharedPreferences("chats", Context.MODE_PRIVATE).edit().clear().apply()
     }
 }

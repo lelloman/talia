@@ -106,3 +106,11 @@ report projection. Device tests cover encrypted storage, HTTPS validation, PKCE
 handoff, expiry, network outages and revoked permissions. Production sign-in
 needs a deployed backend and an interactive LelloAuth login; fixture results
 must not be described as a production end-to-end login.
+
+### Alerts
+
+`POST /native/alerts` accepts `{op, args}` for `snapshot` and `acknowledge`.
+It uses the native session bearer and the existing browser alert account
+permissions. Acknowledgement accepts the same `key`, `occurrence`, `expected`
+revision and `requestId` fields as web alerts. Stale revisions return HTTP 409;
+permission denial returns 403. Other alert configuration operations are excluded.
