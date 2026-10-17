@@ -115,3 +115,26 @@ Known pre-existing probe limitations now appear as findings: broken Promtail Doc
 discovery, insufficient host access to LelloAuth's DB, and a Favzetto read-only SQLite
 failure. The new US security collector preserves its initial historical detections
 while allowing only the documented Meteonesto sync account/source for future checks.
+
+## Peppino addition (PEPPINO-53)
+
+The companion homelab PR adds the internal `peppino` scrape job, dashboard and
+host checks. Existing `ServiceDown` already covers stopped Peppino containers.
+Two new rules add application 5xx rate (probe routes excluded) and readiness
+failure from `talia_health_service_healthy{service="peppino-ready"}`. The latter
+is sampled hourly and covers storage as well as LelloAuth discovery/JWKS;
+existing host freshness/collection rules must stay enabled. Two conditions
+and two input guards are added; the original migration inventory is unchanged.
+
+The error-rate placeholders are `PEPPINO_ERROR_RATE_THRESHOLD = 0.1` errors/sec
+and `PEPPINO_ERROR_RATE_FOR = 300000` ms, reusing existing HighErrorRate defaults
+pending owner tuning. Their reviewable values are the query literal and forMs
+in `rules.json`; update both definition and live binding parameters through
+the guarded publisher workflow when tuning (existing bindings are preserved).
+
+Run `node deploy/homelab-monitoring/test-peppino.mjs` as well as the policy
+checks above. Follow the publishing procedure only after the companion
+scrape/host checks are live, and compare shadow observations before enabling
+delivery. Record sent incident/recovery evidence during the stopped-container
+drill in [Peppino's rollout procedure](../../../homelab/peppino/README.md#monitoring-rollout-peppino-53).
+No agent deployment or live delivery is claimed by these source changes.
