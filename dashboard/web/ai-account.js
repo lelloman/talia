@@ -3,6 +3,7 @@ export async function startAiAccount(account){
  const $=id=>document.getElementById(id),root=$('ai-account-settings');
  let state,busy=false,timer,renderedVersion;
  const status=text=>$('ai-account-status').textContent=text;
+ function actions(){for(const id of ['connect','confirm','disconnect','cancel'])$('ai-account-'+id).disabled=busy||!state||id==='disconnect'&&['unconfigured','disconnected'].includes(state.phase)&&!state.legacy?.configured;}
  function render(){
   if(renderedVersion!==state.version){$('ai-account-origin').value=state.origin||'';$('ai-account-model').value=state.model||'';renderedVersion=state.version;}
   status(state.error||(state.phase==='connected'?'Connected · '+(state.identity.email||state.identity.name||state.identity.sub):state.phase==='unconfigured'?(state.legacy?.configured?'Using the installed API key · '+state.legacy.model:'No account connected.'):({pending:'Waiting for LelloAuth authorization…',polling:'Checking authorization…',validating:'Verifying the account…',confirm:state.owned?'Authorized. Confirm the account below to start using it.':'Waiting for the administrator who started this connection to confirm it.',refreshing:'Refreshing the saved session…',validating_refresh:'Verifying the refreshed session…',reconnect:'Reconnect the account to continue.',disconnected:'Disconnected.'}[state.phase]||state.phase)));
@@ -23,15 +24,15 @@ export async function startAiAccount(account){
  async function refresh(){return attempt(()=>account({op:'aiAccountStatus'}));}
  async function attempt(fn){
   root.hidden=!!window.taliaViewer;if(root.hidden){clearTimeout(timer);return;}
-  if(busy)return;busy=true;root.setAttribute('aria-busy','true');
-  try{state=await fn();render();window.dispatchEvent(new Event('talia-ai-account-changed'));}
+  if(busy)return;busy=true;actions();root.setAttribute('aria-busy','true');
+  try{const next=await fn();if(!next||!Number.isSafeInteger(next.version)||typeof next.phase!=='string')throw Error('Could not load account status. Refresh status to retry.');state=next;render();window.dispatchEvent(new Event('talia-ai-account-changed'));}
   catch(e){
    clearTimeout(timer);
    // A page loaded before verification finished holds an old version: reload and ask again.
    if(/changed/i.test(e.message)){busy=false;root.removeAttribute('aria-busy');await refresh();status('The account state changed while you were on this page. Check it again below.');return;}
    status(e.message);
   }
-  finally{busy=false;root.removeAttribute('aria-busy');}
+  finally{busy=false;actions();root.removeAttribute('aria-busy');}
  }
  $('ai-account-connect').onclick=()=>attempt(()=>account({op:'aiAccountBegin',expected:state.version,origin:$('ai-account-origin').value.trim(),model:$('ai-account-model').value.trim()}));
  $('ai-account-confirm').onclick=()=>attempt(()=>account({op:'aiAccountConfirm',expected:state.version}));
