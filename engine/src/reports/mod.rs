@@ -417,9 +417,15 @@ mod tests;
 
 /// Outcome severity is separate from execution status. Legacy composers remain unknown.
 pub fn run_severity(run: &Run) -> Severity {
-    if run.status == "failed" { return Severity::Error; }
+    if run.status == "failed" {
+        return Severity::Error;
+    }
     let severity = run.content.as_ref().map(|c| c.severity).unwrap_or_default();
-    if severity == Severity::Error { return severity; }
-    if run.status == "partial" { return Severity::Warning; }
+    if severity == Severity::Error {
+        return severity;
+    }
+    if run.status == "partial" {
+        return Severity::Warning;
+    }
     severity
 }

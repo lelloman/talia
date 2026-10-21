@@ -540,18 +540,54 @@ async fn long_report_budget_is_preserved_and_short_deadline_still_cancels() {
     let _dir = config(&http.uri());
     Mock::given(path("/v1/chat/completions"))
         .respond_with(ResponseTemplate::new(200).set_body_json(answer("Ready")))
-        .mount(&http).await;
+        .mount(&http)
+        .await;
     let s = Store::open(":memory:").unwrap();
     let scope = telegram(&s);
     let e = Engine::with_clock(s, Rc::new(|| 1000));
-    execute(&e, "long-budget", scope.clone(), 1_201_000, "Inspect", json!({}), false).await.unwrap();
-    assert_eq!(e.store.borrow().ai_run("long-budget").unwrap().unwrap().deadline, 1_201_000);
+    execute(
+        &e,
+        "long-budget",
+        scope.clone(),
+        1_201_000,
+        "Inspect",
+        json!({}),
+        false,
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        e.store
+            .borrow()
+            .ai_run("long-budget")
+            .unwrap()
+            .unwrap()
+            .deadline,
+        1_201_000
+    );
     http.reset().await;
     Mock::given(path("/v1/chat/completions"))
-        .respond_with(ResponseTemplate::new(200).set_delay(Duration::from_millis(200)).set_body_json(answer("Too late")))
-        .mount(&http).await;
-    assert!(execute(&e, "short-budget", scope, 1020, "Inspect", json!({}), false).await.is_err());
-    assert_eq!(e.store.borrow().ai_run("short-budget").unwrap().unwrap().status, "failed");
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_delay(Duration::from_millis(200))
+                .set_body_json(answer("Too late")),
+        )
+        .mount(&http)
+        .await;
+    assert!(
+        execute(&e, "short-budget", scope, 1020, "Inspect", json!({}), false)
+            .await
+            .is_err()
+    );
+    assert_eq!(
+        e.store
+            .borrow()
+            .ai_run("short-budget")
+            .unwrap()
+            .unwrap()
+            .status,
+        "failed"
+    );
     assert_eq!(http.received_requests().await.unwrap().len(), 1);
 }
 
@@ -603,16 +639,48 @@ async fn conditional_report_analysis_skips_inference_and_rejects_invalid_conditi
 }
 
 fn host_value(seed: f64) -> Value {
-    let series: Vec<Value> = (0..289).map(|i| if i < 8 { Value::Null } else { json!(seed + (i % 50) as f64) }).collect();
-    crate::value::from_json(&json!({"reachable":true,"cpu":seed,"memory":61.2,"cpuHistory":series,"memoryHistory":series,
+    let series: Vec<Value> = (0..289)
+        .map(|i| {
+            if i < 8 {
+                Value::Null
+            } else {
+                json!(seed + (i % 50) as f64)
+            }
+        })
+        .collect();
+    crate::value::from_json(
+        &json!({"reachable":true,"cpu":seed,"memory":61.2,"cpuHistory":series,"memoryHistory":series,
         "cpuMinuteHistory":series[..61].to_vec(),"note":"x".repeat(500),
-        "disks":[{"id":"root","mount":"/","free":41.3,"availableBytes":193e9,"totalBytes":467e9}]}))
+        "disks":[{"id":"root","mount":"/","free":41.3,"availableBytes":193e9,"totalBytes":467e9}]}),
+    )
 }
 fn instance(s: &Store, id: &str, value: Value) {
-    let i = crate::store::Instance { id: id.into(), definition: "host-snapshot".into(), params: json!({}), state: json!({}),
-        value, has_value: true, timestamp: 1000, quality: "good".into(), revision: 1, generation: 1, history_count: 120, history_age_ms: 3_600_000 };
-    s.conn.execute("INSERT OR IGNORE INTO definitions VALUES('host-snapshot','{}')", []).unwrap();
-    s.conn.execute("INSERT INTO instances VALUES(?,?,?)", rusqlite::params![i.id, i.definition, serde_json::to_string(&i).unwrap()]).unwrap();
+    let i = crate::store::Instance {
+        id: id.into(),
+        definition: "host-snapshot".into(),
+        params: json!({}),
+        state: json!({}),
+        value,
+        has_value: true,
+        timestamp: 1000,
+        quality: "good".into(),
+        revision: 1,
+        generation: 1,
+        history_count: 120,
+        history_age_ms: 3_600_000,
+    };
+    s.conn
+        .execute(
+            "INSERT OR IGNORE INTO definitions VALUES('host-snapshot','{}')",
+            [],
+        )
+        .unwrap();
+    s.conn
+        .execute(
+            "INSERT INTO instances VALUES(?,?,?)",
+            rusqlite::params![i.id, i.definition, serde_json::to_string(&i).unwrap()],
+        )
+        .unwrap();
 }
 
 #[test]
@@ -636,19 +704,34 @@ async fn snapshot_is_a_compact_catalogue_that_always_fits_the_tool_limit() {
         instance(&s, host, host_value(20.0));
     }
     let e = Engine::with_clock(s, Rc::new(|| 1000));
-    let v = tools::execute(&e, "monitoring_snapshot", json!({})).await.unwrap();
-    let homelab = v["values"].as_array().unwrap().iter().find(|x| x["id"] == "host-homelab").unwrap();
+    let v = tools::execute(&e, "monitoring_snapshot", json!({}))
+        .await
+        .unwrap();
+    let homelab = v["values"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|x| x["id"] == "host-homelab")
+        .unwrap();
     assert_eq!(homelab["value"]["cpuHistory"]["max"], 69.0);
     assert!(homelab.get("state").is_none());
     // Many large values still fit; the largest previews are replaced, not the catalogue.
     for i in 0..60 {
-        instance(&e.store.borrow(), &format!("bulk-{i:02}"), host_value(i as f64));
+        instance(
+            &e.store.borrow(),
+            &format!("bulk-{i:02}"),
+            host_value(i as f64),
+        );
     }
-    let v = tools::execute(&e, "monitoring_snapshot", json!({})).await.unwrap();
+    let v = tools::execute(&e, "monitoring_snapshot", json!({}))
+        .await
+        .unwrap();
     assert!(serde_json::to_vec(&v).unwrap().len() <= 30 * 1024);
     let values = v["values"].as_array().unwrap();
     assert_eq!(values.len(), 63);
-    assert!(values.iter().any(|x| x["value"] == "omitted for size; use monitoring_read"));
+    assert!(values
+        .iter()
+        .any(|x| x["value"] == "omitted for size; use monitoring_read"));
 }
 
 #[tokio::test]
@@ -664,9 +747,24 @@ async fn tool_calls_cut_off_at_the_token_limit_are_reported_as_truncation() {
     let s = Store::open(":memory:").unwrap();
     let scope = telegram(&s);
     let e = Engine::with_clock(s, Rc::new(|| 1000));
-    let error = execute(&e, "cut-1", scope, 900000, "Check", json!({"question":"q"}), true).await.unwrap_err();
-    assert!(error.contains("simple-ai output truncated at token limit"), "{error}");
-    assert!(crate::conversation::failure_reason(&error).unwrap().contains("ran out of output space"));
+    let error = execute(
+        &e,
+        "cut-1",
+        scope,
+        900000,
+        "Check",
+        json!({"question":"q"}),
+        true,
+    )
+    .await
+    .unwrap_err();
+    assert!(
+        error.contains("simple-ai output truncated at token limit"),
+        "{error}"
+    );
+    assert!(crate::conversation::failure_reason(&error)
+        .unwrap()
+        .contains("ran out of output space"));
 }
 
 #[tokio::test]
@@ -690,26 +788,56 @@ async fn text_form_tool_calls_continue_the_investigation_and_never_become_answer
     let scope = telegram(&s);
     instance(&s, "host-homelab", host_value(20.0));
     let e = Engine::with_clock(s, Rc::new(|| 1000));
-    let v = execute(&e, "text-calls-1", scope.clone(), 900000, "Investigate", json!({"question":"peak cpu?"}), true).await.unwrap();
+    let v = execute(
+        &e,
+        "text-calls-1",
+        scope.clone(),
+        900000,
+        "Investigate",
+        json!({"question":"peak cpu?"}),
+        true,
+    )
+    .await
+    .unwrap();
     assert_eq!(v["summary"], "CPU peaked at 30.2% on homelab.");
     let q = requests.lock().unwrap();
     let history = q[1]["messages"].as_array().unwrap();
     let call = history.iter().find(|m| m["role"] == "assistant").unwrap();
     assert_eq!(call["tool_calls"][0]["function"]["name"], "monitoring_read");
     assert_eq!(call["content"], "Let me look at the history first.");
-    assert!(history.iter().any(|m| m["role"] == "tool" && m["tool_call_id"].as_str().is_some_and(|id| id.starts_with("text-") && id == call["tool_calls"][0]["id"])));
+    assert!(history.iter().any(|m| m["role"] == "tool"
+        && m["tool_call_id"]
+            .as_str()
+            .is_some_and(|id| id.starts_with("text-") && id == call["tool_calls"][0]["id"])));
     drop(q);
 
     // Markup that cannot be understood fails instead of reaching the user.
     let broken = MockServer::start().await;
     let _dir = config(&broken.uri());
     Mock::given(path("/v1/chat/completions"))
-        .respond_with(ResponseTemplate::new(200).set_body_json(answer("thinking…\n<tool_call>\n<function=monitoring_read>\n<parameter=id>host")))
+        .respond_with(ResponseTemplate::new(200).set_body_json(answer(
+            "thinking…\n<tool_call>\n<function=monitoring_read>\n<parameter=id>host",
+        )))
         .mount(&broken)
         .await;
-    let error = execute(&e, "text-calls-2", scope, 900000, "Investigate", json!({"question":"q"}), true).await.unwrap_err();
-    assert!(error.contains("simple-ai returned a malformed tool call"), "{error}");
-    assert!(crate::conversation::failure_reason(&error).unwrap().contains("could not understand"));
+    let error = execute(
+        &e,
+        "text-calls-2",
+        scope,
+        900000,
+        "Investigate",
+        json!({"question":"q"}),
+        true,
+    )
+    .await
+    .unwrap_err();
+    assert!(
+        error.contains("simple-ai returned a malformed tool call"),
+        "{error}"
+    );
+    assert!(crate::conversation::failure_reason(&error)
+        .unwrap()
+        .contains("could not understand"));
 }
 
 fn acknowledgement_alert(s: &mut Store) {

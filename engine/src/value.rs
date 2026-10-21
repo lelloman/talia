@@ -140,13 +140,17 @@ pub fn preview(wire: &Value) -> Value {
     const SERIES: usize = 16;
     fn number(v: &Value) -> Option<f64> {
         let a = v.as_array()?;
-        (a.first()?.as_str()? == "number").then(|| a.get(1)?.as_f64()).flatten()
+        (a.first()?.as_str()? == "number")
+            .then(|| a.get(1)?.as_f64())
+            .flatten()
     }
     fn round(n: f64) -> Value {
         json!((n * 1000.0).round() / 1000.0)
     }
     fn walk(n: &Value, depth: usize) -> Value {
-        let Some(a) = n.as_array() else { return Value::Null };
+        let Some(a) = n.as_array() else {
+            return Value::Null;
+        };
         let tag = a.first().and_then(Value::as_str).unwrap_or("");
         let v = a.get(1).unwrap_or(&Value::Null);
         if depth > 8 {
@@ -166,13 +170,23 @@ pub fn preview(wire: &Value) -> Value {
             }
             "array" => {
                 let items = v.as_array().map(Vec::as_slice).unwrap_or(&[]);
-                let numeric = items.iter().all(|x| number(x).is_some() || x.get(0).and_then(Value::as_str).is_some_and(|t| t == "null" || t == "undefined"));
+                let numeric = items.iter().all(|x| {
+                    number(x).is_some()
+                        || x.get(0)
+                            .and_then(Value::as_str)
+                            .is_some_and(|t| t == "null" || t == "undefined")
+                });
                 if items.len() > SERIES && numeric {
-                    let values: Vec<f64> = items.iter().filter_map(number).filter(|n| n.is_finite()).collect();
+                    let values: Vec<f64> = items
+                        .iter()
+                        .filter_map(number)
+                        .filter(|n| n.is_finite())
+                        .collect();
                     let mut out = json!({"series": items.len(), "samples": values.len()});
                     if !values.is_empty() {
                         out["min"] = round(values.iter().cloned().fold(f64::INFINITY, f64::min));
-                        out["max"] = round(values.iter().cloned().fold(f64::NEG_INFINITY, f64::max));
+                        out["max"] =
+                            round(values.iter().cloned().fold(f64::NEG_INFINITY, f64::max));
                         out["mean"] = round(values.iter().sum::<f64>() / values.len() as f64);
                         out["last"] = round(*values.last().unwrap());
                     }

@@ -785,15 +785,29 @@ pub(crate) mod tests {
             assert!(passes < 20);
         }
         assert!(passes > 0, "a small batch needs several passes");
-        for (id, kept) in [(&old, false), (&uncertain, true), (&older, false), (&recent, true)] {
+        for (id, kept) in [
+            (&old, false),
+            (&uncertain, true),
+            (&older, false),
+            (&recent, true),
+        ] {
             assert_eq!(s.run(id).is_ok(), kept, "{id}");
         }
         let admitted = |s: &Store, request: &str| s.run_admission(request).unwrap().is_some();
-        for (request, kept) in [("a", false), ("b", true), ("c", false), ("d", false), ("e", true)] {
+        for (request, kept) in [
+            ("a", false),
+            ("b", true),
+            ("c", false),
+            ("d", false),
+            ("e", true),
+        ] {
             assert_eq!(admitted(s, request), kept, "{request}");
         }
         // A retried request inside the window still returns its original admission.
-        assert_eq!(s.admit("x", "e", "manual", 0, 20_000_001).unwrap().run_id, Some(recent));
+        assert_eq!(
+            s.admit("x", "e", "manual", 0, 20_000_001).unwrap().run_id,
+            Some(recent)
+        );
         // Caught up: a pass reads only the first recent row and reports no backlog.
         assert!(!s.prune_runs(100_000_000, 86_400_000, 2).unwrap());
     }

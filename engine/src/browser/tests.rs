@@ -281,7 +281,17 @@ async fn viewer_alerts_and_account_admin_operations_are_denied() {
 // Full-service browser fixture: loopback OIDC is enabled only in this test binary.
 #[test]
 #[ignore = "launched only by dashboard/tests/access.mjs"]
-fn browser_fixture_service(){
- let db=std::env::var("TALIA_TEST_DB").expect("browser fixture database");
- tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(crate::run(vec!["fixture".into(),db,"0".into(),"--seed".into()])).unwrap();
+fn browser_fixture_service() {
+    let db = std::env::var("TALIA_TEST_DB").expect("browser fixture database");
+    tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap()
+        .block_on(crate::run(vec![
+            "fixture".into(),
+            db,
+            "0".into(),
+            "--seed".into(),
+        ]))
+        .unwrap();
 }

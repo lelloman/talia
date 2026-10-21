@@ -84,7 +84,11 @@ async fn send_inner(p: &Provider, d: &Dispatch) -> Outcome {
         d.alert.severity, state, d.alert.message, d.alert.key, d.alert.occurrence
     );
     match p {
-        Provider::WebPush {private_key, subject, allowed_origins} => super::web_push::send(private_key, subject, allowed_origins, d).await,
+        Provider::WebPush {
+            private_key,
+            subject,
+            allowed_origins,
+        } => super::web_push::send(private_key, subject, allowed_origins, d).await,
         Provider::Fcm {
             project,
             service_account,
@@ -162,10 +166,20 @@ async fn send_inner(p: &Provider, d: &Dispatch) -> Outcome {
             else {
                 return Outcome::Failed("HTTP transport unavailable".into());
             };
-            let Some(part) = crate::telegram::formatting::markdown(&text, 4000).into_iter().next() else {
+            let Some(part) = crate::telegram::formatting::markdown(&text, 4000)
+                .into_iter()
+                .next()
+            else {
                 return Outcome::Failed("Empty Telegram message".into());
             };
-            let response=client.post(format!("{}/bot{token}/sendMessage",base_url.trim_end_matches('/'))).json(&json!({"chat_id":d.address,"text":part.text,"entities":part.entities})).send().await;
+            let response = client
+                .post(format!(
+                    "{}/bot{token}/sendMessage",
+                    base_url.trim_end_matches('/')
+                ))
+                .json(&json!({"chat_id":d.address,"text":part.text,"entities":part.entities}))
+                .send()
+                .await;
             let Ok(mut response) = response else {
                 return Outcome::Unknown("Telegram delivery outcome unknown".into());
             };
@@ -241,19 +255,38 @@ impl Sender {
                     .borrow_mut()
                     .alert_claim_delivery(&j.id, this.engine.now());
                 if let Ok(Some(dispatch)) = claim {
-                    let managed = if dispatch.destination.provider == crate::telegram::PROVIDER && dispatch.destination.channel == "telegram" {
-                        Some(match crate::telegram::transport::Bot::load(&this.engine).await {
-                            Ok((_,bot))=>send(&Provider::Telegram{token:bot.token,base_url:bot.base},&dispatch).await,
-                            Err(e)=>Outcome::Failed(e),
-                        })
-                    }else{None};
-                    let outcome = if let Some(outcome)=managed {outcome}else{match config {
-                        Ok(config) => match config.get(&dispatch.destination.provider) {
-                            Some(p) => send(p, &dispatch).await,
-                            None => Outcome::Failed("provider not configured".into()),
-                        },
-                        Err(e) => Outcome::Failed(e),
-                    }};
+                    let managed = if dispatch.destination.provider == crate::telegram::PROVIDER
+                        && dispatch.destination.channel == "telegram"
+                    {
+                        Some(
+                            match crate::telegram::transport::Bot::load(&this.engine).await {
+                                Ok((_, bot)) => {
+                                    send(
+                                        &Provider::Telegram {
+                                            token: bot.token,
+                                            base_url: bot.base,
+                                        },
+                                        &dispatch,
+                                    )
+                                    .await
+                                }
+                                Err(e) => Outcome::Failed(e),
+                            },
+                        )
+                    } else {
+                        None
+                    };
+                    let outcome = if let Some(outcome) = managed {
+                        outcome
+                    } else {
+                        match config {
+                            Ok(config) => match config.get(&dispatch.destination.provider) {
+                                Some(p) => send(p, &dispatch).await,
+                                None => Outcome::Failed("provider not configured".into()),
+                            },
+                            Err(e) => Outcome::Failed(e),
+                        }
+                    };
                     let result = this.engine.store.borrow_mut().alert_finish_delivery(
                         &j.id,
                         outcome,

@@ -162,11 +162,8 @@ impl ServerHandler for Adapter {
                 None,
             ));
         }
-        let tools=talia_engine::mcp::tools();
-        if !tools
-            .iter()
-            .any(|t| t["name"] == request.name.as_ref())
-        {
+        let tools = talia_engine::mcp::tools();
+        if !tools.iter().any(|t| t["name"] == request.name.as_ref()) {
             return Err(ErrorData::invalid_params("Unknown tool", None));
         }
         let call = format!(

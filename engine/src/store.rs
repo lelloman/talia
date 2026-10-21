@@ -95,42 +95,126 @@ PRAGMA user_version=3;").map_err(err)?;
         }
         if version < 5 {
             let tx = conn.transaction().map_err(err)?;
-            tx.execute_batch(include_str!("../migrations/005_catalog.sql")).map_err(err)?;
+            tx.execute_batch(include_str!("../migrations/005_catalog.sql"))
+                .map_err(err)?;
             tx.commit().map_err(err)?;
         }
         if version < 6 {
             let tx = conn.transaction().map_err(err)?;
-            tx.execute_batch(include_str!("../migrations/006_authority.sql")).map_err(err)?;
-            let mut key = [0u8;32];
-            ring::rand::SecureRandom::fill(&ring::rand::SystemRandom::new(), &mut key).map_err(|_| "secure randomness unavailable".to_string())?;
-            tx.execute("INSERT OR IGNORE INTO agent_security VALUES(1,?,'[]')", [&key[..]]).map_err(err)?;
+            tx.execute_batch(include_str!("../migrations/006_authority.sql"))
+                .map_err(err)?;
+            let mut key = [0u8; 32];
+            ring::rand::SecureRandom::fill(&ring::rand::SystemRandom::new(), &mut key)
+                .map_err(|_| "secure randomness unavailable".to_string())?;
+            tx.execute(
+                "INSERT OR IGNORE INTO agent_security VALUES(1,?,'[]')",
+                [&key[..]],
+            )
+            .map_err(err)?;
             tx.commit().map_err(err)?;
         }
         if version < 7 {
             let tx = conn.transaction().map_err(err)?;
-            tx.execute_batch(include_str!("../migrations/007_clients.sql")).map_err(err)?;
+            tx.execute_batch(include_str!("../migrations/007_clients.sql"))
+                .map_err(err)?;
             tx.commit().map_err(err)?;
         }
         if version < 8 {
             let tx = conn.transaction().map_err(err)?;
-            tx.execute_batch(include_str!("../migrations/008_delivery.sql")).map_err(err)?;
+            tx.execute_batch(include_str!("../migrations/008_delivery.sql"))
+                .map_err(err)?;
             tx.commit().map_err(err)?;
         }
-        if version < 9 {let tx=conn.transaction().map_err(err)?;tx.execute_batch(include_str!("../migrations/009_live.sql")).map_err(err)?;tx.commit().map_err(err)?;}
-        if version < 10 {let tx=conn.transaction().map_err(err)?;tx.execute_batch(include_str!("../migrations/010_alerts.sql")).map_err(err)?;tx.commit().map_err(err)?;}
-        if version < 11 {let tx=conn.transaction().map_err(err)?;tx.execute_batch(include_str!("../migrations/011_users.sql")).map_err(err)?;tx.commit().map_err(err)?;}
-        if version < 12 {let tx=conn.transaction().map_err(err)?;tx.execute_batch(include_str!("../migrations/012_user_agent_keys.sql")).map_err(err)?;tx.commit().map_err(err)?;}
-        if version < 13 {let tx=conn.transaction().map_err(err)?;tx.execute_batch(include_str!("../migrations/013_reports.sql")).map_err(err)?;tx.commit().map_err(err)?;}
-        if version < 14 {let tx=conn.transaction().map_err(err)?;tx.execute_batch(include_str!("../migrations/014_telegram.sql")).map_err(err)?;tx.commit().map_err(err)?;}
-        if version < 15 {let tx=conn.transaction().map_err(err)?;tx.execute_batch(include_str!("../migrations/015_retire_agents.sql")).map_err(err)?;tx.commit().map_err(err)?;}
-        if version < 16 {let tx=conn.transaction().map_err(err)?;tx.execute_batch(include_str!("../migrations/016_ai.sql")).map_err(err)?;tx.commit().map_err(err)?;}
-        if version < 17 {let tx=conn.transaction().map_err(err)?;tx.execute_batch(include_str!("../migrations/017_ai_account.sql")).map_err(err)?;tx.commit().map_err(err)?;}
-        if version < 18 {let tx=conn.transaction().map_err(err)?;tx.execute_batch(include_str!("../migrations/018_conversation_context.sql")).map_err(err)?;tx.commit().map_err(err)?;}
-        if version < 19 {let tx=conn.transaction().map_err(err)?;tx.execute_batch(include_str!("../migrations/019_store_notifications.sql")).map_err(err)?;tx.commit().map_err(err)?;}
-        if version < 20 {let tx=conn.transaction().map_err(err)?;tx.execute_batch(include_str!("../migrations/020_chat.sql")).map_err(err)?;tx.commit().map_err(err)?;}
-        if version < 21 {let tx=conn.transaction().map_err(err)?;tx.execute_batch(include_str!("../migrations/021_telegram_formatting.sql")).map_err(err)?;tx.commit().map_err(err)?;}
-        if version < 22 {let tx=conn.transaction().map_err(err)?;tx.execute_batch(include_str!("../migrations/022_monitoring_run_status.sql")).map_err(err)?;tx.commit().map_err(err)?;}
-        if version < 23 {let tx=conn.transaction().map_err(err)?;tx.execute_batch(include_str!("../migrations/023_monitoring_run_latest.sql")).map_err(err)?;tx.commit().map_err(err)?;}
+        if version < 9 {
+            let tx = conn.transaction().map_err(err)?;
+            tx.execute_batch(include_str!("../migrations/009_live.sql"))
+                .map_err(err)?;
+            tx.commit().map_err(err)?;
+        }
+        if version < 10 {
+            let tx = conn.transaction().map_err(err)?;
+            tx.execute_batch(include_str!("../migrations/010_alerts.sql"))
+                .map_err(err)?;
+            tx.commit().map_err(err)?;
+        }
+        if version < 11 {
+            let tx = conn.transaction().map_err(err)?;
+            tx.execute_batch(include_str!("../migrations/011_users.sql"))
+                .map_err(err)?;
+            tx.commit().map_err(err)?;
+        }
+        if version < 12 {
+            let tx = conn.transaction().map_err(err)?;
+            tx.execute_batch(include_str!("../migrations/012_user_agent_keys.sql"))
+                .map_err(err)?;
+            tx.commit().map_err(err)?;
+        }
+        if version < 13 {
+            let tx = conn.transaction().map_err(err)?;
+            tx.execute_batch(include_str!("../migrations/013_reports.sql"))
+                .map_err(err)?;
+            tx.commit().map_err(err)?;
+        }
+        if version < 14 {
+            let tx = conn.transaction().map_err(err)?;
+            tx.execute_batch(include_str!("../migrations/014_telegram.sql"))
+                .map_err(err)?;
+            tx.commit().map_err(err)?;
+        }
+        if version < 15 {
+            let tx = conn.transaction().map_err(err)?;
+            tx.execute_batch(include_str!("../migrations/015_retire_agents.sql"))
+                .map_err(err)?;
+            tx.commit().map_err(err)?;
+        }
+        if version < 16 {
+            let tx = conn.transaction().map_err(err)?;
+            tx.execute_batch(include_str!("../migrations/016_ai.sql"))
+                .map_err(err)?;
+            tx.commit().map_err(err)?;
+        }
+        if version < 17 {
+            let tx = conn.transaction().map_err(err)?;
+            tx.execute_batch(include_str!("../migrations/017_ai_account.sql"))
+                .map_err(err)?;
+            tx.commit().map_err(err)?;
+        }
+        if version < 18 {
+            let tx = conn.transaction().map_err(err)?;
+            tx.execute_batch(include_str!("../migrations/018_conversation_context.sql"))
+                .map_err(err)?;
+            tx.commit().map_err(err)?;
+        }
+        if version < 19 {
+            let tx = conn.transaction().map_err(err)?;
+            tx.execute_batch(include_str!("../migrations/019_store_notifications.sql"))
+                .map_err(err)?;
+            tx.commit().map_err(err)?;
+        }
+        if version < 20 {
+            let tx = conn.transaction().map_err(err)?;
+            tx.execute_batch(include_str!("../migrations/020_chat.sql"))
+                .map_err(err)?;
+            tx.commit().map_err(err)?;
+        }
+        if version < 21 {
+            let tx = conn.transaction().map_err(err)?;
+            tx.execute_batch(include_str!("../migrations/021_telegram_formatting.sql"))
+                .map_err(err)?;
+            tx.commit().map_err(err)?;
+        }
+        if version < 22 {
+            let tx = conn.transaction().map_err(err)?;
+            tx.execute_batch(include_str!("../migrations/022_monitoring_run_status.sql"))
+                .map_err(err)?;
+            tx.commit().map_err(err)?;
+        }
+        if version < 23 {
+            let tx = conn.transaction().map_err(err)?;
+            tx.execute_batch(include_str!("../migrations/023_monitoring_run_latest.sql"))
+                .map_err(err)?;
+            tx.commit().map_err(err)?;
+        }
         Ok(Self { conn })
     }
     pub fn definition(&self, id: &str) -> Result<Definition> {
@@ -361,22 +445,49 @@ pub(crate) mod tests {
     use super::*;
     #[test]
     fn monitoring_status_index_migrates_and_avoids_history_scans() {
-        let path = std::env::temp_dir().join(format!("talia-status-index-{}.sqlite3", std::process::id()));
+        let path =
+            std::env::temp_dir().join(format!("talia-status-index-{}.sqlite3", std::process::id()));
         {
             let s = Store::open(&path).unwrap();
             s.conn.execute_batch("DROP INDEX monitoring_runs_status; PRAGMA user_version=21; INSERT INTO monitoring_runs VALUES('retained','probe','completed','{}');").unwrap();
         }
         let s = Store::open(&path).unwrap();
-        assert_eq!(s.conn.query_row("SELECT count(*) FROM monitoring_runs WHERE id='retained'", [], |r| r.get::<_, i64>(0)).unwrap(), 1);
+        assert_eq!(
+            s.conn
+                .query_row(
+                    "SELECT count(*) FROM monitoring_runs WHERE id='retained'",
+                    [],
+                    |r| r.get::<_, i64>(0)
+                )
+                .unwrap(),
+            1
+        );
         for query in [
             "SELECT id FROM monitoring_runs WHERE status IN ('pending','queued') ORDER BY rowid",
             "SELECT count(*) FROM monitoring_runs WHERE status IN ('pending','running','queued')",
             "SELECT id FROM monitoring_runs WHERE status='running'",
         ] {
-            let mut statement = s.conn.prepare(&format!("EXPLAIN QUERY PLAN {query}")).unwrap();
-            let plan: Vec<String> = statement.query_map([], |r| r.get(3)).unwrap().map(|r| r.unwrap()).collect();
-            assert!(plan.iter().any(|step| step.contains("SEARCH monitoring_runs") && step.contains("monitoring_runs_status")), "{plan:?}");
-            assert!(!plan.iter().any(|step| step.contains("SCAN monitoring_runs")), "{plan:?}");
+            let mut statement = s
+                .conn
+                .prepare(&format!("EXPLAIN QUERY PLAN {query}"))
+                .unwrap();
+            let plan: Vec<String> = statement
+                .query_map([], |r| r.get(3))
+                .unwrap()
+                .map(|r| r.unwrap())
+                .collect();
+            assert!(
+                plan.iter()
+                    .any(|step| step.contains("SEARCH monitoring_runs")
+                        && step.contains("monitoring_runs_status")),
+                "{plan:?}"
+            );
+            assert!(
+                !plan
+                    .iter()
+                    .any(|step| step.contains("SCAN monitoring_runs")),
+                "{plan:?}"
+            );
         }
         drop(s);
         // Reopening an already migrated database must also succeed.
@@ -385,18 +496,40 @@ pub(crate) mod tests {
     }
     #[test]
     fn latest_run_index_migrates_without_sorting_history() {
-        let path = std::env::temp_dir().join(format!("talia-latest-index-{}.sqlite3", std::process::id()));
+        let path =
+            std::env::temp_dir().join(format!("talia-latest-index-{}.sqlite3", std::process::id()));
         {
             let s = Store::open(&path).unwrap();
             s.conn.execute_batch("DROP INDEX monitoring_runs_latest; PRAGMA user_version=22; INSERT INTO monitoring_runs VALUES('older','probe','complete','{}'),('newer','probe','failed','{}');").unwrap();
         }
         let s = Store::open(&path).unwrap();
-        let query = "SELECT id FROM monitoring_runs WHERE instance='probe' ORDER BY rowid DESC LIMIT 1";
-        assert_eq!(s.conn.query_row(query, [], |r| r.get::<_, String>(0)).unwrap(), "newer");
-        let mut statement = s.conn.prepare(&format!("EXPLAIN QUERY PLAN {query}")).unwrap();
-        let plan: Vec<String> = statement.query_map([], |r| r.get(3)).unwrap().map(|r| r.unwrap()).collect();
-        assert!(plan.iter().any(|s| s.contains("monitoring_runs_latest")), "{plan:?}");
-        assert!(!plan.iter().any(|s| s.contains("TEMP B-TREE") || s.contains("SCAN monitoring_runs")), "{plan:?}");
+        let query =
+            "SELECT id FROM monitoring_runs WHERE instance='probe' ORDER BY rowid DESC LIMIT 1";
+        assert_eq!(
+            s.conn
+                .query_row(query, [], |r| r.get::<_, String>(0))
+                .unwrap(),
+            "newer"
+        );
+        let mut statement = s
+            .conn
+            .prepare(&format!("EXPLAIN QUERY PLAN {query}"))
+            .unwrap();
+        let plan: Vec<String> = statement
+            .query_map([], |r| r.get(3))
+            .unwrap()
+            .map(|r| r.unwrap())
+            .collect();
+        assert!(
+            plan.iter().any(|s| s.contains("monitoring_runs_latest")),
+            "{plan:?}"
+        );
+        assert!(
+            !plan
+                .iter()
+                .any(|s| s.contains("TEMP B-TREE") || s.contains("SCAN monitoring_runs")),
+            "{plan:?}"
+        );
         drop(statement);
         drop(s);
         drop(Store::open(&path).unwrap());

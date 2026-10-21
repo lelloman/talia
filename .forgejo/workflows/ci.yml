@@ -1,0 +1,50 @@
+name: CI
+
+# Check is the required status for merging into master. It gates the Rust
+# engine on formatting, a full build and its test suite. Clippy runs too but
+# only reports for now: the engine has existing lints to fix first.
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_BUILD_JOBS: "2"
+  CARGO_INCREMENTAL: "0"
+  CARGO_PROFILE_DEV_DEBUG: "0"
+  CARGO_PROFILE_TEST_DEBUG: "0"
+
+jobs:
+  check:
+    name: Check
+    runs-on: fucina-docker
+    defaults:
+      run:
+        working-directory: engine
+    steps:
+      - uses: https://data.forgejo.org/actions/checkout@v6
+      - uses: https://github.com/dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Identify Rust compiler
+        id: rust-cache
+        run: echo "version=$(rustc -Vv | sha256sum | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
+      - name: Cache Cargo dependencies
+        uses: https://data.forgejo.org/actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            engine/target/
+          key: cargo-v1-${{ runner.os }}-engine-${{ steps.rust-cache.outputs.version }}-${{ hashFiles('engine/Cargo.lock') }}
+          restore-keys: |
+            cargo-v1-${{ runner.os }}-engine-${{ steps.rust-cache.outputs.version }}-
+      - run: cargo fmt -- --check
+      - run: cargo test --locked
+      - name: Clippy (report only)
+        continue-on-error: true
+        run: cargo clippy --all-targets --locked
