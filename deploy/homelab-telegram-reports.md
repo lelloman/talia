@@ -1,10 +1,11 @@
 # Infrastructure checklist reports
 
 [Definitions](homelab-telegram-reports.json) run at **09:00, 14:00 and 19:00
-Europe/Rome**, including daylight-saving changes. Captured versions are **12, 11, 11**.
+Europe/Rome**, including daylight-saving changes. Captured versions are **14, 13, 13**.
 
 The checklist contains Homelab, VPS-EU, VPS-US, LelloAuth, Knot Resolver,
-Pezzottify, Pezzottflix, SimpleAI, Simple Agents, LelloStore and Crumbles.
+Pezzottify, Pezzottflix, SimpleAI, LelloStore and Crumbles.
+Simple Agents was decommissioned and is no longer checked.
 Backups and TLS certificates are excluded until real checks are configured;
 Observo is also excluded. Host checks aggregate their metrics;
 services have their own entries instead of being repeated under Homelab.
@@ -28,15 +29,13 @@ circle emoji because text colors are unavailable.
 - Per-host internet: separate external DNS and HTTPS probes must originate from
   that host; missing probes are Warning. A probe failure is described specifically,
   not as proof of a general internet outage.
-- LelloAuth, Knot Resolver, Pezzottify, Pezzottflix, SimpleAI and Simple Agents:
+- LelloAuth, Knot Resolver, Pezzottify, Pezzottflix and SimpleAI:
   current scrape reachability and rolling availability. Down is Error; missing
   reachability/availability is Warning. Scraping does not establish full application
   health or successful authenticated user workflows.
 - Knot Resolver: SERVFAIL response ratio over 15 minutes warns above 1%.
 - Pezzottify: HTTP 5xx ratio over 15 minutes warns above 1%; unavailable ratio warns.
 - SimpleAI: `simpleai_up` must be 1; this does not run a synthetic inference.
-- Simple Agents: uncertain effects or exhausted recovery above zero warn;
-  unavailable metrics warn.
 - LelloStore and Crumbles: direct JSON health endpoints must return successful
   HTTP responses and `status: healthy` or `status: ok`. Transport/HTTP failure is
   Error; an unexpected status is Warning. Sources are `report-lellostore` at
@@ -185,3 +184,9 @@ is preserved.
 python3 deploy/update-report-checks.py --backup /private/report-checks-preview
 python3 deploy/update-report-checks.py --backup /private/report-checks-applied --apply
 ```
+
+## Simple Agents decommissioned — 2026-10-21
+
+Versions 14, 13, 13 remove the Simple Agents checklist item and its
+`simple_agents_*` signal queries. The checklist now has 10 items. Only the
+`signals` and `facts` steps changed.

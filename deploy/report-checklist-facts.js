@@ -69,7 +69,6 @@ ctx => {
     {id:'pezzottify',name:'Pezzottify',job:'pezzottify-server',instance:'192.168.1.34:9091',node:'boxo'},
     {id:'pezzottflix',name:'Pezzottflix',job:'pezzottflix',instance:'192.168.1.34:9092',node:'boxo'},
     {id:'simple-ai',name:'SimpleAI',job:'simple-ai',instance:'simple-ai:8080'},
-    {id:'simple-agents',name:'Simple Agents',job:'simple-agents',instance:'simple-agents:9781'},
     {id:'lellostore',name:'LelloStore',http:'lellostore'},
     {id:'crumbles',name:'Crumbles',http:'crumbles'}
   ];
@@ -115,12 +114,7 @@ ctx => {
   const ai = sample(metricRows(signals,'simpleai_up')[0]);
   if (ai === null) add(byId('simple-ai'),'WARN','SimpleAI health metric unavailable.');
   else if (ai !== 1) add(byId('simple-ai'),'ERR','SimpleAI reports unhealthy.');
-  for (const metric of ['simple_agents_uncertain_effects','simple_agents_exhausted_recovery']) {
-    const results = metricRows(signals,metric);
-    if (!results.length) add(byId('simple-agents'),'WARN',metric+': unavailable.');
-    else { const n=results.reduce((sum,r)=>sum+(sample(r)||0),0); if(n>0) add(byId('simple-agents'),'WARN',metric+': '+n+'.'); }
-  }
-  const signalItems = ['dns','pezzottify','simple-ai','simple-agents'].map(byId).filter(i => !i.asleep);
+  const signalItems = ['dns','pezzottify','simple-ai'].map(byId).filter(i => !i.asleep);
   if (!signals) for (const item of signalItems) add(item,'WARN','Additional service checks could not be collected.');
   for (const warning of signals?.warnings || []) for (const item of signalItems) add(item,'WARN','Service data warning: '+warning);
   for (const warning of extras?.warnings || []) for(const item of hosts) add(item,'WARN','Probe data warning: '+warning);

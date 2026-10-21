@@ -7,7 +7,7 @@ import uuid
 from deploy import MCP
 
 ROOT = pathlib.Path(__file__).resolve().parent
-QUIET_CONDITIONS = ('SimpleAgentsCapacityExhausted', 'LogErrorBurst')
+QUIET_CONDITIONS = ('LogErrorBurst',)
 
 
 def main():
@@ -31,14 +31,11 @@ def main():
             changes.append(('alerts_policy_save', dict(
                 policy={**policy, 'version': policy['version'] + 1, 'source': source},
                 expected=policy['version'])))
-        for name in (*QUIET_CONDITIONS, 'SimpleAgentsSessionNoProgress'):
+        for name in QUIET_CONDITIONS:
             binding = next(b for b in config['bindings'] if b['id'] == 'infra-' + name)
             assert binding['policy'] == 'infra-warning', 'Unexpected policy binding'
             params = dict(binding['params'])
-            if name in QUIET_CONDITIONS:
-                params['notify'] = False
-            else:
-                params['quietStates'] = ['queued']
+            params['notify'] = False
             if params != binding['params']:
                 changes.append(('alerts_binding_save', dict(
                     binding={**binding, 'version': binding['version'] + 1, 'params': params},
