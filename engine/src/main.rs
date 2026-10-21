@@ -566,10 +566,19 @@ async fn run(args:Vec<String>)->Result<()> {
       if let Err(e)=monitoring.reports.tick(){errors.push(e);}
       if let Err(e)=monitoring.telegram.tick(){errors.push(e);}
       if let Err(e)=monitoring.chat.tick(){errors.push(e);}
-      *monitoring.monitoring_error.borrow_mut()=if errors.is_empty(){None}else{Some(errors.join("; "))};
+      let error=if errors.is_empty(){None}else{Some(errors.join("; "))};
+      if error!=*monitoring.monitoring_error.borrow(){eprintln!("Monitoring tick: {}",error.as_deref().unwrap_or("recovered"));}
+      *monitoring.monitoring_error.borrow_mut()=error;
       tokio::time::sleep(Duration::from_millis(50)).await;
     }
   });
+  // Run history and admissions otherwise grow by one row per collector run. Small batches
+  // keep each pass short on the shared thread; a backlog drains at a few thousand rows a second.
+  let retention=service.clone();tokio::task::spawn_local(async move{loop{
+    let now=retention.engine.now();
+    let more=match retention.engine.store.borrow_mut().prune_runs(now,86_400_000,500){Ok(more)=>more,Err(e)=>{eprintln!("Run retention: {e}");false}};
+    tokio::time::sleep(Duration::from_millis(if more{100}else{60_000})).await;
+  }});
   let agent_leases=service.agent_engine.clone();tokio::task::spawn_local(async move{loop{tokio::time::sleep(Duration::from_secs(1)).await;agent_leases.sweep();}});
   let leases=service.clone();tokio::task::spawn_local(async move{loop{tokio::time::sleep(Duration::from_secs(10)).await;let expired:Vec<_>=leases.leases.borrow().iter().filter(|(_,(_,t))|leases.engine.now()-*t>60000).map(|(k,_)|k.clone()).collect();for key in expired{if let Some((id,_))=leases.leases.borrow_mut().remove(&key){leases.engine.unsubscribe(&id);}}}});
   tokio::task::spawn_local(async move{let active=Rc::new(Cell::new(0usize));while let Some(request)=rx.recv().await{if active.get()>=128{let _=request.reply.send(json!({"error":if request.agent {"limit_exceeded"}else{"server busy"}}));continue;}let active=active.clone();active.set(active.get()+1);let s=service.clone();tokio::task::spawn_local(async move{

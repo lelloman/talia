@@ -13,6 +13,10 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 fn timeout() -> u64 {
     30_000
 }
+/// Below the default run timeout, so a hung source fails as a source error with its cause.
+fn source_timeout() -> u64 {
+    10_000
+}
 fn response_limit() -> usize {
     1_048_576
 }
@@ -40,7 +44,7 @@ pub struct DataSource {
     pub url: String,
     #[serde(default)]
     pub credential_ref: Option<String>,
-    #[serde(default = "timeout")]
+    #[serde(default = "source_timeout")]
     pub timeout_ms: u64,
     #[serde(default = "response_limit")]
     pub max_bytes: usize,

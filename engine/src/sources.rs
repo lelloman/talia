@@ -31,6 +31,28 @@ pub enum SourceRequest {
 fn get() -> String {
     "GET".into()
 }
+/// Keeps the transport cause for operators. The URL is dropped because queries can be long;
+/// MCP clients never see run error text.
+fn transport_error(prefix: &str, e: reqwest::Error) -> String {
+    let kind = if e.is_timeout() {
+        "timeout"
+    } else if e.is_connect() {
+        "connect"
+    } else if e.is_body() || e.is_decode() {
+        "body"
+    } else {
+        "request"
+    };
+    let e = e.without_url();
+    let mut detail = e.to_string();
+    let mut cause = std::error::Error::source(&e);
+    while let Some(c) = cause {
+        detail.push_str(": ");
+        detail.push_str(&c.to_string());
+        cause = c.source();
+    }
+    format!("{prefix} ({kind}): {detail}")
+}
 impl SourceRequest {
     pub fn has_effect(&self) -> bool {
         matches!(self,Self::Http{method,..} if method!="GET"&&method!="HEAD")
@@ -168,7 +190,7 @@ impl Adapters {
         let mut response = req
             .send()
             .await
-            .map_err(|_| "source connection/request failed")?;
+            .map_err(|e| transport_error("source connection/request failed", e))?;
         if !response.status().is_success() {
             return Err(format!("source HTTP {}", response.status().as_u16()));
         }
@@ -182,7 +204,7 @@ impl Adapters {
         while let Some(chunk) = response
             .chunk()
             .await
-            .map_err(|_| "source response interrupted")?
+            .map_err(|e| transport_error("source response interrupted", e))?
         {
             if bytes.len().saturating_add(chunk.len()) > source.max_bytes {
                 return Err("source response size limit".into());

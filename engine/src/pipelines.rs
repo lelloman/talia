@@ -203,6 +203,82 @@ impl Store {
         }
         Ok(out)
     }
+    /// Deletes terminal runs older than `retain_ms`, oldest first, then the admissions that
+    /// referenced them. Rowid cursors in metadata bound each pass to `batch` rows per table.
+    /// Unfinished and `unknown` runs and each instance's latest run are kept. Returns true
+    /// while a backlog remains.
+    pub fn prune_runs(&mut self, now: i64, retain_ms: i64, batch: usize) -> Result<bool> {
+        let cutoff = now.saturating_sub(retain_ms);
+        self.monitoring_atomic(|s| {
+            s.conn.execute("INSERT OR IGNORE INTO metadata VALUES('run_prune_rowid',0),('request_prune_rowid',0)",[]).map_err(err)?;
+            let cursor = |key: &str| -> Result<i64> {
+                s.conn.query_row("SELECT value FROM metadata WHERE key=?", [key], |r| r.get(0)).map_err(err)
+            };
+            let mut q = s.conn.prepare("SELECT rowid,instance,status,body FROM monitoring_runs WHERE rowid>? ORDER BY rowid LIMIT ?").map_err(err)?;
+            let rows = q
+                .query_map(params![cursor("run_prune_rowid")?, batch], |r| {
+                    Ok((r.get::<_, i64>(0)?, r.get::<_, String>(1)?, r.get::<_, String>(2)?, r.get::<_, String>(3)?))
+                })
+                .map_err(err)?
+                .collect::<std::result::Result<Vec<_>, _>>()
+                .map_err(err)?;
+            drop(q);
+            let mut runs_done = rows.len() < batch;
+            let mut next = None;
+            for (rowid, instance, status, body) in &rows {
+                // Rows are inserted in creation order, so the first recent one ends the pass.
+                if serde_json::from_str::<Run>(body).map_err(err)?.created >= cutoff {
+                    runs_done = true;
+                    break;
+                }
+                next = Some(*rowid);
+                if !["complete", "failed", "timed_out", "cancelled"].contains(&status.as_str()) {
+                    continue;
+                }
+                let latest: bool = s.conn.query_row("SELECT NOT EXISTS(SELECT 1 FROM monitoring_runs WHERE instance=? AND rowid>?)", params![instance, rowid], |r| r.get(0)).map_err(err)?;
+                if !latest {
+                    s.conn.execute("DELETE FROM monitoring_runs WHERE rowid=?", [rowid]).map_err(err)?;
+                }
+            }
+            if let Some(n) = next {
+                s.conn.execute("UPDATE metadata SET value=? WHERE key='run_prune_rowid'", [n]).map_err(err)?;
+            }
+            let mut q = s.conn.prepare("SELECT rowid,body FROM monitoring_requests WHERE rowid>? ORDER BY rowid LIMIT ?").map_err(err)?;
+            let rows = q
+                .query_map(params![cursor("request_prune_rowid")?, batch], |r| Ok((r.get::<_, i64>(0)?, r.get::<_, String>(1)?)))
+                .map_err(err)?
+                .collect::<std::result::Result<Vec<_>, _>>()
+                .map_err(err)?;
+            drop(q);
+            let run_cursor = cursor("run_prune_rowid")?;
+            let mut requests_done = rows.len() < batch;
+            let mut next = None;
+            for (rowid, body) in &rows {
+                let a: Admission = serde_json::from_str(body).map_err(err)?;
+                // Admissions follow their run. Only scheduled skips have no run, and their keys
+                // name a due time the scheduler never revisits.
+                if let Some(id) = a.run_id {
+                    let run: Option<i64> = s.conn.query_row("SELECT rowid FROM monitoring_runs WHERE id=?", [&id], |r| r.get(0)).optional().map_err(err)?;
+                    if let Some(run) = run {
+                        // A run the run pass has not reached yet: wait for it.
+                        if run > run_cursor {
+                            requests_done = runs_done;
+                            break;
+                        }
+                        // The run pass kept this run, so its admission stays too.
+                        next = Some(*rowid);
+                        continue;
+                    }
+                }
+                s.conn.execute("DELETE FROM monitoring_requests WHERE rowid=?", [rowid]).map_err(err)?;
+                next = Some(*rowid);
+            }
+            if let Some(n) = next {
+                s.conn.execute("UPDATE metadata SET value=? WHERE key='request_prune_rowid'", [n]).map_err(err)?;
+            }
+            Ok(!(runs_done && requests_done))
+        })
+    }
 }
 #[derive(Clone)]
 pub struct Pipelines {
@@ -315,6 +391,10 @@ impl Pipelines {
             s.save_run(&r)?;
             if let Ok(mut m) = s.monitor_state(&r.instance) {
                 if was_running && m.generation == r.generation {
+                    // Failed runs write no history sample, so this log is their only trace.
+                    if m.error != r.error {
+                        eprintln!("Monitor {} {}: {}", r.instance, r.status, error);
+                    }
                     m.error = r.error.clone();
                     m.revision += 1;
                     s.save_monitor(&m)?;
@@ -431,7 +511,9 @@ impl Pipelines {
         let mut next = s.monitor_state(&state.id)?;
         next.state = new_state;
         next.revision += 1;
-        next.error = None;
+        if next.error.take().is_some() {
+            eprintln!("Monitor {} recovered", state.id);
+        }
         s.monitoring_atomic(|s| {
             for (alias, wire) in outputs.iter() {
                 let id = i.outputs.get(alias).ok_or("output not granted")?;
@@ -674,6 +756,46 @@ pub(crate) mod tests {
             tokio::time::sleep(Duration::from_millis(5)).await;
         }
         panic!("run did not finish")
+    }
+    #[test]
+    fn retention_prunes_old_terminal_runs_and_their_admissions() {
+        let p = fixture("{async run(ctx){}}");
+        let mut guard = p.engine.store.borrow_mut();
+        let s = &mut *guard;
+        let admit = |s: &mut Store, request: &str, cause: &str, now: i64, status: &str| {
+            let id = s.admit("x", request, cause, 0, now).unwrap().run_id;
+            if let Some(id) = &id {
+                let mut r = s.run(id).unwrap();
+                r.status = status.into();
+                s.save_run(&r).unwrap();
+            }
+            id
+        };
+        let old = admit(s, "a", "manual", 1000, "complete").unwrap();
+        let uncertain = admit(s, "b", "manual", 2000, "pending").unwrap();
+        assert_eq!(admit(s, "c", "scheduled", 2000, ""), None);
+        let mut r = s.run(&uncertain).unwrap();
+        r.status = "unknown".into();
+        s.save_run(&r).unwrap();
+        let older = admit(s, "d", "manual", 3000, "complete").unwrap();
+        let recent = admit(s, "e", "manual", 20_000_000, "complete").unwrap();
+        let mut passes = 0;
+        while s.prune_runs(100_000_000, 86_400_000, 2).unwrap() {
+            passes += 1;
+            assert!(passes < 20);
+        }
+        assert!(passes > 0, "a small batch needs several passes");
+        for (id, kept) in [(&old, false), (&uncertain, true), (&older, false), (&recent, true)] {
+            assert_eq!(s.run(id).is_ok(), kept, "{id}");
+        }
+        let admitted = |s: &Store, request: &str| s.run_admission(request).unwrap().is_some();
+        for (request, kept) in [("a", false), ("b", true), ("c", false), ("d", false), ("e", true)] {
+            assert_eq!(admitted(s, request), kept, "{request}");
+        }
+        // A retried request inside the window still returns its original admission.
+        assert_eq!(s.admit("x", "e", "manual", 0, 20_000_001).unwrap().run_id, Some(recent));
+        // Caught up: a pass reads only the first recent row and reports no backlog.
+        assert!(!s.prune_runs(100_000_000, 86_400_000, 2).unwrap());
     }
     #[tokio::test]
     async fn admission_and_async_io() {
