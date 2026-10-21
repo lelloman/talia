@@ -364,48 +364,6 @@
     }
   },
   {
-    "name": "SimpleAgentsRunnerDisconnected",
-    "query": "simple_agents_expected_runners_disconnected{job=\"simple-agents\"} > 0",
-    "forMs": 300000,
-    "intervalMs": 30000,
-    "labels": {
-      "category": "availability",
-      "severity": "warning"
-    },
-    "annotations": {
-      "description": "An enabled, enrolled Runner has an expired lease for 5 minutes. Check SA fleet and Runner connectivity; disable intentionally offline capacity. Do not re-enroll or release reservations to silence this alert.",
-      "summary": "Simple Agents Runner disconnected"
-    }
-  },
-  {
-    "name": "SimpleAgentsCapacityExhausted",
-    "query": "(simple_agents_available_runner_slots{job=\"simple-agents\"} == 0) and on (job, instance) (simple_agents_sessions{job=\"simple-agents\",state=\"queued\"} > 0)",
-    "forMs": 600000,
-    "intervalMs": 30000,
-    "labels": {
-      "category": "capacity",
-      "severity": "warning"
-    },
-    "annotations": {
-      "description": "No enabled connected Runner has a free concurrency slot and work has been queued for 10 minutes. Inspect reservations and compatible capacity; never clear reservations without confirmed worker cleanup.",
-      "summary": "Simple Agents has queued work but no Runner slots"
-    }
-  },
-  {
-    "name": "SimpleAgentsSessionNoProgress",
-    "query": "(simple_agents_session_idle_seconds{job=\"simple-agents\",state=\"running\"} > 1800) or (simple_agents_session_idle_seconds{job=\"simple-agents\",state=\"queued\"} > 600) or (simple_agents_session_idle_seconds{job=\"simple-agents\",state=~\"pausing|cancelling\"} > 300)",
-    "forMs": 300000,
-    "intervalMs": 30000,
-    "labels": {
-      "category": "execution",
-      "severity": "warning"
-    },
-    "annotations": {
-      "description": "At least one {{ $labels.state }} session has exceeded its no-progress threshold for 5 minutes. Inspect SA session history and worker health; quiet engine work may be legitimate. Human-waiting and paused sessions are excluded. No automatic retry or cancellation is performed.",
-      "summary": "Simple Agents session may be stuck"
-    }
-  },
-  {
     "name": "HealthCollectionStale",
     "query": "(time() - talia_health_checked_timestamp_seconds > 3900) or absent(talia_health_checked_timestamp_seconds)",
     "forMs": 0,

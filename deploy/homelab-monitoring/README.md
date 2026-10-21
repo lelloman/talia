@@ -39,6 +39,12 @@ The session policy remembers whether a condition was eligible to notify so a
 quiet queue recovery does not generate a message. These settings do not cancel,
 retry or change the pacing of any session.
 
+Simple Agents was decommissioned on 2026-10-21. Its three conditions
+(`SimpleAgentsRunnerDisconnected`, `SimpleAgentsCapacityExhausted`,
+`SimpleAgentsSessionNoProgress`) were removed from `rules.json`; their live
+bindings were disabled and their collectors deleted. The quiet runner-capacity and
+queue-wait tuning above no longer applies.
+
 The publisher uses these defaults for new bindings and preserves existing live
 overrides. To apply the targeted tuning to existing bindings, preview the guarded
 changes with a fresh private backup directory, then use another directory to apply:

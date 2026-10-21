@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Preview/apply the checklist steps of the infra reports from homelab-telegram-reports.json.
 
-Only the reachability, availability and facts steps are replaced. Schedules,
+Only the reachability, availability, signals and facts steps are replaced. Schedules,
 destinations, the composer and every other step keep their live values.
 """
 import argparse
@@ -14,7 +14,7 @@ ROOT = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT / 'homelab-monitoring'))
 from deploy import MCP  # noqa: E402
 
-STEPS = ('reachability', 'availability', 'facts')
+STEPS = ('reachability', 'availability', 'signals', 'facts')
 
 
 def main():
