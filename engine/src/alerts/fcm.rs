@@ -4,7 +4,10 @@ use base64::{
     engine::general_purpose::{STANDARD, URL_SAFE_NO_PAD},
     Engine as _,
 };
-use ring::{rand::SystemRandom, signature::{RsaKeyPair, RSA_PKCS1_SHA256}};
+use ring::{
+    rand::SystemRandom,
+    signature::{RsaKeyPair, RSA_PKCS1_SHA256},
+};
 use std::time::{SystemTime, UNIX_EPOCH};
 #[derive(Deserialize)]
 struct Account {

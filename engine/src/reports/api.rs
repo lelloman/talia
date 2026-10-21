@@ -39,7 +39,16 @@ impl Store {
         {
             return Err("unknown report fields".into());
         }
-        if ["list", "get", "runs", "run_get", "analysis_get", "schedule_get"].contains(&op) {
+        if [
+            "list",
+            "get",
+            "runs",
+            "run_get",
+            "analysis_get",
+            "schedule_get",
+        ]
+        .contains(&op)
+        {
             return self.report_inner(op, &args, actor, now);
         }
         let request = text(&args, "requestId")?;
@@ -80,11 +89,26 @@ impl Store {
         })
     }
     /// Trusted native HTTP host supplies the authenticated subject, never client arguments.
-    pub fn native_reports(&mut self, subject: &str, op: &str, args: Value, now: i64) -> Result<Value> {
+    pub fn native_reports(
+        &mut self,
+        subject: &str,
+        op: &str,
+        args: Value,
+        now: i64,
+    ) -> Result<Value> {
         if !self.user_admin(subject).map_err(|_| "forbidden")? {
             return Err("forbidden".into());
         }
-        if !["list", "runs", "run_get", "run", "schedule_get", "schedule_save"].contains(&op) {
+        if ![
+            "list",
+            "runs",
+            "run_get",
+            "run",
+            "schedule_get",
+            "schedule_save",
+        ]
+        .contains(&op)
+        {
             return Err("unknown report operation".into());
         }
         // Native runs are retained previews; delivery is a separate operator action.
@@ -95,15 +119,20 @@ impl Store {
         if op == "list" {
             let mut definitions = vec![];
             for d in self.report_definitions()? {
-                let latest = self.report_inner("runs", &json!({"report":d.id,"limit":1}), subject, now)?;
+                let latest =
+                    self.report_inner("runs", &json!({"report":d.id,"limit":1}), subject, now)?;
                 definitions.push(json!({"id":d.id,"enabled":d.enabled,"scheduled":d.schedule.is_some(),
                     "steps":d.steps.len(),"period_ms":d.period_ms,
                     "version":d.version,"schedule":d.schedule,"next_due":self.report_schedule_view(&d)?["next_due"],
                     "available":!d.steps.iter().any(|s| matches!(s.action, Action::Unavailable {..})),
                     "latest":latest["runs"][0]}));
             }
-            definitions.sort_by(|a, b| b["latest"]["created"].as_i64().cmp(&a["latest"]["created"].as_i64())
-                .then_with(|| a["id"].as_str().cmp(&b["id"].as_str())));
+            definitions.sort_by(|a, b| {
+                b["latest"]["created"]
+                    .as_i64()
+                    .cmp(&a["latest"]["created"].as_i64())
+                    .then_with(|| a["id"].as_str().cmp(&b["id"].as_str()))
+            });
             return Ok(json!({"definitions":definitions}));
         }
         if op == "run_get" {
@@ -114,30 +143,52 @@ impl Store {
                     else if r["status"] == "failed" { "not_run" } else { "pending" };
                 json!({"id":step["id"],"status":output["status"].as_str().unwrap_or(fallback),"error":output["error"]})
             }).collect();
-            return Ok(json!({"run":{"id":r["id"],"report":r["definition"]["id"],"created":r["created"],
+            return Ok(
+                json!({"run":{"id":r["id"],"report":r["definition"]["id"],"created":r["created"],
                 "period_start":r["period_start"],"status":r["status"],"send":r["send"],
-                "severity":run_severity(&self.report_run(r["id"].as_str().ok_or("invalid run identity")?)?),"steps":steps,"content":r["content"],"error":r["error"],"deliveries":r["deliveries"]}}));
+                "severity":run_severity(&self.report_run(r["id"].as_str().ok_or("invalid run identity")?)?),"steps":steps,"content":r["content"],"error":r["error"],"deliveries":r["deliveries"]}}),
+            );
         }
         Ok(value)
     }
     fn report_schedule_view(&self, d: &Definition) -> Result<Value> {
-        let due: Option<i64> = self.conn.query_row("SELECT next_due FROM report_definitions WHERE id=?", [&d.id], |r| r.get(0)).map_err(err)?;
-        Ok(json!({"id":d.id,"version":d.version,"enabled":d.enabled,"schedule":d.schedule,
-            "next_due":due,"destinations":d.destinations}))
+        let due: Option<i64> = self
+            .conn
+            .query_row(
+                "SELECT next_due FROM report_definitions WHERE id=?",
+                [&d.id],
+                |r| r.get(0),
+            )
+            .map_err(err)?;
+        Ok(
+            json!({"id":d.id,"version":d.version,"enabled":d.enabled,"schedule":d.schedule,
+            "next_due":due,"destinations":d.destinations}),
+        )
     }
     fn report_inner(&mut self, op: &str, args: &Value, actor: &str, now: i64) -> Result<Value> {
         match op {
             "list" => Ok(json!({"definitions":self.report_definitions()?})),
             "get" => Ok(json!({"definition":self.report_definition(text(args,"id")?)?})),
-            "schedule_get" => self.report_schedule_view(&self.report_definition(text(args, "id")?)?),
+            "schedule_get" => {
+                self.report_schedule_view(&self.report_definition(text(args, "id")?)?)
+            }
             "schedule_save" => {
                 let mut d = self.report_definition(text(args, "id")?)?;
                 let expected = number(args, "expected")?;
-                if d.version != expected { return Err("report version conflict; reload the schedule".into()); }
-                d.enabled = args["enabled"].as_bool().ok_or("enabled boolean required")?;
-                if !args.as_object().unwrap().contains_key("schedule") { return Err("schedule required".into()); }
-                d.schedule = serde_json::from_value(args["schedule"].clone()).map_err(|_| "invalid schedule")?;
-                if d.enabled && d.schedule.is_none() { return Err("choose a schedule before enabling".into()); }
+                if d.version != expected {
+                    return Err("report version conflict; reload the schedule".into());
+                }
+                d.enabled = args["enabled"]
+                    .as_bool()
+                    .ok_or("enabled boolean required")?;
+                if !args.as_object().unwrap().contains_key("schedule") {
+                    return Err("schedule required".into());
+                }
+                d.schedule = serde_json::from_value(args["schedule"].clone())
+                    .map_err(|_| "invalid schedule")?;
+                if d.enabled && d.schedule.is_none() {
+                    return Err("choose a schedule before enabling".into());
+                }
                 d.version = expected.checked_add(1).ok_or("version overflow")?;
                 self.report_save(&d, expected, now)?;
                 self.report_schedule_view(&d)
@@ -166,23 +217,58 @@ impl Store {
                     return Err("limit must be 1..100".into());
                 }
                 let sort = args["sort"].as_str().unwrap_or("newest");
-                if !["newest", "oldest"].contains(&sort) { return Err("invalid history sort".into()); }
+                if !["newest", "oldest"].contains(&sort) {
+                    return Err("invalid history sort".into());
+                }
                 let status = args["status"].as_str().unwrap_or("all");
-                if !["all", "active", "complete", "issues", "failed"].contains(&status) { return Err("invalid history status".into()); }
+                if !["all", "active", "complete", "issues", "failed"].contains(&status) {
+                    return Err("invalid history status".into());
+                }
                 let (before_created, before_id) = if let Some(before) = args["before"].as_str() {
-                    let created: i64 = self.conn.query_row(
-                        "SELECT created FROM report_runs WHERE report=? AND id=?", params![report, before], |r| r.get(0)
-                    ).optional().map_err(err)?.ok_or("history cursor expired; refresh history")?;
+                    let created: i64 = self
+                        .conn
+                        .query_row(
+                            "SELECT created FROM report_runs WHERE report=? AND id=?",
+                            params![report, before],
+                            |r| r.get(0),
+                        )
+                        .optional()
+                        .map_err(err)?
+                        .ok_or("history cursor expired; refresh history")?;
                     (created, before)
-                } else if sort == "oldest" { (i64::MIN, "") } else { (i64::MAX, "~") };
-                let (comparison, direction) = if sort == "oldest" { (">", "ASC") } else { ("<", "DESC") };
+                } else if sort == "oldest" {
+                    (i64::MIN, "")
+                } else {
+                    (i64::MAX, "~")
+                };
+                let (comparison, direction) = if sort == "oldest" {
+                    (">", "ASC")
+                } else {
+                    ("<", "DESC")
+                };
                 // Only validated, fixed SQL fragments are interpolated. User values stay bound.
-                let sql = format!("SELECT body FROM report_runs WHERE report=? AND (created,id){comparison}(?,?)
+                let sql = format!(
+                    "SELECT body FROM report_runs WHERE report=? AND (created,id){comparison}(?,?)
                     AND (?='all' OR (?='active' AND status IN ('queued','running','delivering'))
                     OR (?='issues' AND status IN ('partial','failed')) OR status=?)
-                    ORDER BY created {direction},id {direction} LIMIT ?");
+                    ORDER BY created {direction},id {direction} LIMIT ?"
+                );
                 let mut q = self.conn.prepare(&sql).map_err(err)?;
-                let rows = q.query_map(params![report, before_created, before_id, status, status, status, status, limit], |r| r.get::<_, String>(0)).map_err(err)?;
+                let rows = q
+                    .query_map(
+                        params![
+                            report,
+                            before_created,
+                            before_id,
+                            status,
+                            status,
+                            status,
+                            status,
+                            limit
+                        ],
+                        |r| r.get::<_, String>(0),
+                    )
+                    .map_err(err)?;
                 let runs=rows.map(|r|{let r:Run=serde_json::from_str(&r.map_err(err)?).map_err(err)?;Ok(json!({"id":r.id,"created":r.created,"status":r.status,"version":r.definition.version,"send":r.send,"error":r.error,"deliveries":r.deliveries}))}).collect::<Result<Vec<_>>>()?;
                 Ok(
                     json!({"runs":runs,"next_before":if runs.len()==limit as usize{runs.last().map(|r|r["id"].clone())}else{None}}),

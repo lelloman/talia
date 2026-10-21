@@ -376,7 +376,15 @@ fn validate_grants(grants: &[Grant]) -> Result<()> {
             return Err(ErrorCode::InvalidInput);
         }
         let valid = match g.family {
-            Family::Alerts => &[Action::Read, Action::Acknowledge, Action::Silence, Action::Configure, Action::Observe, Action::Register, Action::Audit][..],
+            Family::Alerts => &[
+                Action::Read,
+                Action::Acknowledge,
+                Action::Silence,
+                Action::Configure,
+                Action::Observe,
+                Action::Register,
+                Action::Audit,
+            ][..],
             Family::Authoring => &[
                 Action::Read,
                 Action::List,
@@ -461,15 +469,35 @@ mod user_keys;
 impl Store {
     /// Trusted HTTP host only, after OIDC session and app-access validation.
     /// The non-hex credential key cannot be authenticated through the Bearer API.
-    pub fn browser_alert_session(&mut self, subject:&str)->Result<Session>{
-        let principal=format!("oidc-{}",&hex(digest::digest(&digest::SHA256,subject.as_bytes()).as_ref())[..48]);
-        let key=format!("browser:{principal}");
-        let grants=vec![Grant{family:Family::Alerts,actions:[Action::Read,Action::Acknowledge,Action::Silence].into_iter().collect(),scope:Scope::All}];
-        let tx=self.conn.savepoint()?;
-        tx.execute("INSERT OR IGNORE INTO agent_principals VALUES(?,1,1,?)",params![principal,serde_json::to_string(&grants)?])?;
-        tx.execute("INSERT OR IGNORE INTO agent_credentials VALUES(?,?)",params![key,principal])?;
+    pub fn browser_alert_session(&mut self, subject: &str) -> Result<Session> {
+        let principal = format!(
+            "oidc-{}",
+            &hex(digest::digest(&digest::SHA256, subject.as_bytes()).as_ref())[..48]
+        );
+        let key = format!("browser:{principal}");
+        let grants = vec![Grant {
+            family: Family::Alerts,
+            actions: [Action::Read, Action::Acknowledge, Action::Silence]
+                .into_iter()
+                .collect(),
+            scope: Scope::All,
+        }];
+        let tx = self.conn.savepoint()?;
+        tx.execute(
+            "INSERT OR IGNORE INTO agent_principals VALUES(?,1,1,?)",
+            params![principal, serde_json::to_string(&grants)?],
+        )?;
+        tx.execute(
+            "INSERT OR IGNORE INTO agent_credentials VALUES(?,?)",
+            params![key, principal],
+        )?;
         tx.commit()?;
-        let session=Session{principal,credential_digest:key};self.agent_grants(&session)?;Ok(session)
+        let session = Session {
+            principal,
+            credential_digest: key,
+        };
+        self.agent_grants(&session)?;
+        Ok(session)
     }
     /// Operator-only provisioning; never exposed as an authored definition or guest capability.
     pub fn agent_policy_set(
@@ -541,15 +569,25 @@ impl Store {
         })
     }
     fn agent_grants(&self, session: &Session) -> Result<Vec<Grant>> {
-        if session.credential_digest.starts_with("user:"){return self.user_agent_grants(session)}
+        if session.credential_digest.starts_with("user:") {
+            return self.user_agent_grants(session);
+        }
         let policy:Option<String>=self.conn.query_row("SELECT p.policy FROM agent_credentials c JOIN agent_principals p ON p.id=c.principal WHERE c.digest=? AND p.id=? AND p.enabled=1",params![session.credential_digest,session.principal],|r|r.get(0)).optional()?;
         Ok(serde_json::from_str(
             &policy.ok_or(ErrorCode::Unauthenticated)?,
         )?)
     }
     /// Sharing can grant data access to every user: only the global authoring operator may do it.
-    pub fn agent_require_dashboard_admin(&self,session:&Session)->Result<()> {
-        if self.agent_grants(session)?.iter().any(|g|g.family==Family::Authoring&&g.scope==Scope::All&&g.actions.contains(&Action::Save)){Ok(())}else{Err(ErrorCode::Forbidden)}
+    pub fn agent_require_dashboard_admin(&self, session: &Session) -> Result<()> {
+        if self.agent_grants(session)?.iter().any(|g| {
+            g.family == Family::Authoring
+                && g.scope == Scope::All
+                && g.actions.contains(&Action::Save)
+        }) {
+            Ok(())
+        } else {
+            Err(ErrorCode::Forbidden)
+        }
     }
     pub fn agent_require(
         &self,
@@ -588,27 +626,43 @@ impl Store {
         Ok(serde_json::from_str(&s)?)
     }
 }
+mod assignment;
 mod audit;
 mod authoring;
+mod discovery;
 #[cfg(test)]
 mod tests;
-mod discovery;
-mod assignment;
 pub use assignment::AssignmentRequest;
 
 impl Store {
     /// Alert authority uses its own permission family; legacy engine grants confer none.
     pub fn alert_require(&self, session: &Session, action: Action) -> Result<()> {
-        if allows(&self.agent_grants(session)?, Family::Alerts, action, &Target::Resource{id:"alerts".into()}) {Ok(())} else {Err(ErrorCode::Forbidden)}
+        if allows(
+            &self.agent_grants(session)?,
+            Family::Alerts,
+            action,
+            &Target::Resource {
+                id: "alerts".into(),
+            },
+        ) {
+            Ok(())
+        } else {
+            Err(ErrorCode::Forbidden)
+        }
     }
 }
 
 #[cfg(test)]
 mod browser_session_tests {
- use super::*;
- #[test]
- fn oidc_subjects_have_separate_auditable_alert_identity_without_machine_credentials(){
-  let mut store=Store::open(":memory:").unwrap();let a=store.browser_alert_session("issuer#alice").unwrap();let b=store.browser_alert_session("issuer#bob").unwrap();assert_ne!(a.principal,b.principal);
-  assert!(store.alert_require(&a,Action::Read).is_ok());assert!(store.alert_require(&a,Action::Configure).is_err());assert!(store.agent_authenticate(&a.credential_digest).is_err());
- }
+    use super::*;
+    #[test]
+    fn oidc_subjects_have_separate_auditable_alert_identity_without_machine_credentials() {
+        let mut store = Store::open(":memory:").unwrap();
+        let a = store.browser_alert_session("issuer#alice").unwrap();
+        let b = store.browser_alert_session("issuer#bob").unwrap();
+        assert_ne!(a.principal, b.principal);
+        assert!(store.alert_require(&a, Action::Read).is_ok());
+        assert!(store.alert_require(&a, Action::Configure).is_err());
+        assert!(store.agent_authenticate(&a.credential_digest).is_err());
+    }
 }

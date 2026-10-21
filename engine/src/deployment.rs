@@ -252,8 +252,8 @@ impl Deployment {
             });
         // An interrupted rotation retries the same refresh token: LelloAuth returns the
         // persisted successor within its rotation grace period and rejects it afterwards.
-        let refresh_due = tokens.refresh.is_some()
-            && (tokens.refreshing || tokens.access_expires <= now() + 30);
+        let refresh_due =
+            tokens.refresh.is_some() && (tokens.refreshing || tokens.access_expires <= now() + 30);
         if !checked || refresh_due {
             let _permit = self
                 .budget
@@ -359,12 +359,25 @@ impl Deployment {
     pub async fn gate(State(d): State<Self>, mut r: Request, next: Next) -> Response {
         let path = r.uri().path().to_owned();
         let path = path.as_str();
-        let native_request = matches!(path, "/native/alerts" | "/native/overview" | "/native/session" | "/native/logout" | "/native/reports" | "/native/notifications" | "/native/dashboards" | "/native/clients" | "/native/engine" | "/native/chats");
+        let native_request = matches!(
+            path,
+            "/native/alerts"
+                | "/native/overview"
+                | "/native/session"
+                | "/native/logout"
+                | "/native/reports"
+                | "/native/notifications"
+                | "/native/dashboards"
+                | "/native/clients"
+                | "/native/engine"
+                | "/native/chats"
+        );
         let browser_alert = path == "/alerts" && !r.headers().contains_key(header::AUTHORIZATION);
         let protected = matches!(
             path,
             "/engine" | "/clients" | "/account" | "/auth/session" | "/auth/logout"
-        ) || browser_alert || native_request;
+        ) || browser_alert
+            || native_request;
         if r.method() != axum::http::Method::GET
             && (r
                 .headers()
@@ -376,17 +389,30 @@ impl Deployment {
         }
         if protected {
             let identity = if native_request {
-                match native::bearer(r.headers()) { Some(token) => d.identity_id(&hash(token)).await, None => Err(StatusCode::UNAUTHORIZED) }
-            } else { d.identity(r.headers()).await };
+                match native::bearer(r.headers()) {
+                    Some(token) => d.identity_id(&hash(token)).await,
+                    None => Err(StatusCode::UNAUTHORIZED),
+                }
+            } else {
+                d.identity(r.headers()).await
+            };
             match identity {
                 Ok(identity) => {
                     // Native apps carry their installation credential beside the session bearer.
                     if path == "/native/clients" {
-                        let installation = r.headers().get("x-talia-client").and_then(|v| v.to_str().ok()).unwrap_or("").to_owned();
+                        let installation = r
+                            .headers()
+                            .get("x-talia-client")
+                            .and_then(|v| v.to_str().ok())
+                            .unwrap_or("")
+                            .to_owned();
                         if installation.is_empty() || installation.len() > 256 {
                             return StatusCode::BAD_REQUEST.into_response();
                         }
-                        r.headers_mut().insert(header::AUTHORIZATION, format!("Bearer {installation}").parse().unwrap());
+                        r.headers_mut().insert(
+                            header::AUTHORIZATION,
+                            format!("Bearer {installation}").parse().unwrap(),
+                        );
                     }
                     // An installation credential is scoped to its authenticated user.
                     if path == "/clients" || path == "/native/clients" {
@@ -480,7 +506,14 @@ async fn callback(
     headers: HeaderMap,
     Query(q): Query<Callback>,
 ) -> Response {
-    let native_attempt = q.state.as_ref().and_then(|s| d.inner.lock().unwrap().logins.get(&hash(s)).and_then(|l| l.native.clone()));
+    let native_attempt = q.state.as_ref().and_then(|s| {
+        d.inner
+            .lock()
+            .unwrap()
+            .logins
+            .get(&hash(s))
+            .and_then(|l| l.native.clone())
+    });
     let outcome = finish(&d, &headers, q).await;
     if let (Some(attempt), Ok((token, _))) = (&native_attempt, &outcome) {
         return native::complete(&d, attempt, token.clone());
@@ -562,7 +595,11 @@ async fn finish(
     if expires <= now() {
         return Err(StatusCode::UNAUTHORIZED);
     }
-    let token = if flow.native.is_some() { format!("n.{}",random()) } else { random() };
+    let token = if flow.native.is_some() {
+        format!("n.{}", random())
+    } else {
+        random()
+    };
     let encrypted =
         d.seal(&serde_json::to_string(&tokens).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?)?;
     let mut inner = d.inner.lock().unwrap();
@@ -776,73 +813,226 @@ mod tests {
     }
     #[tokio::test]
     async fn native_pkce_handoff_is_one_time_scoped_and_revocable() {
-        let (server,d)=fixture().await;
-        let router=d.routes().route("/native/overview",get(||async{"private"}))
-            .route("/native/reports",post(||async{"private"}))
-            .route("/native/dashboards",post(||async{"private"}))
-            .route("/native/engine",post(||async{"private"}))
-            .route("/native/chats",post(||async{"private"}))
-            .route("/native/alerts",post(||async{"private"}))
-            .route("/native/clients",post(|h:HeaderMap|async move{h[header::AUTHORIZATION].to_str().unwrap().to_owned()}))
-            .route("/engine",post(||async{"private"}))
-            .layer(axum::middleware::from_fn_with_state(d.clone(),Deployment::gate));
-        let verifier=random();
-        let response=router.clone().oneshot(Request::builder().method("POST").uri("/native/start")
-            .header("content-type","application/json").body(Body::from(json!({"challenge":hash(&verifier)}).to_string())).unwrap()).await.unwrap();
-        assert_eq!(response.status(),StatusCode::OK);
-        let value:serde_json::Value=serde_json::from_slice(&axum::body::to_bytes(response.into_body(),8192).await.unwrap()).unwrap();
-        let attempt=value["attempt"].as_str().unwrap();
-        let response=router.clone().oneshot(Request::builder().uri(format!("/native/authorize?attempt={attempt}")).body(Body::empty()).unwrap()).await.unwrap();
-        let browser=response.headers()[header::SET_COOKIE].to_str().unwrap().split(';').next().unwrap().to_owned();
-        let url=url::Url::parse(response.headers()[header::LOCATION].to_str().unwrap()).unwrap();
-        let fields:HashMap<_,_>=url.query_pairs().into_owned().collect();
-        token(&server,&fields["nonce"],&fields["code_challenge"]).await;
-        let response=router.clone().oneshot(Request::builder().uri(format!("/auth/callback?state={}&code=code",fields["state"]))
-            .header(header::COOKIE,browser).body(Body::empty()).unwrap()).await.unwrap();
-        assert_eq!(response.status(),StatusCode::OK);
-        let html=String::from_utf8(axum::body::to_bytes(response.into_body(),8192).await.unwrap().to_vec()).unwrap();
+        let (server, d) = fixture().await;
+        let router = d
+            .routes()
+            .route("/native/overview", get(|| async { "private" }))
+            .route("/native/reports", post(|| async { "private" }))
+            .route("/native/dashboards", post(|| async { "private" }))
+            .route("/native/engine", post(|| async { "private" }))
+            .route("/native/chats", post(|| async { "private" }))
+            .route("/native/alerts", post(|| async { "private" }))
+            .route(
+                "/native/clients",
+                post(|h: HeaderMap| async move {
+                    h[header::AUTHORIZATION].to_str().unwrap().to_owned()
+                }),
+            )
+            .route("/engine", post(|| async { "private" }))
+            .layer(axum::middleware::from_fn_with_state(
+                d.clone(),
+                Deployment::gate,
+            ));
+        let verifier = random();
+        let response = router
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/native/start")
+                    .header("content-type", "application/json")
+                    .body(Body::from(json!({"challenge":hash(&verifier)}).to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let value: serde_json::Value = serde_json::from_slice(
+            &axum::body::to_bytes(response.into_body(), 8192)
+                .await
+                .unwrap(),
+        )
+        .unwrap();
+        let attempt = value["attempt"].as_str().unwrap();
+        let response = router
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri(format!("/native/authorize?attempt={attempt}"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let browser = response.headers()[header::SET_COOKIE]
+            .to_str()
+            .unwrap()
+            .split(';')
+            .next()
+            .unwrap()
+            .to_owned();
+        let url = url::Url::parse(response.headers()[header::LOCATION].to_str().unwrap()).unwrap();
+        let fields: HashMap<_, _> = url.query_pairs().into_owned().collect();
+        token(&server, &fields["nonce"], &fields["code_challenge"]).await;
+        let response = router
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri(format!(
+                        "/auth/callback?state={}&code=code",
+                        fields["state"]
+                    ))
+                    .header(header::COOKIE, browser)
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let html = String::from_utf8(
+            axum::body::to_bytes(response.into_body(), 8192)
+                .await
+                .unwrap()
+                .to_vec(),
+        )
+        .unwrap();
         assert!(!html.contains("private-provider-token"));
-        for (proof,expected) in [(random(),StatusCode::UNAUTHORIZED),(verifier.clone(),StatusCode::OK),(verifier.clone(),StatusCode::UNAUTHORIZED)] {
-            let response=router.clone().oneshot(Request::builder().method("POST").uri("/native/exchange").header("content-type","application/json")
-                .body(Body::from(json!({"attempt":attempt,"verifier":proof}).to_string())).unwrap()).await.unwrap();
-            assert_eq!(response.status(),expected);
-            if expected==StatusCode::OK {
-                let v:serde_json::Value=serde_json::from_slice(&axum::body::to_bytes(response.into_body(),8192).await.unwrap()).unwrap();
-                let token=v["token"].as_str().unwrap();
+        for (proof, expected) in [
+            (random(), StatusCode::UNAUTHORIZED),
+            (verifier.clone(), StatusCode::OK),
+            (verifier.clone(), StatusCode::UNAUTHORIZED),
+        ] {
+            let response = router
+                .clone()
+                .oneshot(
+                    Request::builder()
+                        .method("POST")
+                        .uri("/native/exchange")
+                        .header("content-type", "application/json")
+                        .body(Body::from(
+                            json!({"attempt":attempt,"verifier":proof}).to_string(),
+                        ))
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(response.status(), expected);
+            if expected == StatusCode::OK {
+                let v: serde_json::Value = serde_json::from_slice(
+                    &axum::body::to_bytes(response.into_body(), 8192)
+                        .await
+                        .unwrap(),
+                )
+                .unwrap();
+                let token = v["token"].as_str().unwrap();
                 assert!(token.starts_with("n."));
-                let clients=|installation:Option<&str>|{let mut request=Request::builder().method("POST").uri("/native/clients").header(header::AUTHORIZATION,format!("Bearer {token}"));
-                    if let Some(installation)=installation {request=request.header("x-talia-client",installation);} request.body(Body::empty()).unwrap()};
-                assert_eq!(router.clone().oneshot(clients(None)).await.unwrap().status(),StatusCode::BAD_REQUEST);
-                let response=router.clone().oneshot(clients(Some("install-1"))).await.unwrap();
-                assert_eq!(response.status(),StatusCode::OK);
-                let scoped=String::from_utf8(axum::body::to_bytes(response.into_body(),8192).await.unwrap().to_vec()).unwrap();
+                let clients = |installation: Option<&str>| {
+                    let mut request = Request::builder()
+                        .method("POST")
+                        .uri("/native/clients")
+                        .header(header::AUTHORIZATION, format!("Bearer {token}"));
+                    if let Some(installation) = installation {
+                        request = request.header("x-talia-client", installation);
+                    }
+                    request.body(Body::empty()).unwrap()
+                };
+                assert_eq!(
+                    router
+                        .clone()
+                        .oneshot(clients(None))
+                        .await
+                        .unwrap()
+                        .status(),
+                    StatusCode::BAD_REQUEST
+                );
+                let response = router
+                    .clone()
+                    .oneshot(clients(Some("install-1")))
+                    .await
+                    .unwrap();
+                assert_eq!(response.status(), StatusCode::OK);
+                let scoped = String::from_utf8(
+                    axum::body::to_bytes(response.into_body(), 8192)
+                        .await
+                        .unwrap()
+                        .to_vec(),
+                )
+                .unwrap();
                 // The handler sees only the user-scoped installation credential, never the session bearer.
-                assert!(scoped.starts_with("Bearer ")&&!scoped.contains(token)&&!scoped.contains("install-1"));
-                for (path,method,origin,expected) in [
-                    ("/native/dashboards","POST",None,StatusCode::OK),
-                    ("/native/engine","POST",None,StatusCode::OK),
-                    ("/native/alerts","POST",None,StatusCode::OK),
-                    ("/native/alerts","POST",Some("https://attacker.test"),StatusCode::FORBIDDEN),
-                    ("/native/chats","POST",None,StatusCode::OK),
-                    ("/native/chats","POST",Some("https://attacker.test"),StatusCode::FORBIDDEN),
-                    ("/native/engine","POST",Some("https://attacker.test"),StatusCode::FORBIDDEN),
-                    ("/native/session","GET",None,StatusCode::OK),
-                    ("/native/overview","GET",None,StatusCode::OK),
-                    ("/native/reports","POST",None,StatusCode::OK),
-                    ("/native/reports","POST",Some("https://attacker.test"),StatusCode::FORBIDDEN),
-                    ("/engine","POST",Some("https://talia.test"),StatusCode::UNAUTHORIZED),
-                    ("/native/logout","POST",Some("https://attacker.test"),StatusCode::FORBIDDEN),
-                    ("/native/logout","POST",None,StatusCode::NO_CONTENT),
-                    ("/native/session","GET",None,StatusCode::UNAUTHORIZED),
-                    ("/native/reports","POST",None,StatusCode::UNAUTHORIZED),
-                    ("/native/engine","POST",None,StatusCode::UNAUTHORIZED),
-                    ("/native/dashboards","POST",None,StatusCode::UNAUTHORIZED),
-                    ("/native/alerts","POST",None,StatusCode::UNAUTHORIZED),
-                    ("/native/chats","POST",None,StatusCode::UNAUTHORIZED),
+                assert!(
+                    scoped.starts_with("Bearer ")
+                        && !scoped.contains(token)
+                        && !scoped.contains("install-1")
+                );
+                for (path, method, origin, expected) in [
+                    ("/native/dashboards", "POST", None, StatusCode::OK),
+                    ("/native/engine", "POST", None, StatusCode::OK),
+                    ("/native/alerts", "POST", None, StatusCode::OK),
+                    (
+                        "/native/alerts",
+                        "POST",
+                        Some("https://attacker.test"),
+                        StatusCode::FORBIDDEN,
+                    ),
+                    ("/native/chats", "POST", None, StatusCode::OK),
+                    (
+                        "/native/chats",
+                        "POST",
+                        Some("https://attacker.test"),
+                        StatusCode::FORBIDDEN,
+                    ),
+                    (
+                        "/native/engine",
+                        "POST",
+                        Some("https://attacker.test"),
+                        StatusCode::FORBIDDEN,
+                    ),
+                    ("/native/session", "GET", None, StatusCode::OK),
+                    ("/native/overview", "GET", None, StatusCode::OK),
+                    ("/native/reports", "POST", None, StatusCode::OK),
+                    (
+                        "/native/reports",
+                        "POST",
+                        Some("https://attacker.test"),
+                        StatusCode::FORBIDDEN,
+                    ),
+                    (
+                        "/engine",
+                        "POST",
+                        Some("https://talia.test"),
+                        StatusCode::UNAUTHORIZED,
+                    ),
+                    (
+                        "/native/logout",
+                        "POST",
+                        Some("https://attacker.test"),
+                        StatusCode::FORBIDDEN,
+                    ),
+                    ("/native/logout", "POST", None, StatusCode::NO_CONTENT),
+                    ("/native/session", "GET", None, StatusCode::UNAUTHORIZED),
+                    ("/native/reports", "POST", None, StatusCode::UNAUTHORIZED),
+                    ("/native/engine", "POST", None, StatusCode::UNAUTHORIZED),
+                    ("/native/dashboards", "POST", None, StatusCode::UNAUTHORIZED),
+                    ("/native/alerts", "POST", None, StatusCode::UNAUTHORIZED),
+                    ("/native/chats", "POST", None, StatusCode::UNAUTHORIZED),
                 ] {
-                    let mut request=Request::builder().method(method).uri(path).header(header::AUTHORIZATION,format!("Bearer {token}"));
-                    if let Some(origin)=origin {request=request.header(header::ORIGIN,origin);}
-                    assert_eq!(router.clone().oneshot(request.body(Body::empty()).unwrap()).await.unwrap().status(),expected,"{path}");
+                    let mut request = Request::builder()
+                        .method(method)
+                        .uri(path)
+                        .header(header::AUTHORIZATION, format!("Bearer {token}"));
+                    if let Some(origin) = origin {
+                        request = request.header(header::ORIGIN, origin);
+                    }
+                    assert_eq!(
+                        router
+                            .clone()
+                            .oneshot(request.body(Body::empty()).unwrap())
+                            .await
+                            .unwrap()
+                            .status(),
+                        expected,
+                        "{path}"
+                    );
                 }
             }
         }

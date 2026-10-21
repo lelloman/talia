@@ -244,9 +244,7 @@ pub(crate) async fn execute_with_options(
     with_tools: bool,
     options: ExecutionOptions,
 ) -> Result<Value> {
-    if !(1..=8192).contains(&options.max_tokens)
-        || !(1..=6).contains(&options.max_turns)
-    {
+    if !(1..=8192).contains(&options.max_tokens) || !(1..=6).contains(&options.max_turns) {
         return Err("invalid AI execution options".into());
     }
     permit(engine, &scope)?;

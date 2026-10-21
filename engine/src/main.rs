@@ -1,12 +1,13 @@
-mod http_mcp;
 mod browser;
 mod deployment;
-mod store_notifications;
+mod http_mcp;
 mod oidc;
+mod store_notifications;
 use axum::{
     extract::{DefaultBodyLimit, State},
+    http::HeaderMap,
     routing::post,
-    http::HeaderMap, Json, Router,
+    Json, Router,
 };
 use serde_json::{json, Value};
 use std::{
@@ -80,26 +81,124 @@ impl Service {
             None => json!({"actionId":id,"status":"unknown"}),
         })
     }
-    async fn agent_execute(&self, credential:&str, connection:&str, call:&str, body:Value, http_mcp:bool)->talia_engine::authority::Result<Value> {
+    async fn agent_execute(
+        &self,
+        credential: &str,
+        connection: &str,
+        call: &str,
+        body: Value,
+        http_mcp: bool,
+    ) -> talia_engine::authority::Result<Value> {
         use talia_engine::authority::ErrorCode;
-        if http_mcp && body["name"]=="_key_auth" {let store=self.engine.store.borrow();let mut info=store.user_key_info(credential)?;info["admin"]=json!(store.user_admin(info["subject"].as_str().unwrap())?);return Ok(info)}
-        let session=if http_mcp {self.engine.store.borrow().user_agent_authenticate(credential)?}else{self.engine.store.borrow().agent_authenticate(credential)?};
-        if http_mcp {self.engine.store.borrow().agent_require_dashboard_admin(&session)?;}
-        let r: talia_engine::mcp::Request=serde_json::from_value(body).map_err(|_|ErrorCode::InvalidInput)?;
-        if let Some(op)=r.name.strip_prefix("reports_") {return Ok(self.engine.store.borrow_mut().report_api(&session,op,r.arguments,self.engine.now()).unwrap_or_else(|error|json!({"error":error})));}
-        if let Some(op)=r.name.strip_prefix("alerts_") {return Ok(self.engine.store.borrow_mut().alert_api(&session,op,r.arguments,self.engine.now()).unwrap_or_else(|error|json!({"error":error})));}
-        if r.name=="_cancel_call"||r.name=="_session_close" {self.live.cancel(&session,connection,if r.name=="_cancel_call" {r.arguments["callId"].as_str()}else{None})?;}
-        if r.name=="clients_list"||r.name.starts_with("live_"){return self.live.execute(&session,connection,call,r).await;}
-        if r.name=="operation_status" {if r.arguments.as_object().is_none_or(|o|o.len()!=1||!o.contains_key("requestId")){return Err(ErrorCode::InvalidInput)}let result=self.live.outcome(&session,r.arguments["requestId"].as_str().unwrap_or(""))?;if result["outcome"].is_object(){let mut result=result;result.as_object_mut().unwrap().remove("error");return Ok(result)}}
-        if r.name.starts_with("engine_") || r.name.starts_with('_') || r.name=="operation_status" {
-            return self.agent_engine.execute(&session,connection,call,r).await;
+        if http_mcp && body["name"] == "_key_auth" {
+            let store = self.engine.store.borrow();
+            let mut info = store.user_key_info(credential)?;
+            info["admin"] = json!(store.user_admin(info["subject"].as_str().unwrap())?);
+            return Ok(info);
         }
-        let before=if r.name=="definitions_save" {self.engine.store.borrow().instances().map_err(|_|ErrorCode::StorageError)?}else{vec![]};
-        let value=talia_engine::mcp::dispatch(&mut self.engine.store.borrow_mut(),&session,r,self.engine.now())?;
+        let session = if http_mcp {
+            self.engine
+                .store
+                .borrow()
+                .user_agent_authenticate(credential)?
+        } else {
+            self.engine.store.borrow().agent_authenticate(credential)?
+        };
+        if http_mcp {
+            self.engine
+                .store
+                .borrow()
+                .agent_require_dashboard_admin(&session)?;
+        }
+        let r: talia_engine::mcp::Request =
+            serde_json::from_value(body).map_err(|_| ErrorCode::InvalidInput)?;
+        if let Some(op) = r.name.strip_prefix("reports_") {
+            return Ok(self
+                .engine
+                .store
+                .borrow_mut()
+                .report_api(&session, op, r.arguments, self.engine.now())
+                .unwrap_or_else(|error| json!({"error":error})));
+        }
+        if let Some(op) = r.name.strip_prefix("alerts_") {
+            return Ok(self
+                .engine
+                .store
+                .borrow_mut()
+                .alert_api(&session, op, r.arguments, self.engine.now())
+                .unwrap_or_else(|error| json!({"error":error})));
+        }
+        if r.name == "_cancel_call" || r.name == "_session_close" {
+            self.live.cancel(
+                &session,
+                connection,
+                if r.name == "_cancel_call" {
+                    r.arguments["callId"].as_str()
+                } else {
+                    None
+                },
+            )?;
+        }
+        if r.name == "clients_list" || r.name.starts_with("live_") {
+            return self.live.execute(&session, connection, call, r).await;
+        }
+        if r.name == "operation_status" {
+            if r.arguments
+                .as_object()
+                .is_none_or(|o| o.len() != 1 || !o.contains_key("requestId"))
+            {
+                return Err(ErrorCode::InvalidInput);
+            }
+            let result = self
+                .live
+                .outcome(&session, r.arguments["requestId"].as_str().unwrap_or(""))?;
+            if result["outcome"].is_object() {
+                let mut result = result;
+                result.as_object_mut().unwrap().remove("error");
+                return Ok(result);
+            }
+        }
+        if r.name.starts_with("engine_") || r.name.starts_with('_') || r.name == "operation_status"
+        {
+            return self
+                .agent_engine
+                .execute(&session, connection, call, r)
+                .await;
+        }
+        let before = if r.name == "definitions_save" {
+            self.engine
+                .store
+                .borrow()
+                .instances()
+                .map_err(|_| ErrorCode::StorageError)?
+        } else {
+            vec![]
+        };
+        let value = talia_engine::mcp::dispatch(
+            &mut self.engine.store.borrow_mut(),
+            &session,
+            r,
+            self.engine.now(),
+        )?;
         if !value["receipt"].is_null() {
-            let after=self.engine.store.borrow().instances().map_err(|_|ErrorCode::StorageError)?;
-            for i in &after {if !before.iter().any(|b|b.id==i.id && b.revision==i.revision && b.generation==i.generation){self.engine.catalog_changed(&i.id);}}
-            for i in &before {if !after.iter().any(|a|a.id==i.id){self.engine.changed(&i.id);}}
+            let after = self
+                .engine
+                .store
+                .borrow()
+                .instances()
+                .map_err(|_| ErrorCode::StorageError)?;
+            for i in &after {
+                if !before.iter().any(|b| {
+                    b.id == i.id && b.revision == i.revision && b.generation == i.generation
+                }) {
+                    self.engine.catalog_changed(&i.id);
+                }
+            }
+            for i in &before {
+                if !after.iter().any(|a| a.id == i.id) {
+                    self.engine.changed(&i.id);
+                }
+            }
         }
         Ok(value)
     }
@@ -302,11 +401,25 @@ impl Service {
     }
 }
 async fn health(State(tx): State<mpsc::Sender<Request>>) -> axum::http::StatusCode {
-    let (reply, rx)=oneshot::channel();
-    if tx.try_send(Request { http_mcp:false,browser_subject:None,body:json!({"version":1,"client":"healthcheck","epoch":1,"op":"health"}),reply,credential:None,agent:false,connection:String::new(),call:String::new()}).is_err(){return axum::http::StatusCode::SERVICE_UNAVAILABLE;}
-    match tokio::time::timeout(Duration::from_secs(3),rx).await {
+    let (reply, rx) = oneshot::channel();
+    if tx
+        .try_send(Request {
+            http_mcp: false,
+            browser_subject: None,
+            body: json!({"version":1,"client":"healthcheck","epoch":1,"op":"health"}),
+            reply,
+            credential: None,
+            agent: false,
+            connection: String::new(),
+            call: String::new(),
+        })
+        .is_err()
+    {
+        return axum::http::StatusCode::SERVICE_UNAVAILABLE;
+    }
+    match tokio::time::timeout(Duration::from_secs(3), rx).await {
         Ok(Ok(v)) if v.get("error").is_none() => axum::http::StatusCode::OK,
-        _=>axum::http::StatusCode::SERVICE_UNAVAILABLE
+        _ => axum::http::StatusCode::SERVICE_UNAVAILABLE,
     }
 }
 #[cfg(test)]
@@ -330,18 +443,42 @@ mod health_tests {
     async fn health_rejects_database_error_and_closed_queue() {
         let (tx, mut rx) = mpsc::channel::<Request>(1);
         let worker = async {
-            rx.recv().await.unwrap().reply.send(json!({"error":"database unavailable"})).unwrap();
+            rx.recv()
+                .await
+                .unwrap()
+                .reply
+                .send(json!({"error":"database unavailable"}))
+                .unwrap();
         };
         let (status, _) = tokio::join!(health(State(tx)), worker);
         assert_eq!(status, axum::http::StatusCode::SERVICE_UNAVAILABLE);
         let (tx, rx) = mpsc::channel::<Request>(1);
         drop(rx);
-        assert_eq!(health(State(tx)).await, axum::http::StatusCode::SERVICE_UNAVAILABLE);
+        assert_eq!(
+            health(State(tx)).await,
+            axum::http::StatusCode::SERVICE_UNAVAILABLE
+        );
     }
 }
-async fn rpc(State(tx): State<mpsc::Sender<Request>>, browser:Option<axum::Extension<deployment::Identity>>, Json(body): Json<Value>) -> Json<Value> {
+async fn rpc(
+    State(tx): State<mpsc::Sender<Request>>,
+    browser: Option<axum::Extension<deployment::Identity>>,
+    Json(body): Json<Value>,
+) -> Json<Value> {
     let (reply, rx) = oneshot::channel();
-    if tx.try_send(Request { http_mcp:false, browser_subject:browser.map(|axum::Extension(i)|i.subject), body, reply, credential: None, agent: false, connection:String::new(), call:String::new() }).is_err() {
+    if tx
+        .try_send(Request {
+            http_mcp: false,
+            browser_subject: browser.map(|axum::Extension(i)| i.subject),
+            body,
+            reply,
+            credential: None,
+            agent: false,
+            connection: String::new(),
+            call: String::new(),
+        })
+        .is_err()
+    {
         return Json(json!({"error":"server busy"}));
     }
     Json(
@@ -349,89 +486,314 @@ async fn rpc(State(tx): State<mpsc::Sender<Request>>, browser:Option<axum::Exten
             .unwrap_or_else(|_| json!({"error":"server stopped"})),
     )
 }
-async fn client_rpc(State(tx): State<mpsc::Sender<Request>>, headers: HeaderMap, browser:Option<axum::Extension<deployment::Identity>>, Json(body): Json<Value>) -> Json<Value> {
-    let credential = headers.get("authorization").and_then(|s|s.to_str().ok()).and_then(|s|s.strip_prefix("Bearer ")).unwrap_or("").to_string();
+async fn client_rpc(
+    State(tx): State<mpsc::Sender<Request>>,
+    headers: HeaderMap,
+    browser: Option<axum::Extension<deployment::Identity>>,
+    Json(body): Json<Value>,
+) -> Json<Value> {
+    let credential = headers
+        .get("authorization")
+        .and_then(|s| s.to_str().ok())
+        .and_then(|s| s.strip_prefix("Bearer "))
+        .unwrap_or("")
+        .to_string();
     let (reply, rx) = oneshot::channel();
-    if tx.try_send(Request { http_mcp:false, browser_subject:browser.map(|axum::Extension(i)|i.subject), body, reply, credential: Some(credential), agent: false, connection:String::new(), call:String::new() }).is_err() { return Json(json!({"error":"limit_exceeded"})); }
-    Json(rx.await.unwrap_or_else(|_|json!({"error":"internal_error"})))
+    if tx
+        .try_send(Request {
+            http_mcp: false,
+            browser_subject: browser.map(|axum::Extension(i)| i.subject),
+            body,
+            reply,
+            credential: Some(credential),
+            agent: false,
+            connection: String::new(),
+            call: String::new(),
+        })
+        .is_err()
+    {
+        return Json(json!({"error":"limit_exceeded"}));
+    }
+    Json(
+        rx.await
+            .unwrap_or_else(|_| json!({"error":"internal_error"})),
+    )
 }
-async fn agent_rpc(State(tx): State<mpsc::Sender<Request>>, headers: HeaderMap, Json(body): Json<Value>) -> Json<Value> {
-    if headers.contains_key("origin") { return Json(json!({"error":"forbidden"})); }
-    let credential = headers.get("authorization").and_then(|s|s.to_str().ok()).and_then(|s|s.strip_prefix("Bearer ")).unwrap_or("").to_string();
+async fn agent_rpc(
+    State(tx): State<mpsc::Sender<Request>>,
+    headers: HeaderMap,
+    Json(body): Json<Value>,
+) -> Json<Value> {
+    if headers.contains_key("origin") {
+        return Json(json!({"error":"forbidden"}));
+    }
+    let credential = headers
+        .get("authorization")
+        .and_then(|s| s.to_str().ok())
+        .and_then(|s| s.strip_prefix("Bearer "))
+        .unwrap_or("")
+        .to_string();
     let (reply, rx) = oneshot::channel();
-    if tx.try_send(Request { http_mcp:false, browser_subject:None, body, reply, credential: Some(credential), agent: true, connection:headers.get("x-talia-session").and_then(|v|v.to_str().ok()).unwrap_or("").into(), call:headers.get("x-talia-call").and_then(|v|v.to_str().ok()).unwrap_or("").into() }).is_err() { return Json(json!({"error":"limit_exceeded"})); }
-    Json(rx.await.unwrap_or_else(|_|json!({"error":"internal_error"})))
+    if tx
+        .try_send(Request {
+            http_mcp: false,
+            browser_subject: None,
+            body,
+            reply,
+            credential: Some(credential),
+            agent: true,
+            connection: headers
+                .get("x-talia-session")
+                .and_then(|v| v.to_str().ok())
+                .unwrap_or("")
+                .into(),
+            call: headers
+                .get("x-talia-call")
+                .and_then(|v| v.to_str().ok())
+                .unwrap_or("")
+                .into(),
+        })
+        .is_err()
+    {
+        return Json(json!({"error":"limit_exceeded"}));
+    }
+    Json(
+        rx.await
+            .unwrap_or_else(|_| json!({"error":"internal_error"})),
+    )
 }
-async fn alerts_rpc(State(tx):State<mpsc::Sender<Request>>,headers:HeaderMap,browser:Option<axum::Extension<deployment::Identity>>,Json(body):Json<Value>)->Json<Value>{
-    let credential=headers.get("authorization").and_then(|s|s.to_str().ok()).and_then(|s|s.strip_prefix("Bearer ")).unwrap_or("").to_string();
-    let (reply,rx)=oneshot::channel();
-    if body.as_object().is_none_or(|o|o.keys().any(|k|k!="op"&&k!="args"&&k!="dashboard")){return Json(json!({"error":"invalid_input"}));}
-    let context=body["dashboard"].clone();let mut body=json!({"name":format!("alerts_{}",body["op"].as_str().unwrap_or("")),"arguments":body.get("args").cloned().unwrap_or_else(||json!({}))});if browser.is_some(){body["dashboard"]=context;}
-    if tx.try_send(Request{http_mcp:false,browser_subject:browser.map(|axum::Extension(i)|i.subject),body,credential:Some(credential),agent:true,connection:String::new(),call:String::new(),reply}).is_err(){return Json(json!({"error":"limit_exceeded"}));}
-    Json(rx.await.unwrap_or_else(|_|json!({"error":"internal_error"})))
+async fn alerts_rpc(
+    State(tx): State<mpsc::Sender<Request>>,
+    headers: HeaderMap,
+    browser: Option<axum::Extension<deployment::Identity>>,
+    Json(body): Json<Value>,
+) -> Json<Value> {
+    let credential = headers
+        .get("authorization")
+        .and_then(|s| s.to_str().ok())
+        .and_then(|s| s.strip_prefix("Bearer "))
+        .unwrap_or("")
+        .to_string();
+    let (reply, rx) = oneshot::channel();
+    if body.as_object().is_none_or(|o| {
+        o.keys()
+            .any(|k| k != "op" && k != "args" && k != "dashboard")
+    }) {
+        return Json(json!({"error":"invalid_input"}));
+    }
+    let context = body["dashboard"].clone();
+    let mut body = json!({"name":format!("alerts_{}",body["op"].as_str().unwrap_or("")),"arguments":body.get("args").cloned().unwrap_or_else(||json!({}))});
+    if browser.is_some() {
+        body["dashboard"] = context;
+    }
+    if tx
+        .try_send(Request {
+            http_mcp: false,
+            browser_subject: browser.map(|axum::Extension(i)| i.subject),
+            body,
+            credential: Some(credential),
+            agent: true,
+            connection: String::new(),
+            call: String::new(),
+            reply,
+        })
+        .is_err()
+    {
+        return Json(json!({"error":"limit_exceeded"}));
+    }
+    Json(
+        rx.await
+            .unwrap_or_else(|_| json!({"error":"internal_error"})),
+    )
 }
 // Native alert access shares browser account permissions and occurrence guards.
-async fn native_alerts(State(tx):State<mpsc::Sender<Request>>,identity:Option<axum::Extension<deployment::Identity>>,Json(body):Json<Value>)->axum::response::Response {
- use axum::response::IntoResponse;
- if identity.is_none(){return axum::http::StatusCode::UNAUTHORIZED.into_response()}
- if body.as_object().is_none_or(|o|o.keys().any(|k|k!="op"&&k!="args")) || !matches!(body["op"].as_str(),Some("snapshot"|"acknowledge")) || body.to_string().len()>4096 {return axum::http::StatusCode::BAD_REQUEST.into_response()}
- let Json(value)=alerts_rpc(State(tx),HeaderMap::new(),identity,Json(body)).await;
- let status=match value["error"].as_str(){Some("forbidden")=>axum::http::StatusCode::FORBIDDEN,Some("conflict"|"request conflict")=>axum::http::StatusCode::CONFLICT,Some("limit_exceeded"|"internal_error")=>axum::http::StatusCode::SERVICE_UNAVAILABLE,Some(_)=>axum::http::StatusCode::BAD_REQUEST,None=>axum::http::StatusCode::OK};
- (status,Json(value)).into_response()
+async fn native_alerts(
+    State(tx): State<mpsc::Sender<Request>>,
+    identity: Option<axum::Extension<deployment::Identity>>,
+    Json(body): Json<Value>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    if identity.is_none() {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    }
+    if body
+        .as_object()
+        .is_none_or(|o| o.keys().any(|k| k != "op" && k != "args"))
+        || !matches!(body["op"].as_str(), Some("snapshot" | "acknowledge"))
+        || body.to_string().len() > 4096
+    {
+        return axum::http::StatusCode::BAD_REQUEST.into_response();
+    }
+    let Json(value) = alerts_rpc(State(tx), HeaderMap::new(), identity, Json(body)).await;
+    let status = match value["error"].as_str() {
+        Some("forbidden") => axum::http::StatusCode::FORBIDDEN,
+        Some("conflict" | "request conflict") => axum::http::StatusCode::CONFLICT,
+        Some("limit_exceeded" | "internal_error") => axum::http::StatusCode::SERVICE_UNAVAILABLE,
+        Some(_) => axum::http::StatusCode::BAD_REQUEST,
+        None => axum::http::StatusCode::OK,
+    };
+    (status, Json(value)).into_response()
 }
-async fn native_overview(State(tx):State<mpsc::Sender<Request>>, identity:Option<axum::Extension<deployment::Identity>>)->axum::response::Response {
- use axum::response::IntoResponse;
- let Some(identity)=identity else {return axum::http::StatusCode::UNAUTHORIZED.into_response()};
- let Json(value)=account_rpc(State(tx),Some(identity),Json(json!({"op":"nativeOverview"}))).await;
- let status=match value["error"].as_str(){Some("forbidden")=>axum::http::StatusCode::FORBIDDEN,Some(_)=>axum::http::StatusCode::SERVICE_UNAVAILABLE,None=>axum::http::StatusCode::OK};
- (status,Json(value)).into_response()
+async fn native_overview(
+    State(tx): State<mpsc::Sender<Request>>,
+    identity: Option<axum::Extension<deployment::Identity>>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    let Some(identity) = identity else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
+    let Json(value) = account_rpc(
+        State(tx),
+        Some(identity),
+        Json(json!({"op":"nativeOverview"})),
+    )
+    .await;
+    let status = match value["error"].as_str() {
+        Some("forbidden") => axum::http::StatusCode::FORBIDDEN,
+        Some(_) => axum::http::StatusCode::SERVICE_UNAVAILABLE,
+        None => axum::http::StatusCode::OK,
+    };
+    (status, Json(value)).into_response()
 }
-async fn native_notifications(State(tx):State<mpsc::Sender<Request>>, identity:Option<axum::Extension<deployment::Identity>>, Json(body):Json<Value>)->axum::response::Response {
- use axum::response::IntoResponse;
- let Some(identity)=identity else {return axum::http::StatusCode::UNAUTHORIZED.into_response()};
- if body.to_string().len()>4096 {return axum::http::StatusCode::BAD_REQUEST.into_response()}
- let Json(value)=account_rpc(State(tx),Some(identity),Json(json!({"op":"nativeNotifications","args":body}))).await;
- let status=match value["error"].as_str(){Some("forbidden")=>axum::http::StatusCode::FORBIDDEN,Some("unauthenticated")=>axum::http::StatusCode::UNAUTHORIZED,Some(_)=>axum::http::StatusCode::SERVICE_UNAVAILABLE,None=>axum::http::StatusCode::OK};
- (status,Json(value)).into_response()
+async fn native_notifications(
+    State(tx): State<mpsc::Sender<Request>>,
+    identity: Option<axum::Extension<deployment::Identity>>,
+    Json(body): Json<Value>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    let Some(identity) = identity else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
+    if body.to_string().len() > 4096 {
+        return axum::http::StatusCode::BAD_REQUEST.into_response();
+    }
+    let Json(value) = account_rpc(
+        State(tx),
+        Some(identity),
+        Json(json!({"op":"nativeNotifications","args":body})),
+    )
+    .await;
+    let status = match value["error"].as_str() {
+        Some("forbidden") => axum::http::StatusCode::FORBIDDEN,
+        Some("unauthenticated") => axum::http::StatusCode::UNAUTHORIZED,
+        Some(_) => axum::http::StatusCode::SERVICE_UNAVAILABLE,
+        None => axum::http::StatusCode::OK,
+    };
+    (status, Json(value)).into_response()
 }
-async fn native_reports(State(tx):State<mpsc::Sender<Request>>, identity:Option<axum::Extension<deployment::Identity>>, Json(body):Json<Value>)->axum::response::Response {
- use axum::response::IntoResponse;
- let Some(identity)=identity else {return axum::http::StatusCode::UNAUTHORIZED.into_response()};
- if body.as_object().is_none_or(|o|o.keys().any(|k|k!="op"&&k!="args")) {return axum::http::StatusCode::BAD_REQUEST.into_response()}
- let Json(value)=account_rpc(State(tx),Some(identity),Json(json!({"op":"nativeReports","operation":body["op"],"args":body.get("args").cloned().unwrap_or_else(||json!({}))}))).await;
- let status=match value["error"].as_str(){Some("forbidden")=>axum::http::StatusCode::FORBIDDEN,Some(e) if e.starts_with("report version conflict")=>axum::http::StatusCode::CONFLICT,Some("limit_exceeded"|"internal_error")=>axum::http::StatusCode::SERVICE_UNAVAILABLE,Some(_)=>axum::http::StatusCode::BAD_REQUEST,None=>axum::http::StatusCode::OK};
- (status,Json(value)).into_response()
+async fn native_reports(
+    State(tx): State<mpsc::Sender<Request>>,
+    identity: Option<axum::Extension<deployment::Identity>>,
+    Json(body): Json<Value>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    let Some(identity) = identity else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
+    if body
+        .as_object()
+        .is_none_or(|o| o.keys().any(|k| k != "op" && k != "args"))
+    {
+        return axum::http::StatusCode::BAD_REQUEST.into_response();
+    }
+    let Json(value)=account_rpc(State(tx),Some(identity),Json(json!({"op":"nativeReports","operation":body["op"],"args":body.get("args").cloned().unwrap_or_else(||json!({}))}))).await;
+    let status = match value["error"].as_str() {
+        Some("forbidden") => axum::http::StatusCode::FORBIDDEN,
+        Some(e) if e.starts_with("report version conflict") => axum::http::StatusCode::CONFLICT,
+        Some("limit_exceeded" | "internal_error") => axum::http::StatusCode::SERVICE_UNAVAILABLE,
+        Some(_) => axum::http::StatusCode::BAD_REQUEST,
+        None => axum::http::StatusCode::OK,
+    };
+    (status, Json(value)).into_response()
 }
-async fn native_dashboards(State(tx):State<mpsc::Sender<Request>>, identity:Option<axum::Extension<deployment::Identity>>, Json(body):Json<Value>)->axum::response::Response {
- use axum::response::IntoResponse;
- let Some(identity)=identity else {return axum::http::StatusCode::UNAUTHORIZED.into_response()};
- // Native apps may list dashboards and choose their default; account administration stays browser-only.
- if !matches!(body["op"].as_str(),Some("catalog"|"default"))||body.to_string().len()>1024 {return axum::http::StatusCode::BAD_REQUEST.into_response()}
- let Json(value)=account_rpc(State(tx),Some(identity),Json(body)).await;
- let status=match value["error"].as_str(){Some("forbidden")=>axum::http::StatusCode::FORBIDDEN,Some("unauthenticated")=>axum::http::StatusCode::UNAUTHORIZED,Some("limit_exceeded"|"internal_error")=>axum::http::StatusCode::SERVICE_UNAVAILABLE,Some(_)=>axum::http::StatusCode::BAD_REQUEST,None=>axum::http::StatusCode::OK};
- (status,Json(value)).into_response()
+async fn native_dashboards(
+    State(tx): State<mpsc::Sender<Request>>,
+    identity: Option<axum::Extension<deployment::Identity>>,
+    Json(body): Json<Value>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    let Some(identity) = identity else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
+    // Native apps may list dashboards and choose their default; account administration stays browser-only.
+    if !matches!(body["op"].as_str(), Some("catalog" | "default")) || body.to_string().len() > 1024
+    {
+        return axum::http::StatusCode::BAD_REQUEST.into_response();
+    }
+    let Json(value) = account_rpc(State(tx), Some(identity), Json(body)).await;
+    let status = match value["error"].as_str() {
+        Some("forbidden") => axum::http::StatusCode::FORBIDDEN,
+        Some("unauthenticated") => axum::http::StatusCode::UNAUTHORIZED,
+        Some("limit_exceeded" | "internal_error") => axum::http::StatusCode::SERVICE_UNAVAILABLE,
+        Some(_) => axum::http::StatusCode::BAD_REQUEST,
+        None => axum::http::StatusCode::OK,
+    };
+    (status, Json(value)).into_response()
 }
-async fn native_chats(State(tx):State<mpsc::Sender<Request>>, identity:Option<axum::Extension<deployment::Identity>>, Json(body):Json<Value>)->axum::response::Response {
- use axum::response::IntoResponse;
- let Some(identity)=identity else {return axum::http::StatusCode::UNAUTHORIZED.into_response()};
- if body.as_object().is_none_or(|o|o.keys().any(|k|k!="op"&&k!="args"))||body.to_string().len()>32768 {return axum::http::StatusCode::BAD_REQUEST.into_response()}
- let Json(value)=account_rpc(State(tx),Some(identity),Json(json!({"op":"nativeChats","operation":body["op"],"args":body.get("args").cloned().unwrap_or_else(||json!({}))}))).await;
- let status=match value["error"].as_str(){Some("forbidden")=>axum::http::StatusCode::FORBIDDEN,Some("unauthenticated")=>axum::http::StatusCode::UNAUTHORIZED,Some("not_found")=>axum::http::StatusCode::NOT_FOUND,Some("limit_exceeded")=>axum::http::StatusCode::TOO_MANY_REQUESTS,Some("internal_error")=>axum::http::StatusCode::SERVICE_UNAVAILABLE,Some(_)=>axum::http::StatusCode::BAD_REQUEST,None=>axum::http::StatusCode::OK};
- (status,Json(value)).into_response()
+async fn native_chats(
+    State(tx): State<mpsc::Sender<Request>>,
+    identity: Option<axum::Extension<deployment::Identity>>,
+    Json(body): Json<Value>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    let Some(identity) = identity else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
+    if body
+        .as_object()
+        .is_none_or(|o| o.keys().any(|k| k != "op" && k != "args"))
+        || body.to_string().len() > 32768
+    {
+        return axum::http::StatusCode::BAD_REQUEST.into_response();
+    }
+    let Json(value)=account_rpc(State(tx),Some(identity),Json(json!({"op":"nativeChats","operation":body["op"],"args":body.get("args").cloned().unwrap_or_else(||json!({}))}))).await;
+    let status = match value["error"].as_str() {
+        Some("forbidden") => axum::http::StatusCode::FORBIDDEN,
+        Some("unauthenticated") => axum::http::StatusCode::UNAUTHORIZED,
+        Some("not_found") => axum::http::StatusCode::NOT_FOUND,
+        Some("limit_exceeded") => axum::http::StatusCode::TOO_MANY_REQUESTS,
+        Some("internal_error") => axum::http::StatusCode::SERVICE_UNAVAILABLE,
+        Some(_) => axum::http::StatusCode::BAD_REQUEST,
+        None => axum::http::StatusCode::OK,
+    };
+    (status, Json(value)).into_response()
 }
-async fn account_rpc(State(tx):State<mpsc::Sender<Request>>, browser:Option<axum::Extension<deployment::Identity>>, Json(mut body):Json<Value>)->Json<Value>{
- let Some(axum::Extension(identity))=browser else{return Json(json!({"error":"unauthenticated"}))};
- // Internal envelope keeps trusted identity separate from untrusted operation arguments.
- body=json!({"name":identity.name,"authSession":identity.session_id,"request":body});
- let (reply,rx)=oneshot::channel();
- if tx.try_send(Request{http_mcp:false,browser_subject:Some(identity.subject),body,reply,credential:None,agent:false,connection:"account".into(),call:String::new()}).is_err(){return Json(json!({"error":"limit_exceeded"}))}
- Json(rx.await.unwrap_or_else(|_|json!({"error":"internal_error"})))
+async fn account_rpc(
+    State(tx): State<mpsc::Sender<Request>>,
+    browser: Option<axum::Extension<deployment::Identity>>,
+    Json(mut body): Json<Value>,
+) -> Json<Value> {
+    let Some(axum::Extension(identity)) = browser else {
+        return Json(json!({"error":"unauthenticated"}));
+    };
+    // Internal envelope keeps trusted identity separate from untrusted operation arguments.
+    body = json!({"name":identity.name,"authSession":identity.session_id,"request":body});
+    let (reply, rx) = oneshot::channel();
+    if tx
+        .try_send(Request {
+            http_mcp: false,
+            browser_subject: Some(identity.subject),
+            body,
+            reply,
+            credential: None,
+            agent: false,
+            connection: "account".into(),
+            call: String::new(),
+        })
+        .is_err()
+    {
+        return Json(json!({"error":"limit_exceeded"}));
+    }
+    Json(
+        rx.await
+            .unwrap_or_else(|_| json!({"error":"internal_error"})),
+    )
 }
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
     run(std::env::args().collect()).await
 }
-async fn run(args:Vec<String>)->Result<()> {
+async fn run(args: Vec<String>) -> Result<()> {
     let path = args
         .get(1)
         .ok_or("usage: talia-engine DATABASE [PORT] [--seed]")?;
@@ -444,7 +806,9 @@ async fn run(args:Vec<String>)->Result<()> {
     lock.try_lock().map_err(|_| "database already owned")?;
     let mut store = Store::open(path)?;
     store.recover_actions()?;
-    store.clients_recover().map_err(|_|"client recovery failed".to_string())?;
+    store
+        .clients_recover()
+        .map_err(|_| "client recovery failed".to_string())?;
     if args.iter().any(|s| s == "--seed") && store.definitions()?.is_empty() {
         let d = Definition {
             id: "stored".into(),
@@ -472,29 +836,51 @@ async fn run(args:Vec<String>)->Result<()> {
             history_age_ms: 86400000,
         })?;
     }
-    if args.iter().any(|s|s == "--seed") { store.seed_dashboards()?; }
+    if args.iter().any(|s| s == "--seed") {
+        store.seed_dashboards()?;
+    }
     let incarnation = std::fs::read_to_string("/proc/sys/kernel/random/uuid")
         .map_err(|e| e.to_string())?
         .trim()
         .to_string();
-    if let Ok(subjects)=std::env::var("TALIA_BOOTSTRAP_ADMINS") {for subject in subjects.split(',').map(str::trim).filter(|s|!s.is_empty()){store.user_bootstrap(subject).map_err(|e|format!("admin bootstrap: {e:?}"))?;}}
+    if let Ok(subjects) = std::env::var("TALIA_BOOTSTRAP_ADMINS") {
+        for subject in subjects.split(',').map(str::trim).filter(|s| !s.is_empty()) {
+            store
+                .user_bootstrap(subject)
+                .map_err(|e| format!("admin bootstrap: {e:?}"))?;
+        }
+    }
     let engine = Engine::new(store);
     engine.store.borrow_mut().recover_runs(engine.now())?;
-    engine.store.borrow_mut().agent_recover(engine.now()).map_err(|_| "agent recovery failed".to_string())?;
-    engine.store.borrow_mut().alert_recover_policies(engine.now())?;
-    engine.store.borrow_mut().alert_recover_deliveries(engine.now())?;
+    engine
+        .store
+        .borrow_mut()
+        .agent_recover(engine.now())
+        .map_err(|_| "agent recovery failed".to_string())?;
+    engine
+        .store
+        .borrow_mut()
+        .alert_recover_policies(engine.now())?;
+    engine
+        .store
+        .borrow_mut()
+        .alert_recover_deliveries(engine.now())?;
     engine.store.borrow().report_recover()?;
     engine.store.borrow().telegram_recover()?;
     engine.store.borrow().ai_recover()?;
     engine.store.borrow().ai_account_recover()?;
     let pipelines = Pipelines::new(engine.clone())?;
     let watches = Watches::new(pipelines.clone());
-    let agent_engine=talia_engine::mcp_engine::AgentEngine::new(engine.clone(),pipelines.clone(),watches.clone());
+    let agent_engine = talia_engine::mcp_engine::AgentEngine::new(
+        engine.clone(),
+        pipelines.clone(),
+        watches.clone(),
+    );
     let deployment = deployment::Deployment::load().await?;
-    let notifications=store_notifications::Worker::load(engine.clone(),deployment.clone())?;
+    let notifications = store_notifications::Worker::load(engine.clone(), deployment.clone())?;
     let service = Service {
         notifications,
-        live: talia_engine::mcp_live::Live::new(engine.clone(),agent_engine.clone()),
+        live: talia_engine::mcp_live::Live::new(engine.clone(), agent_engine.clone()),
         agent_engine,
         alert_policies: talia_engine::alerts::policy::Policies::new(engine.clone()),
         alert_sender: talia_engine::alerts::providers::Sender::new(engine.clone()),
@@ -517,7 +903,10 @@ async fn run(args:Vec<String>)->Result<()> {
         .route("/native/overview", axum::routing::get(native_overview))
         .route("/native/reports", axum::routing::post(native_reports))
         .route("/native/alerts", axum::routing::post(native_alerts))
-        .route("/native/notifications", axum::routing::post(native_notifications))
+        .route(
+            "/native/notifications",
+            axum::routing::post(native_notifications),
+        )
         .route("/native/dashboards", axum::routing::post(native_dashboards))
         .route("/native/clients", post(client_rpc))
         .route("/native/engine", post(rpc))
@@ -527,11 +916,17 @@ async fn run(args:Vec<String>)->Result<()> {
         .layer(DefaultBodyLimit::max(2_359_296))
         .route("/healthz", axum::routing::get(health))
         .with_state(tx.clone());
-    if let Some(d)=deployment {
-        router=router.merge(http_mcp::routes(tx.clone(),d.clone())).merge(d.routes()).layer(axum::middleware::from_fn_with_state(d, deployment::Deployment::gate));
+    if let Some(d) = deployment {
+        router = router
+            .merge(http_mcp::routes(tx.clone(), d.clone()))
+            .merge(d.routes())
+            .layer(axum::middleware::from_fn_with_state(
+                d,
+                deployment::Deployment::gate,
+            ));
     }
     let listener = tokio::net::TcpListener::bind((
-        std::env::var("TALIA_LISTEN").unwrap_or_else(|_|"127.0.0.1".into()),
+        std::env::var("TALIA_LISTEN").unwrap_or_else(|_| "127.0.0.1".into()),
         args.get(2)
             .and_then(|p| p.parse::<u16>().ok())
             .unwrap_or(18745),

@@ -73,8 +73,18 @@ fn encode<T: serde::Serialize>(v: T) -> Result<Value> {
 pub fn dispatch(store: &mut Store, session: &Session, request: Request, now: i64) -> Result<Value> {
     let a = request.arguments;
     match request.name.as_str() {
-        "dashboard_access_set"=>{store.agent_require_dashboard_admin(session)?;let access:crate::users::Access=serde_json::from_value(a)?;store.dashboard_access_set(session.principal(),&access)},
-        "dashboard_access_list"=>{store.agent_require_dashboard_admin(session)?;if a!=json!({}){return Err(ErrorCode::InvalidInput)}store.dashboard_access_list()},
+        "dashboard_access_set" => {
+            store.agent_require_dashboard_admin(session)?;
+            let access: crate::users::Access = serde_json::from_value(a)?;
+            store.dashboard_access_set(session.principal(), &access)
+        }
+        "dashboard_access_list" => {
+            store.agent_require_dashboard_admin(session)?;
+            if a != json!({}) {
+                return Err(ErrorCode::InvalidInput);
+            }
+            store.dashboard_access_list()
+        }
         "definitions_list" => {
             let r: List = serde_json::from_value(a)?;
             if r.kind.as_deref().is_some_and(|k| !KINDS.contains(&k)) {

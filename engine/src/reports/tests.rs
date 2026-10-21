@@ -448,9 +448,12 @@ async fn retired_integration_migration_preserves_history_and_delivery() {
 
 #[test]
 fn analysis_inspection_is_admin_only_and_pruning_preserves_active_work() {
-    let schema=api::tools().into_iter().find(|t|t["name"]=="reports_analysis_get").unwrap();
-    assert_eq!(schema["inputSchema"]["required"],json!(["id"]));
-    assert_eq!(schema["annotations"]["readOnlyHint"],true);
+    let schema = api::tools()
+        .into_iter()
+        .find(|t| t["name"] == "reports_analysis_get")
+        .unwrap();
+    assert_eq!(schema["inputSchema"]["required"], json!(["id"]));
+    assert_eq!(schema["annotations"]["readOnlyHint"], true);
     let mut s = Store::open(":memory:").unwrap();
     let actor = operator(&mut s);
     s.report_save(&definition(), 0, 1000).unwrap();
@@ -509,27 +512,63 @@ fn analysis_inspection_is_admin_only_and_pruning_preserves_active_work() {
 fn native_reports_authority_projection_and_replay() {
     let mut s = Store::open(":memory:").unwrap();
     s.report_save(&definition(), 0, 1000).unwrap();
-    assert_eq!(s.native_reports("viewer", "list", json!({}), 1000).unwrap_err(), "forbidden");
+    assert_eq!(
+        s.native_reports("viewer", "list", json!({}), 1000)
+            .unwrap_err(),
+        "forbidden"
+    );
     s.user_bootstrap("admin").unwrap();
     let list = s.native_reports("admin", "list", json!({}), 1000).unwrap();
     assert_eq!(list["definitions"][0]["id"], "morning");
     assert_eq!(list["definitions"][0]["available"], true);
     assert!(list["definitions"][0].get("compose").is_none());
     assert!(s.native_reports("admin", "save", json!({}), 1000).is_err());
-    assert!(s.native_reports("admin", "run", json!({"id":"morning","send":true,"requestId":"native-1"}), 1000).is_err());
+    assert!(s
+        .native_reports(
+            "admin",
+            "run",
+            json!({"id":"morning","send":true,"requestId":"native-1"}),
+            1000
+        )
+        .is_err());
     let args = json!({"id":"morning","send":false,"requestId":"native-1"});
-    let admitted = s.native_reports("admin", "run", args.clone(), 1000).unwrap();
-    assert_eq!(s.native_reports("admin", "run", args, 2000).unwrap(), admitted);
-    let detail = s.native_reports("admin", "run_get", json!({"id":admitted["run_id"]}), 2000).unwrap();
+    let admitted = s
+        .native_reports("admin", "run", args.clone(), 1000)
+        .unwrap();
+    assert_eq!(
+        s.native_reports("admin", "run", args, 2000).unwrap(),
+        admitted
+    );
+    let detail = s
+        .native_reports("admin", "run_get", json!({"id":admitted["run_id"]}), 2000)
+        .unwrap();
     assert_eq!(detail["run"]["steps"][0]["status"], "pending");
     assert!(detail["run"].get("definition").is_none());
     assert!(detail["run"].get("outputs").is_none());
-    let history = s.native_reports("admin", "runs", json!({"report":"morning","limit":1}), 2000).unwrap();
+    let history = s
+        .native_reports("admin", "runs", json!({"report":"morning","limit":1}), 2000)
+        .unwrap();
     assert_eq!(history["runs"].as_array().unwrap().len(), 1);
-    let page = s.native_reports("admin", "runs", json!({"report":"morning","limit":1,"before":history["next_before"]}), 2000).unwrap();
+    let page = s
+        .native_reports(
+            "admin",
+            "runs",
+            json!({"report":"morning","limit":1,"before":history["next_before"]}),
+            2000,
+        )
+        .unwrap();
     assert_eq!(page["runs"], json!([]));
-    s.conn.execute("UPDATE dashboard_users SET admin=0 WHERE subject='admin'", []).unwrap();
-    assert_eq!(s.native_reports("admin", "run_get", json!({"id":admitted["run_id"]}), 2000).unwrap_err(), "forbidden");
+    s.conn
+        .execute(
+            "UPDATE dashboard_users SET admin=0 WHERE subject='admin'",
+            [],
+        )
+        .unwrap();
+    assert_eq!(
+        s.native_reports("admin", "run_get", json!({"id":admitted["run_id"]}), 2000)
+            .unwrap_err(),
+        "forbidden"
+    );
 }
 
 #[test]
@@ -537,39 +576,114 @@ fn history_and_native_catalog_are_newest_first_with_stable_pages() {
     let mut s = Store::open(":memory:").unwrap();
     s.user_bootstrap("admin").unwrap();
     for name in ["morning", "recent", "never"] {
-        let mut d = definition(); d.id = name.into();
+        let mut d = definition();
+        d.id = name.into();
         s.report_save(&d, 0, 1000).unwrap();
     }
     // Deliberately make IDs disagree with chronology, including a timestamp tie.
-    for (name, id, created) in [("morning", "z-old", 1000), ("morning", "a-new", 3000),
-        ("morning", "b-new", 3000), ("morning", "m-middle", 2000), ("recent", "c-latest", 4000)] {
+    for (name, id, created) in [
+        ("morning", "z-old", 1000),
+        ("morning", "a-new", 3000),
+        ("morning", "b-new", 3000),
+        ("morning", "m-middle", 2000),
+        ("recent", "c-latest", 4000),
+    ] {
         let mut run = s.report_start(name, "admin", false, created).unwrap();
-        s.conn.execute("DELETE FROM report_runs WHERE id=?", [&run.id]).unwrap();
-        run.id = id.into(); run.status = if id == "z-old" || id == "a-new" { "failed" } else { "complete" }.into(); s.report_put(&run).unwrap();
+        s.conn
+            .execute("DELETE FROM report_runs WHERE id=?", [&run.id])
+            .unwrap();
+        run.id = id.into();
+        run.status = if id == "z-old" || id == "a-new" {
+            "failed"
+        } else {
+            "complete"
+        }
+        .into();
+        s.report_put(&run).unwrap();
     }
-    let first = s.native_reports("admin", "runs", json!({"report":"morning","limit":2}), 5000).unwrap();
+    let first = s
+        .native_reports("admin", "runs", json!({"report":"morning","limit":2}), 5000)
+        .unwrap();
     assert_eq!(first["runs"][0]["id"], "b-new");
     assert_eq!(first["runs"][1]["id"], "a-new");
-    let next = s.native_reports("admin", "runs", json!({"report":"morning","limit":2,"before":first["next_before"]}), 5000).unwrap();
+    let next = s
+        .native_reports(
+            "admin",
+            "runs",
+            json!({"report":"morning","limit":2,"before":first["next_before"]}),
+            5000,
+        )
+        .unwrap();
     assert_eq!(next["runs"][0]["id"], "m-middle");
     assert_eq!(next["runs"][1]["id"], "z-old");
-    let tied = s.native_reports("admin", "runs", json!({"report":"morning","limit":1,"before":"b-new"}), 5000).unwrap();
+    let tied = s
+        .native_reports(
+            "admin",
+            "runs",
+            json!({"report":"morning","limit":1,"before":"b-new"}),
+            5000,
+        )
+        .unwrap();
     assert_eq!(tied["runs"][0]["id"], "a-new");
     let catalog = s.native_reports("admin", "list", json!({}), 5000).unwrap();
     assert_eq!(catalog["definitions"][0]["id"], "recent");
     assert_eq!(catalog["definitions"][1]["latest"]["id"], "b-new");
     assert_eq!(catalog["definitions"][2]["id"], "never");
-    assert!(s.native_reports("admin", "runs", json!({"report":"morning","before":"c-latest"}), 5000).is_err());
-    let filtered = s.native_reports("admin", "runs", json!({"report":"morning","sort":"oldest","status":"failed","limit":1}), 5000).unwrap();
+    assert!(s
+        .native_reports(
+            "admin",
+            "runs",
+            json!({"report":"morning","before":"c-latest"}),
+            5000
+        )
+        .is_err());
+    let filtered = s
+        .native_reports(
+            "admin",
+            "runs",
+            json!({"report":"morning","sort":"oldest","status":"failed","limit":1}),
+            5000,
+        )
+        .unwrap();
     assert_eq!(filtered["runs"][0]["id"], "z-old");
     let filtered_next = s.native_reports("admin", "runs", json!({"report":"morning","sort":"oldest","status":"failed","limit":1,"before":filtered["next_before"]}), 5000).unwrap();
     assert_eq!(filtered_next["runs"][0]["id"], "a-new");
-    let active = s.native_reports("admin", "runs", json!({"report":"morning","status":"active"}), 5000).unwrap();
+    let active = s
+        .native_reports(
+            "admin",
+            "runs",
+            json!({"report":"morning","status":"active"}),
+            5000,
+        )
+        .unwrap();
     assert_eq!(active["runs"], json!([]));
-    assert!(s.native_reports("admin", "runs", json!({"report":"morning","sort":"arbitrary"}), 5000).is_err());
-    assert!(s.native_reports("admin", "runs", json!({"report":"morning","status":"arbitrary"}), 5000).is_err());
-    s.conn.execute("DELETE FROM report_runs WHERE id='a-new'", []).unwrap();
-    assert!(s.native_reports("admin", "runs", json!({"report":"morning","before":"a-new"}), 5000).is_err());
+    assert!(s
+        .native_reports(
+            "admin",
+            "runs",
+            json!({"report":"morning","sort":"arbitrary"}),
+            5000
+        )
+        .is_err());
+    assert!(s
+        .native_reports(
+            "admin",
+            "runs",
+            json!({"report":"morning","status":"arbitrary"}),
+            5000
+        )
+        .is_err());
+    s.conn
+        .execute("DELETE FROM report_runs WHERE id='a-new'", [])
+        .unwrap();
+    assert!(s
+        .native_reports(
+            "admin",
+            "runs",
+            json!({"report":"morning","before":"a-new"}),
+            5000
+        )
+        .is_err());
 }
 
 #[test]
@@ -578,45 +692,106 @@ fn schedule_edit_projection_cas_replay_and_due() {
     s.user_bootstrap("admin").unwrap();
     let mut d = definition();
     d.destinations = vec!["mail".into()];
-    s.alert_destination_save(&crate::alerts::delivery::Destination {
-        id:"mail".into(), version:1, channel:"email".into(), provider:"mail".into(),
-        target:"owner@example.test".into(), enabled:true,
-    },0,"operator",1000).unwrap();
-    s.report_save(&d,0,1000).unwrap();
+    s.alert_destination_save(
+        &crate::alerts::delivery::Destination {
+            id: "mail".into(),
+            version: 1,
+            channel: "email".into(),
+            provider: "mail".into(),
+            target: "owner@example.test".into(),
+            enabled: true,
+        },
+        0,
+        "operator",
+        1000,
+    )
+    .unwrap();
+    s.report_save(&d, 0, 1000).unwrap();
     let original = s.report_definition("morning").unwrap();
-    let read = s.native_reports("admin","schedule_get",json!({"id":"morning"}),1000).unwrap();
+    let read = s
+        .native_reports("admin", "schedule_get", json!({"id":"morning"}), 1000)
+        .unwrap();
     assert!(read.get("steps").is_none() && read.get("compose").is_none());
     assert!(read["next_due"].is_null());
     let args = json!({"id":"morning","expected":1,"enabled":true,"schedule":{"kind":"interval","every_ms":120000},"requestId":"schedule-1"});
-    assert!(s.native_reports("viewer","schedule_save",args.clone(),1000).is_err());
-    let saved=s.native_reports("admin","schedule_save",args.clone(),1000).unwrap();
-    assert_eq!(saved["version"],2); assert_eq!(saved["next_due"],121000);
-    assert_eq!(s.native_reports("admin","schedule_save",args.clone(),2000).unwrap(),saved);
-    let mut stale=args.clone();stale["requestId"]=json!("stale");
-    assert!(s.native_reports("admin","schedule_save",stale,2000).unwrap_err().contains("version conflict"));
-    let updated=s.report_definition("morning").unwrap();
-    assert_eq!(updated.compose,original.compose);
-    assert_eq!(serde_json::to_value(updated.steps).unwrap(),serde_json::to_value(original.steps).unwrap());
-    assert_eq!(updated.destinations,original.destinations);
-    let mut pause=args.clone();pause["expected"]=json!(2);pause["enabled"]=json!(false);pause["requestId"]=json!("pause");
-    let paused=s.native_reports("admin","schedule_save",pause,3000).unwrap();
-    assert!(paused["next_due"].is_null());assert_eq!(paused["schedule"],saved["schedule"]);
-    let daily=json!({"id":"morning","expected":3,"enabled":true,"schedule":{"kind":"daily","time":"09:00","zone":"Europe/Rome","weekdays":[1,2,3,4,5]},"requestId":"daily"});
-    assert!(s.native_reports("admin","schedule_save",daily.clone(),4000).unwrap()["next_due"].as_i64().unwrap()>4000);
-    for invalid in [json!({"kind":"daily","time":"25:00","zone":"Europe/Rome"}),json!({"kind":"daily","time":"09:00","zone":"Mars/Base"}),json!({"kind":"interval","every_ms":59999}),Value::Null] {
-        let mut bad=daily.clone();bad["expected"]=json!(4);bad["schedule"]=invalid;bad["requestId"]=json!("invalid");
-        assert!(s.native_reports("admin","schedule_save",bad,5000).is_err());
+    assert!(s
+        .native_reports("viewer", "schedule_save", args.clone(), 1000)
+        .is_err());
+    let saved = s
+        .native_reports("admin", "schedule_save", args.clone(), 1000)
+        .unwrap();
+    assert_eq!(saved["version"], 2);
+    assert_eq!(saved["next_due"], 121000);
+    assert_eq!(
+        s.native_reports("admin", "schedule_save", args.clone(), 2000)
+            .unwrap(),
+        saved
+    );
+    let mut stale = args.clone();
+    stale["requestId"] = json!("stale");
+    assert!(s
+        .native_reports("admin", "schedule_save", stale, 2000)
+        .unwrap_err()
+        .contains("version conflict"));
+    let updated = s.report_definition("morning").unwrap();
+    assert_eq!(updated.compose, original.compose);
+    assert_eq!(
+        serde_json::to_value(updated.steps).unwrap(),
+        serde_json::to_value(original.steps).unwrap()
+    );
+    assert_eq!(updated.destinations, original.destinations);
+    let mut pause = args.clone();
+    pause["expected"] = json!(2);
+    pause["enabled"] = json!(false);
+    pause["requestId"] = json!("pause");
+    let paused = s
+        .native_reports("admin", "schedule_save", pause, 3000)
+        .unwrap();
+    assert!(paused["next_due"].is_null());
+    assert_eq!(paused["schedule"], saved["schedule"]);
+    let daily = json!({"id":"morning","expected":3,"enabled":true,"schedule":{"kind":"daily","time":"09:00","zone":"Europe/Rome","weekdays":[1,2,3,4,5]},"requestId":"daily"});
+    assert!(
+        s.native_reports("admin", "schedule_save", daily.clone(), 4000)
+            .unwrap()["next_due"]
+            .as_i64()
+            .unwrap()
+            > 4000
+    );
+    for invalid in [
+        json!({"kind":"daily","time":"25:00","zone":"Europe/Rome"}),
+        json!({"kind":"daily","time":"09:00","zone":"Mars/Base"}),
+        json!({"kind":"interval","every_ms":59999}),
+        Value::Null,
+    ] {
+        let mut bad = daily.clone();
+        bad["expected"] = json!(4);
+        bad["schedule"] = invalid;
+        bad["requestId"] = json!("invalid");
+        assert!(s
+            .native_reports("admin", "schedule_save", bad, 5000)
+            .is_err());
     }
-    assert_eq!(s.report_definition("morning").unwrap().version,4);
-    let before = s.native_reports("admin","schedule_get",json!({"id":"morning"}),5000).unwrap();
-    let mut unchanged=daily.clone();unchanged["expected"]=json!(4);unchanged["requestId"]=json!("unchanged");
-    assert_eq!(s.native_reports("admin","schedule_save",unchanged,6000).unwrap()["next_due"],before["next_due"]);
+    assert_eq!(s.report_definition("morning").unwrap().version, 4);
+    let before = s
+        .native_reports("admin", "schedule_get", json!({"id":"morning"}), 5000)
+        .unwrap();
+    let mut unchanged = daily.clone();
+    unchanged["expected"] = json!(4);
+    unchanged["requestId"] = json!("unchanged");
+    assert_eq!(
+        s.native_reports("admin", "schedule_save", unchanged, 6000)
+            .unwrap()["next_due"],
+        before["next_due"]
+    );
     let removed=s.native_reports("admin","schedule_save",json!({"id":"morning","expected":5,"enabled":false,"schedule":null,"requestId":"remove"}),7000).unwrap();
     assert!(removed["schedule"].is_null() && removed["next_due"].is_null());
     assert!(s.native_reports("admin","schedule_save",json!({"id":"morning","expected":6,"enabled":false,"schedule":null,"compose":"injected","requestId":"fields"}),8000).is_err());
-    let read_tool=api::tools().into_iter().find(|t|t["name"]=="reports_schedule_get").unwrap();
-    assert_eq!(read_tool["annotations"]["readOnlyHint"],true);
-    assert_eq!(read_tool["inputSchema"]["required"],json!(["id"]));
+    let read_tool = api::tools()
+        .into_iter()
+        .find(|t| t["name"] == "reports_schedule_get")
+        .unwrap();
+    assert_eq!(read_tool["annotations"]["readOnlyHint"], true);
+    assert_eq!(read_tool["inputSchema"]["required"], json!(["id"]));
 }
 
 #[test]
@@ -633,9 +808,15 @@ fn findings_severity_is_separate_from_execution_status() {
         ("failed", "nominal", Severity::Error),
     ] {
         run.status = status.into();
-        run.content = Some(serde_json::from_value(json!({"severity":severity,"subject":"Test","summary":"","sections":[]})).unwrap());
+        run.content = Some(
+            serde_json::from_value(
+                json!({"severity":severity,"subject":"Test","summary":"","sections":[]}),
+            )
+            .unwrap(),
+        );
         assert_eq!(run_severity(&run), expected);
     }
-    let legacy: Content = serde_json::from_value(json!({"subject":"Old","summary":"","sections":[]})).unwrap();
+    let legacy: Content =
+        serde_json::from_value(json!({"subject":"Old","summary":"","sections":[]})).unwrap();
     assert_eq!(legacy.severity, Severity::Unknown);
 }

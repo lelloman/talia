@@ -14,76 +14,195 @@ impl Service {
                 .unwrap()
                 .to_string()
         };
-        if r.connection == "account" && r.body["request"]["op"]=="nativeNotifications" {
-            let worker=self.notifications.as_ref().ok_or("notifications disabled")?;
-            let args=&r.body["request"]["args"];
+        if r.connection == "account" && r.body["request"]["op"] == "nativeNotifications" {
+            let worker = self
+                .notifications
+                .as_ref()
+                .ok_or("notifications disabled")?;
+            let args = &r.body["request"]["args"];
             return match args["op"].as_str() {
-                Some("enroll")=>worker.enroll(subject,r.body["authSession"].as_str().ok_or("unauthenticated")?,args).await,
-                Some("disable")=>worker.disable(subject,args).await,
-                _=>Err("invalid_input".into()),
+                Some("enroll") => {
+                    worker
+                        .enroll(
+                            subject,
+                            r.body["authSession"].as_str().ok_or("unauthenticated")?,
+                            args,
+                        )
+                        .await
+                }
+                Some("disable") => worker.disable(subject, args).await,
+                _ => Err("invalid_input".into()),
             };
         }
-        if r.connection == "account" && r.body["request"]["op"]=="nativeReports" {
+        if r.connection == "account" && r.body["request"]["op"] == "nativeReports" {
             let body = &r.body["request"];
-            return self.engine.store.borrow_mut().native_reports(subject, body["operation"].as_str().unwrap_or(""), body["args"].clone(), self.engine.now());
+            return self.engine.store.borrow_mut().native_reports(
+                subject,
+                body["operation"].as_str().unwrap_or(""),
+                body["args"].clone(),
+                self.engine.now(),
+            );
         }
-        if r.connection == "account" && r.body["request"]["op"]=="nativeChats" {
+        if r.connection == "account" && r.body["request"]["op"] == "nativeChats" {
             let body = &r.body["request"];
-            return talia_engine::chat::request(&mut self.engine.store.borrow_mut(), subject, body["operation"].as_str().unwrap_or(""), body["args"].clone(), self.engine.now());
+            return talia_engine::chat::request(
+                &mut self.engine.store.borrow_mut(),
+                subject,
+                body["operation"].as_str().unwrap_or(""),
+                body["args"].clone(),
+                self.engine.now(),
+            );
         }
         // Web chat: {"op":"chatList"|"chatCreate"|…, …args}.
-        if r.connection == "account" && r.body["request"]["op"].as_str().is_some_and(|op| op.starts_with("chat")) {
+        if r.connection == "account"
+            && r.body["request"]["op"]
+                .as_str()
+                .is_some_and(|op| op.starts_with("chat"))
+        {
             let mut args = r.body["request"].clone();
             let op = args["op"].as_str().unwrap_or("")[4..].to_ascii_lowercase();
             args.as_object_mut().map(|o| o.remove("op"));
-            return talia_engine::chat::request(&mut self.engine.store.borrow_mut(), subject, &op, args, self.engine.now());
+            return talia_engine::chat::request(
+                &mut self.engine.store.borrow_mut(),
+                subject,
+                &op,
+                args,
+                self.engine.now(),
+            );
         }
-        if r.connection == "account" && r.body["request"]["op"]=="nativeOverview" {
-            return self.engine.store.borrow_mut().native_overview(subject,r.body["name"].as_str().unwrap_or(subject),self.engine.now());
+        if r.connection == "account" && r.body["request"]["op"] == "nativeOverview" {
+            return self.engine.store.borrow_mut().native_overview(
+                subject,
+                r.body["name"].as_str().unwrap_or(subject),
+                self.engine.now(),
+            );
         }
-        if r.connection == "account" && r.body["request"]["op"].as_str().is_some_and(|op| op.starts_with("aiAccount")) {
-            return talia_engine::ai::account::admin(&self.engine, subject, r.body["request"].clone()).await;
+        if r.connection == "account"
+            && r.body["request"]["op"]
+                .as_str()
+                .is_some_and(|op| op.starts_with("aiAccount"))
+        {
+            return talia_engine::ai::account::admin(
+                &self.engine,
+                subject,
+                r.body["request"].clone(),
+            )
+            .await;
         }
-        if r.connection == "account" && r.body["request"]["op"].as_str().is_some_and(|op|op.starts_with("telegram")) {
-            return self.telegram.admin(subject,r.body["request"].clone()).await;
+        if r.connection == "account"
+            && r.body["request"]["op"]
+                .as_str()
+                .is_some_and(|op| op.starts_with("telegram"))
+        {
+            return self
+                .telegram
+                .admin(subject, r.body["request"].clone())
+                .await;
         }
-        if r.connection == "account" && r.body["request"]["op"].as_str().is_some_and(|op|op.starts_with("browserPush")) {
+        if r.connection == "account"
+            && r.body["request"]["op"]
+                .as_str()
+                .is_some_and(|op| op.starts_with("browserPush"))
+        {
             use talia_engine::alerts::web_push;
-            let body=&r.body["request"];
-            let op=body["op"].as_str().ok_or("invalid_input")?;
-            let id=body["id"].as_str().unwrap_or("");
-            if !self.engine.store.borrow().user_admin(subject).map_err(err)? {return Err("forbidden".into());}
-            let allowed: &[&str]=match op {"browserPushConfig"=>&["op"],"browserPushStatus"|"browserPushDisable"=>&["op","id"],"browserPushRegister"=>&["op","id","subscription","applicationServerKey"],"browserPushAlert"=>&["op","id","key","occurrence","revision"],_=>return Err("invalid_input".into())};
-            if body.as_object().is_none_or(|o|o.keys().any(|k|!allowed.contains(&k.as_str()))) {return Err("invalid_input".into());}
-            match op {
-                "browserPushConfig"=>return web_push::public_config().await,
-                "browserPushStatus"=>return self.engine.store.borrow().browser_push_status(subject,id),
-                "browserPushDisable"=>return self.engine.store.borrow_mut().browser_push_disable(subject,id,self.engine.now()),
-                "browserPushAlert"=>return self.engine.store.borrow().browser_push_alert(subject,id,body["key"].as_str().ok_or("invalid_input")?,body["occurrence"].as_u64().ok_or("invalid_input")?,body["revision"].as_u64().ok_or("invalid_input")?),
-                _=>{}
+            let body = &r.body["request"];
+            let op = body["op"].as_str().ok_or("invalid_input")?;
+            let id = body["id"].as_str().unwrap_or("");
+            if !self
+                .engine
+                .store
+                .borrow()
+                .user_admin(subject)
+                .map_err(err)?
+            {
+                return Err("forbidden".into());
             }
-            if id.len()!=44 || !id.starts_with("browser-") || !id[8..].bytes().all(|b|b.is_ascii_hexdigit()||b==b'-') {return Err("invalid browser ID".into());}
-            let config=web_push::public_config().await?;
-            if body["applicationServerKey"]!=config["applicationServerKey"] {return Err("Web Push key changed; enroll again".into());}
+            let allowed: &[&str] = match op {
+                "browserPushConfig" => &["op"],
+                "browserPushStatus" | "browserPushDisable" => &["op", "id"],
+                "browserPushRegister" => &["op", "id", "subscription", "applicationServerKey"],
+                "browserPushAlert" => &["op", "id", "key", "occurrence", "revision"],
+                _ => return Err("invalid_input".into()),
+            };
+            if body
+                .as_object()
+                .is_none_or(|o| o.keys().any(|k| !allowed.contains(&k.as_str())))
+            {
+                return Err("invalid_input".into());
+            }
+            match op {
+                "browserPushConfig" => return web_push::public_config().await,
+                "browserPushStatus" => {
+                    return self.engine.store.borrow().browser_push_status(subject, id)
+                }
+                "browserPushDisable" => {
+                    return self.engine.store.borrow_mut().browser_push_disable(
+                        subject,
+                        id,
+                        self.engine.now(),
+                    )
+                }
+                "browserPushAlert" => {
+                    return self.engine.store.borrow().browser_push_alert(
+                        subject,
+                        id,
+                        body["key"].as_str().ok_or("invalid_input")?,
+                        body["occurrence"].as_u64().ok_or("invalid_input")?,
+                        body["revision"].as_u64().ok_or("invalid_input")?,
+                    )
+                }
+                _ => {}
+            }
+            if id.len() != 44
+                || !id.starts_with("browser-")
+                || !id[8..].bytes().all(|b| b.is_ascii_hexdigit() || b == b'-')
+            {
+                return Err("invalid browser ID".into());
+            }
+            let config = web_push::public_config().await?;
+            if body["applicationServerKey"] != config["applicationServerKey"] {
+                return Err("Web Push key changed; enroll again".into());
+            }
             let raw=json!({"subscription":body["subscription"],"application_server_key":body["applicationServerKey"]}).to_string();
-            let address=web_push::address(&raw)?;
-            let origins:Vec<String>=serde_json::from_value(config["allowedOrigins"].clone()).map_err(|_|"invalid provider")?;
-            if !web_push::endpoint_allowed(&address.subscription.endpoint,&origins) {return Err("push endpoint origin is not allowed".into());}
-            let mut store=self.engine.store.borrow_mut();
-            if !store.user_admin(subject).map_err(err)? {return Err("forbidden".into());}
-            return store.browser_push_register(subject,id,&raw,config["provider"].as_str().unwrap(),self.engine.now());
+            let address = web_push::address(&raw)?;
+            let origins: Vec<String> = serde_json::from_value(config["allowedOrigins"].clone())
+                .map_err(|_| "invalid provider")?;
+            if !web_push::endpoint_allowed(&address.subscription.endpoint, &origins) {
+                return Err("push endpoint origin is not allowed".into());
+            }
+            let mut store = self.engine.store.borrow_mut();
+            if !store.user_admin(subject).map_err(err)? {
+                return Err("forbidden".into());
+            }
+            return store.browser_push_register(
+                subject,
+                id,
+                &raw,
+                config["provider"].as_str().unwrap(),
+                self.engine.now(),
+            );
         }
         if r.connection == "account" {
             let mut store = self.engine.store.borrow_mut();
             store
                 .user_seen(subject, r.body["name"].as_str().unwrap_or(subject))
                 .map_err(err)?;
-            let body=&r.body["request"];
+            let body = &r.body["request"];
             match body["op"].as_str() {
-                Some("agentKeyCreate") if body.as_object().is_some_and(|o|o.len()==1)=>return store.user_key_issue(subject,r.body["authSession"].as_str().unwrap_or("")).map_err(err),
-                Some("agentKeys") if body.as_object().is_some_and(|o|o.len()==1)=>return store.user_keys(subject).map_err(err),
-                Some("agentKeyRevoke") if body.as_object().is_some_and(|o|o.len()==2)=>return store.user_key_revoke(subject,body["id"].as_str().ok_or("invalid_input")?).map_err(err),
-                _=>{}
+                Some("agentKeyCreate") if body.as_object().is_some_and(|o| o.len() == 1) => {
+                    return store
+                        .user_key_issue(subject, r.body["authSession"].as_str().unwrap_or(""))
+                        .map_err(err)
+                }
+                Some("agentKeys") if body.as_object().is_some_and(|o| o.len() == 1) => {
+                    return store.user_keys(subject).map_err(err)
+                }
+                Some("agentKeyRevoke") if body.as_object().is_some_and(|o| o.len() == 2) => {
+                    return store
+                        .user_key_revoke(subject, body["id"].as_str().ok_or("invalid_input")?)
+                        .map_err(err)
+                }
+                _ => {}
             }
             return store
                 .user_request(subject, r.body["request"].clone())

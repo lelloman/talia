@@ -165,7 +165,13 @@ async fn delivery_chunks_are_tracked_and_never_replayed_after_uncertainty() {
     w.engine
         .store
         .borrow()
-        .telegram_enqueue("report-a", 10, "report", Some("run-1"), &format!("**{}**", "😀".repeat(2000)))
+        .telegram_enqueue(
+            "report-a",
+            10,
+            "report",
+            Some("run-1"),
+            &format!("**{}**", "😀".repeat(2000)),
+        )
         .unwrap();
     let (c, bot) = Bot::load(&w.engine).await.unwrap();
     for _ in 0..3 {
@@ -175,7 +181,10 @@ async fn delivery_chunks_are_tracked_and_never_replayed_after_uncertainty() {
     for v in bodies.lock().unwrap().iter() {
         assert!(v["text"].as_str().unwrap().encode_utf16().count() <= 4096);
         assert!(v.get("parse_mode").is_none());
-        assert_eq!(v["entities"], json!([{"type":"bold","offset":0,"length":v["text"].as_str().unwrap().encode_utf16().count()}]));
+        assert_eq!(
+            v["entities"],
+            json!([{"type":"bold","offset":0,"length":v["text"].as_str().unwrap().encode_utf16().count()}])
+        );
     }
     assert_eq!(
         w.engine
@@ -477,20 +486,22 @@ async fn requests_acknowledge_once_and_refresh_typing_until_complete() {
     let ai_dir = crate::ai::tests::config(&ai.uri());
     w.admin("admin", json!({"op":"telegramSettings","expected":1,"enabled":true,"investigations":true,"sources":[]})).await.unwrap();
     Mock::given(path("/v1/chat/completions"))
-        .respond_with(
-            |r: &wiremock::Request| {
-                let request: Value = serde_json::from_slice(&r.body).unwrap();
-                if request["messages"][0]["content"].as_str().unwrap().contains("Classify the incoming question") {
-                    ResponseTemplate::new(200).set_body_json(crate::ai::tests::answer(
-                        r#"{"decision":"new_session","resume_pending":false,"clarification":null}"#,
-                    ))
-                } else {
-                    ResponseTemplate::new(200)
-                        .set_delay(Duration::from_millis(4500))
-                        .set_body_json(crate::ai::tests::answer("All checked"))
-                }
-            },
-        )
+        .respond_with(|r: &wiremock::Request| {
+            let request: Value = serde_json::from_slice(&r.body).unwrap();
+            if request["messages"][0]["content"]
+                .as_str()
+                .unwrap()
+                .contains("Classify the incoming question")
+            {
+                ResponseTemplate::new(200).set_body_json(crate::ai::tests::answer(
+                    r#"{"decision":"new_session","resume_pending":false,"clarification":null}"#,
+                ))
+            } else {
+                ResponseTemplate::new(200)
+                    .set_delay(Duration::from_millis(4500))
+                    .set_body_json(crate::ai::tests::answer("All checked"))
+            }
+        })
         .expect(2)
         .mount(&ai)
         .await;
@@ -539,13 +550,25 @@ async fn requests_acknowledge_once_and_refresh_typing_until_complete() {
         async {
             tokio::time::timeout(Duration::from_secs(2), async {
                 loop {
-                    let count: i64 = w.engine.store.borrow().conn.query_row(
-                        "SELECT count(*) FROM telegram_outbox WHERE id='ack-60-000'", [], |r| r.get(0),
-                    ).unwrap();
-                    if count == 1 { break; }
+                    let count: i64 = w
+                        .engine
+                        .store
+                        .borrow()
+                        .conn
+                        .query_row(
+                            "SELECT count(*) FROM telegram_outbox WHERE id='ack-60-000'",
+                            [],
+                            |r| r.get(0),
+                        )
+                        .unwrap();
+                    if count == 1 {
+                        break;
+                    }
                     tokio::time::sleep(Duration::from_millis(10)).await;
                 }
-            }).await.unwrap();
+            })
+            .await
+            .unwrap();
             let (c, transport) = Bot::load(&w.engine).await.unwrap();
             w.dispatch(&transport, c.version).await.unwrap();
             assert!(!finished.get());
@@ -818,18 +841,41 @@ fn formatting_migration_preserves_queued_plain_text() {
     let s = w.engine.store.borrow();
     s.conn.execute("INSERT INTO telegram_outbox(id,chat,kind,status,body) VALUES('legacy',1,'chat','pending','**literal old text**')", []).unwrap();
     // Recreate the previous schema while retaining the pending message.
-    s.conn.execute_batch("ALTER TABLE telegram_outbox DROP COLUMN entities; PRAGMA user_version=20;").unwrap();
+    s.conn
+        .execute_batch("ALTER TABLE telegram_outbox DROP COLUMN entities; PRAGMA user_version=20;")
+        .unwrap();
     drop(s);
     drop(w);
     let s = Store::open(dir.join("engine.db")).unwrap();
-    let row: (String,String,String) = s.conn.query_row("SELECT body,entities,status FROM telegram_outbox WHERE id='legacy'", [], |r| Ok((r.get(0)?,r.get(1)?,r.get(2)?))).unwrap();
-    assert_eq!(row, ("**literal old text**".into(), "[]".into(), "pending".into()));
-    s.telegram_enqueue("formatted", 1, "report", None, "**new bold**").unwrap();
+    let row: (String, String, String) = s
+        .conn
+        .query_row(
+            "SELECT body,entities,status FROM telegram_outbox WHERE id='legacy'",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+        )
+        .unwrap();
+    assert_eq!(
+        row,
+        ("**literal old text**".into(), "[]".into(), "pending".into())
+    );
+    s.telegram_enqueue("formatted", 1, "report", None, "**new bold**")
+        .unwrap();
     drop(s);
     let s = Store::open(dir.join("engine.db")).unwrap();
-    let row: (String,String) = s.conn.query_row("SELECT body,entities FROM telegram_outbox WHERE id='formatted-000'", [], |r| Ok((r.get(0)?,r.get(1)?))).unwrap();
+    let row: (String, String) = s
+        .conn
+        .query_row(
+            "SELECT body,entities FROM telegram_outbox WHERE id='formatted-000'",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .unwrap();
     assert_eq!(row.0, "new bold");
-    assert_eq!(serde_json::from_str::<Value>(&row.1).unwrap(), json!([{"type":"bold","offset":0,"length":8}]));
+    assert_eq!(
+        serde_json::from_str::<Value>(&row.1).unwrap(),
+        json!([{"type":"bold","offset":0,"length":8}])
+    );
     drop(s);
     std::fs::remove_dir_all(dir).unwrap();
 }

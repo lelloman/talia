@@ -1,6 +1,8 @@
 use super::{policy::*, *};
 use ring::digest;
-fn push_channel() -> String { "push".into() }
+fn push_channel() -> String {
+    "push".into()
+}
 fn yes() -> bool {
     true
 }
@@ -95,7 +97,8 @@ impl Store {
         key(&d.id)?;
         key(&d.provider)?;
         key(&d.target)?;
-        if d.version != expected + 1 || !["email", "telegram", "push", "web_push"].contains(&d.channel.as_str())
+        if d.version != expected + 1
+            || !["email", "telegram", "push", "web_push"].contains(&d.channel.as_str())
         {
             return Err("invalid destination".into());
         }
@@ -133,8 +136,12 @@ impl Store {
     ) -> Result<()> {
         key(&d.id)?;
         key(owner)?;
-        if !["push", "web_push"].contains(&d.channel.as_str()) { return Err("invalid device channel".into()); }
-        if d.channel == "web_push" { super::web_push::address(&d.token)?; }
+        if !["push", "web_push"].contains(&d.channel.as_str()) {
+            return Err("invalid device channel".into());
+        }
+        if d.channel == "web_push" {
+            super::web_push::address(&d.token)?;
+        }
         if d.version != expected + 1
             || d.token.is_empty()
             || d.token.len() > 4096
@@ -144,7 +151,10 @@ impl Store {
         }
         self.alert_atomic(|s| {
             let old = s.alert_get::<Device>("device", &d.id)?;
-            if old.as_ref().is_some_and(|v| v.owner != owner || v.channel != d.channel) {
+            if old
+                .as_ref()
+                .is_some_and(|v| v.owner != owner || v.channel != d.channel)
+            {
                 return Err("forbidden".into());
             }
             if old.as_ref().map_or(0, |v| v.version) != expected {
@@ -210,7 +220,8 @@ impl Store {
             .alert_list::<Device>("device")?
             .into_iter()
             .filter(|v| {
-                v.enabled && v.channel == d.channel
+                v.enabled
+                    && v.channel == d.channel
                     && (v.channel != "web_push" || self.user_admin(&v.owner).unwrap_or(false))
                     && (d.target == format!("device:{}", v.id)
                         || d.target == format!("user:{}", v.owner)
@@ -476,12 +487,15 @@ impl Store {
                     if let Some(id) = &j.device {
                         if let Some(mut device) = s.alert_get::<Device>("device", id)? {
                             if device.channel == "web_push" && device.token == *address {
-                                device.enabled = false; device.version += 1;
+                                device.enabled = false;
+                                device.version += 1;
                                 s.alert_put("device", id, &device)?;
                             }
                         }
                     }
-                    j.status = "failed".into(); j.error = Some("browser subscription expired".into()); false
+                    j.status = "failed".into();
+                    j.error = Some("browser subscription expired".into());
+                    false
                 }
                 Outcome::Failed(e) => {
                     j.status = "failed".into();
