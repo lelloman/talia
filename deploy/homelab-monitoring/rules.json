@@ -504,20 +504,6 @@
     }
   },
   {
-    "name": "LogErrorBurst",
-    "query": "talia_health_log_errors_1h > 10",
-    "forMs": 0,
-    "intervalMs": 60000,
-    "labels": {
-      "severity": "warning",
-      "category": "health"
-    },
-    "annotations": {
-      "summary": "More than ten error/panic/fatal log messages in the last hour",
-      "description": "Measured value: {{ $value }}. Hourly host probe; inspect Tal\u00eca and the host health-check log."
-    }
-  },
-  {
     "name": "PeppinoHighErrorRate",
     "query": "sum(rate(peppino_http_requests_total{job=\"peppino\",status=~\"5..\",route!~\"/metrics|/health|/ready\"}[5m])) > 0.1",
     "forMs": 300000,
