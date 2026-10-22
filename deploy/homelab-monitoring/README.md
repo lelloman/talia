@@ -43,8 +43,20 @@ bindings were disabled and their collectors deleted.
 
 Grafana, Loki and Alloy were retired on 2026-10-22, so the host health probe no
 longer exports `talia_health_log_errors_1h`. `LogErrorBurst` was removed from
-`rules.json`; its live bindings (`infra-LogErrorBurst` and
-`infra-LogErrorBurst-input`) and collector are retired during rollout.
+`rules.json`; the publisher does not remove existing live entries, so retire its
+bindings and collector with the guarded helper:
+
+```sh
+python3 deploy/homelab-monitoring/retire-logerrorburst.py --backup /private/log-error-preview
+python3 deploy/homelab-monitoring/retire-logerrorburst.py --backup /private/log-error-applied --apply
+```
+
+The helper disables `infra-LogErrorBurst` and `infra-LogErrorBurst-input`, reads
+them back as disabled, then deletes only the `infra-LogErrorBurst` variable and
+collector after checking its query still names the retired metric. It saves the
+original configuration and requests, reads the deleted keys back as absent, and
+is safe to rerun. `python3 deploy/homelab-monitoring/test-retirement.py` checks
+the preview, apply, repeat and mismatched-collector paths against a local fixture.
 
 The publisher preserves existing live overrides on redeployment; update binding
 parameters explicitly to apply changed defaults.
