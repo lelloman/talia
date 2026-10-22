@@ -160,7 +160,7 @@ def main():
             ident = 'infra-'+rule['name']
             params = dict(name=rule['name'], forMs=rule['forMs'], staleMs=max(90000, rule['intervalMs']*3),
                 severity=rule['labels']['severity'], summary=rule['annotations']['summary'], description=rule['annotations']['description'])
-            if rule['name'] in ('SSHAuthenticationFailureBurst', 'LogErrorBurst'):
+            if rule['name'] == 'SSHAuthenticationFailureBurst':
                 params['notify'] = False
             for guard in [False, True]:
                 bid = ident+('-input' if guard else '')

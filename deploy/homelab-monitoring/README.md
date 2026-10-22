@@ -1,7 +1,7 @@
 # Homelab monitoring
 
-Published 2026-10-07. Talìa owns 40 monitoring conditions: all 29 former Prometheus
-alert rules plus 11 conditions derived from the hourly host health probe. Each
+Published 2026-10-07. Talìa owns 38 monitoring conditions: 27 Prometheus query
+rules plus 11 conditions derived from the hourly host health probe. Each
 condition has a scheduled Prometheus query and a separate input-availability alert.
 The existing Git workspace policy is unchanged: 81 bindings total in production.
 
@@ -30,35 +30,24 @@ messages are bounded. Critical alerts notify immediately and repeat every four h
 warnings wait 30 seconds and repeat every twelve hours. Acknowledgement stops repeats.
 Recovery sends once. Delivery retries, silences and history are owned by Talìa.
 
-Notification tuning applied 2026-10-15 keeps aggregate log counts, ordinary runner
-capacity saturation and queue-only session waits in Talìa without Telegram firing
-or recovery messages. Queue waiting can be deliberate weekly usage pacing and is
-not proof of a stuck worker. Running, pausing and cancelling stalls still notify,
-as do service/database failures, security conditions and missing monitoring data.
-The session policy remembers whether a condition was eligible to notify so a
-quiet queue recovery does not generate a message. These settings do not cancel,
-retry or change the pacing of any session.
+Notification tuning applied 2026-10-15 kept aggregate log counts and ordinary
+runner-capacity and queue-wait conditions in Talìa without Telegram firing or
+recovery messages. Those conditions have since been retired. SSH authentication
+failure bursts remain monitoring-only; service/database failures, security
+conditions and missing monitoring data notify as before.
 
 Simple Agents was decommissioned on 2026-10-21. Its three conditions
 (`SimpleAgentsRunnerDisconnected`, `SimpleAgentsCapacityExhausted`,
 `SimpleAgentsSessionNoProgress`) were removed from `rules.json`; their live
-bindings were disabled and their collectors deleted. The quiet runner-capacity and
-queue-wait tuning above no longer applies.
+bindings were disabled and their collectors deleted.
 
-The publisher uses these defaults for new bindings and preserves existing live
-overrides. To apply the targeted tuning to existing bindings, preview the guarded
-changes with a fresh private backup directory, then use another directory to apply:
+Grafana, Loki and Alloy were retired on 2026-10-22, so the host health probe no
+longer exports `talia_health_log_errors_1h`. `LogErrorBurst` was removed from
+`rules.json`; its live bindings (`infra-LogErrorBurst` and
+`infra-LogErrorBurst-input`) and collector are retired during rollout.
 
-```sh
-python3 deploy/homelab-monitoring/tune-notifications.py --backup /private/tuning-preview
-python3 deploy/homelab-monitoring/tune-notifications.py --backup /private/tuning-applied --apply
-```
-
-The helper updates only the warning policy source and the three notification
-bindings, preserving policy destinations, schedules, stages and other parameters.
-It saves the original configuration and requests, checks current versions, and
-reads back every change. It does not republish collectors or disable delivery for
-other conditions. Inspect an uncertain operation before retrying.
+The publisher preserves existing live overrides on redeployment; update binding
+parameters explicitly to apply changed defaults.
 
 `ServiceDown` ignores targets on Boxo (`192.168.1.34`) while idle-manager reports
 it off, waking, suspending or suspended, and for five minutes after any Boxo state
