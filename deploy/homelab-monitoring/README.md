@@ -73,6 +73,14 @@ python3 deploy/homelab-monitoring/update-queries.py --backup /private/query-prev
 python3 deploy/homelab-monitoring/update-queries.py --backup /private/query-applied --apply
 ```
 
+`ServiceDown` waits five minutes (`forMs` 300000) before firing. The original
+one-minute duration flapped on 2026-11-05/06: host CPU saturation made the
+simple-ai metrics scrape exceed Prometheus's ten-second timeout for 30 to 170
+seconds at a time while the container stayed healthy, producing fifteen
+firing/recovery pairs in sixteen hours. The live `infra-ServiceDown` binding was
+updated to version 2 with the same value on 2026-11-06; the publisher preserves
+it on redeployment.
+
 Failed SSH authentication bursts are monitoring-only (`notify: false`): both
 firing and recovery messages are suppressed while measurements and alert history
 remain available. Unexpected successful logins, security-file changes, and missing
